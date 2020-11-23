@@ -2,8 +2,6 @@
 
 WILDFIRE STATS AND SCENARIOS BY BGC ZONE
 
-See documentation.
-
 '''
 
 #%% Import Python modules
@@ -21,12 +19,13 @@ import statsmodels.api as sm
 from fcgadgets.utilities import utilities_general as gu
 from fcgadgets.utilities import utilities_gis as gis
 from fcgadgets.utilities import utilities_inventory as invu
+from fcgadgets.taz import general_stat_models as gensm
 from fcgadgets.taz import wildfire_stat_models as wfsm
 
 #%% Path of file to store stats and scenarios
 
-PathData=r'G:\My Drive\Data\Wildfire\Wildfire_Stats_Scenarios_By_BGCZ\Wildfire_Stats_Scenarios_By_BGCZ.pkl'
-PathFigures=r'G:\My Drive\Figures\Wildfire\Wildfire_Stats_Sceanrios_By_BGCZ'
+PathData=r'C:\Users\rhember\Documents\Data\Taz Datasets\Wildfire Stats and Scenarios\Wildfire_Stats_Scenarios_By_BGCZ.pkl'
+PathFigures=r'C:\Users\rhember\Documents\Figures\Wildfire\Wildfire_Stats_Sceanrios_By_BGCZ'
 
 #%% Set figure properties
 
@@ -35,10 +34,10 @@ plt.rcParams.update(params)
 
 #%% Import BGC zones
 
-zBECZ=gis.OpenGeoTiff(r'Z:\!Workgrp\Forest Carbon\Data\BC1ha\VRI\becz.tif')
+zBECZ=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
 zBECZf=zBECZ['Data'].flatten()
 zBECZs=zBECZ['Data'][0::50,0::50].flatten()
-dBECZ=gu.ReadExcel(r'Z:\!Workgrp\Forest Carbon\Data\BC1ha\VRI\becz_lut.xlsx')
+dBECZ=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz_lut.xlsx')
 
 #%% Total area burned
 
@@ -57,8 +56,8 @@ plt.bar(tv_obs,A/1e6,0.7,facecolor=[0.5,0,0])
 
 #%% Import wildfire data and calculate prob occ
 
-# Initialize variables
 tv_obs=np.arange(1920,2020,1)
+
 wfss={}
 for iZ in range(dBECZ['ZONE'].size):
     nam=dBECZ['ZONE'][iZ]
@@ -157,7 +156,7 @@ gu.PrintFig(PathFigures + '\\Wilfire_Occurrence_ByBGCZ','png',900)
 #%% Scenario development (deterministic component)
 
 # Import parameters
-#wfss=gu.ipickle(PathData)
+# wfss=gu.ipickle(PathData)
 
 tv_scn=np.arange(-2000,2201,1)
 
@@ -165,12 +164,11 @@ for zone in wfss.keys():
 
     Po_obs=wfss[zone]['Po_obs']*100
 
-    wfss[zone]['Po_Det_WF_Scn1']=Po_obs*np.ones(tv_scn.size)
+    wfss[zone]['Po_Det_WF_Scn1']=1.5*Po_obs*np.ones(tv_scn.size)
     wfss[zone]['Po_Det_WF_Scn2']=Po_obs*np.ones(tv_scn.size)
     wfss[zone]['Po_Det_WF_Scn3']=Po_obs*np.ones(tv_scn.size)
     wfss[zone]['Po_Det_WF_Scn4']=Po_obs*np.ones(tv_scn.size)
     
-    wfss[zone]['Po_Det_WF_Scn1']=1.5*Po_obs
     ind=np.where( (tv_scn<1920-50) )[0]; 
     wfss[zone]['Po_Det_WF_Scn2'][ind]=1.5*Po_obs
     wfss[zone]['Po_Det_WF_Scn3'][ind]=1.5*Po_obs
@@ -180,11 +178,17 @@ for zone in wfss.keys():
     wfss[zone]['Po_Det_WF_Scn2'][ind]=np.interp(tv_scn[ind],np.array([1920-50,1920]),np.array([1.5*Po_obs,Po_obs]))
     wfss[zone]['Po_Det_WF_Scn3'][ind]=np.interp(tv_scn[ind],np.array([1920-50,1920]),np.array([1.5*Po_obs,Po_obs]))
     wfss[zone]['Po_Det_WF_Scn4'][ind]=np.interp(tv_scn[ind],np.array([1920-50,1920]),np.array([1.5*Po_obs,Po_obs]))
-
+    
+    # Assume 1.5 and 2.0 x increase by 2100 for Scn3 and 4
     ind=np.where( (tv_scn>2020) )[0]; 
     wfss[zone]['Po_Det_WF_Scn2'][ind]=np.interp(tv_scn[ind],np.array([2020,2200]),np.array([Po_obs,1.0*Po_obs]))
-    wfss[zone]['Po_Det_WF_Scn3'][ind]=np.interp(tv_scn[ind],np.array([2020,2200]),np.array([Po_obs,1.5*Po_obs]))
-    wfss[zone]['Po_Det_WF_Scn4'][ind]=np.interp(tv_scn[ind],np.array([2020,2200]),np.array([Po_obs,2.0*Po_obs]))
+    wfss[zone]['Po_Det_WF_Scn3'][ind]=np.interp(tv_scn[ind],np.array([2020,2200]),np.array([Po_obs,2.125*Po_obs]))
+    wfss[zone]['Po_Det_WF_Scn4'][ind]=np.interp(tv_scn[ind],np.array([2020,2200]),np.array([Po_obs,3.25*Po_obs]))
+
+# Check
+ind=np.where(tv_scn==2100)[0]
+ind1=np.where(tv_scn==2000)[0]
+print(wfss[zone]['Po_Det_WF_Scn4'][ind]/wfss[zone]['Po_Det_WF_Scn4'][ind1])
 
 # Save
 gu.opickle(PathData,wfss)
@@ -193,21 +197,27 @@ gu.opickle(PathData,wfss)
 zone='IDF'
 plt.close('all')
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,5.5))
-rc=patches.Rectangle((1920,0),100,1,facecolor=[0.85,0.85,0.85])
+rc=patches.Rectangle((1920,0),100,1.2,facecolor=[0.85,0.85,0.85])
 ax.add_patch(rc)
 ax.plot(tv_scn,wfss[zone]['Po_Det_WF_Scn1'],'b-',linewidth=1.5,label='Wildfire occurrence Scn. 1 (pre-industrial baseline)')
 ax.plot(tv_scn,wfss[zone]['Po_Det_WF_Scn2'],'g:',linewidth=1.5,label='Wildfire occurrence Scn. 2')
 ax.plot(tv_scn,wfss[zone]['Po_Det_WF_Scn3'],'c-.',linewidth=1.5,label='Wildfire occurrence Scn. 3')
 ax.plot(tv_scn,wfss[zone]['Po_Det_WF_Scn4'],'r--',linewidth=1.5,label='Wildfire occurrence Scn. 4')
-ax.annotate('Modern era',(1920+50,0.65),ha='center')
+ax.annotate('Modern era',(1920+50,0.75),ha='center')
 ax.legend(loc='upper left',frameon=False)
-ax.set(position=[0.065,0.17,0.92,0.8],ylim=[0,1],xlim=[1000-0.5,tv_scn[-1]+1+0.5],
+ax.set(position=[0.065,0.17,0.92,0.8],ylim=[0,1.2],xlim=[1000-0.5,tv_scn[-1]+1+0.5],
        xticks=np.arange(tv_scn[0],tv_scn[-1]+100,100),
        ylabel='Annual probability (% yr$^-$$^1$)',
        xlabel='Time, calendar year')
 gu.PrintFig(PathFigures + '\\Wildfire_Scenarios_ts_IDF','png',900)
 
-#%% Apply random component to scenarios
+#%% Scenario development (deterministic+random component)
+
+# These can be used when applied to multiple tiles - the random component will
+# be stratified by BGC zone, but it will not show edge effects among tiles because
+# the annual random componet is consistent across tiles.
+
+# Right now, it is just generated for a single ensemble. 
 
 n_stand=2000
 
@@ -215,21 +225,36 @@ for zone in wfss.keys():
 
     # Initialize annual probability of occurrence (final with deterministic and
     # random components)
-    wfss[zone]['Po_WF_Scn1']=np.zeros((tv_scn.size,n_stand))
-    
+    Po=np.zeros((tv_scn.size,n_stand))    
     for iT in range(tv_scn.size):
         # Adjust shape parameter to match specified annual probability of 
         # occurrence from the deterministic component
         b0=wfss[zone]['Beta_Pareto'].copy()       
         b_shape=wfss[zone]['Pareto_shape_for_Po'].copy()
         b0[0]=np.exp(b_shape[1]*np.log(wfss[zone]['Po_Det_WF_Scn1'][iT])+b_shape[0])
-        wfss[zone]['Po_WF_Scn1'][iT,:]=wfsm.GenerateDisturbancesFromPareto(1,n_stand,b0)
+        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(n_stand,b0)    
+    # Convert to percent area of occurrence
+    wfss[zone]['PctOcc_DetPlusRand_WF_Scn1']=np.sum(Po,axis=1)/n_stand*100
+    
+    Po=np.zeros((tv_scn.size,n_stand))
+    for iT in range(tv_scn.size):
+        # Adjust shape parameter to match specified annual probability of 
+        # occurrence from the deterministic component
+        b0=wfss[zone]['Beta_Pareto'].copy()       
+        b_shape=wfss[zone]['Pareto_shape_for_Po'].copy()
+        b0[0]=np.exp(b_shape[1]*np.log(wfss[zone]['Po_Det_WF_Scn4'][iT])+b_shape[0])
+        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(n_stand,b0)  
+    # Convert to percent area of occurrence
+    wfss[zone]['PctOcc_DetPlusRand_WF_Scn4']=np.sum(Po,axis=1)/n_stand*100
 
-Po=np.sum(wfss[zone]['Po_WF_Scn1'],axis=1)/n_stand*100
+# Plot annual percent occurrence
+t0=1
 plt.close('all'); 
-plt.bar(tv_scn[3000:],Po[3000:],1)
-plt.plot(tv_scn[3000:],gu.movingave(Po[3000:],50,'historical'),linewidth=3)
+plt.bar(tv_scn[t0:],wfss[zone]['PctOcc_DetPlusRand_WF_Scn1'][t0:],1)
+plt.plot(tv_scn[t0:],gu.movingave(wfss[zone]['PctOcc_DetPlusRand_WF_Scn1'][t0:],50,'historical'),linewidth=3)
 
+# Save
+gu.opickle(PathData,wfss)
 
 #%% Histogram of burn severity rating in 2017
 
