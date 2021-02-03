@@ -25,6 +25,7 @@ from fcgadgets.taz import wildfire_stat_models as wfsm
 #%% Path of file to store stats and scenarios
 
 PathData=r'C:\Users\rhember\Documents\Data\Taz Datasets\Wildfire Stats and Scenarios\Wildfire_Stats_Scenarios_By_BGCZ.pkl'
+
 PathFigures=r'C:\Users\rhember\Documents\Figures\Wildfire\Wildfire_Stats_Sceanrios_By_BGCZ'
 
 #%% Set figure properties
@@ -68,10 +69,9 @@ for iZ in range(dBECZ['ZONE'].size):
     ind=np.where( (zBECZf==dBECZ['VALUE'][iZ]) )[0]
     wfss[nam]['Azone']=ind.size
 
-# Populate variables from rasterized wildfire perimiter data
 for iT in range(tv_obs.size):
     print(tv_obs[iT])
-    zFire=gis.OpenGeoTiff(r'Z:\!Workgrp\Forest Carbon\Data\BC1ha\Disturbances\PROT_HISTORICAL_FIRE_POLYS_SP_' + str(tv_obs[iT]) + '.tif')
+    zFire=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PROT_HISTORICAL_FIRE_POLYS_SP_' + str(tv_obs[iT]) + '.tif')
     zFiref=zFire['Data'].flatten()
     zFires=zFire['Data'][0::50,0::50].flatten()
     for iZ in range(dBECZ['ZONE'].size):
@@ -83,75 +83,203 @@ for iT in range(tv_obs.size):
     del zFire,zFiref,zFires
     garc.collect()
 
-# Annual probability of occurrence
+#%% Calculate annual probability of occurrence
+    
 for k in wfss.keys():    
     wfss[k]['Po_obs']=np.sum(wfss[k]['Oc'])/wfss[k]['Oc'].size
 
-# Pareto distribution fits
+#%% Plot annual time series of observed annual area burned (%/yr)
+
+zone='IDF'
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,5.5))
+ax.bar(tv_obs,wfss[zone]['Ao']/wfss['IDF']['Azone']*100,1,facecolor=[0.5,0,0])
+ax.set(position=[0.06,0.1,0.92,0.86],xlim=[tv_obs[0]-0.5,tv_obs[-1]+1+0.5],xticks=np.arange(tv_obs[0],tv_obs[-1]+2,10),
+       ylabel='Probability (% yr$^-$$^1$)')
+gu.PrintFig(PathFigures + '\\Wilfire_ts_IDF','png',900)
+
+#%% Plot mean annual probability of occurrence
+
+Po_obs_mu=np.zeros(len(wfss.keys())); cnt=0
+for k in wfss.keys():
+    Po_obs_mu[cnt]=wfss[k]['Po_obs']; cnt=cnt+1
+    
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,5.5))
+ax.bar(np.arange(1,Po_obs_mu.size+1),Po_obs_mu*100,facecolor=[0.8,0.8,0.8])
+ax.set(position=[0.07,0.1,0.92,0.86],xlim=[0.5,Po_obs_mu.size+.5],xticks=np.arange(1,Po_obs_mu.size+1),
+       xticklabels=list(wfss.keys()),ylabel='Probability (% yr$^-$$^1$)')
+gu.PrintFig(PathFigures + '\\Wilfire_Occurrence_ByBGCZ','png',900)
+
+#%% Pareto distribution fits
+
 for zone in wfss.keys():
     Ao=wfss[zone]['Ao']/wfss[zone]['Azone']
     shape,loc,scale=stats.pareto.fit(Ao)
     wfss[zone]['Beta_Pareto']=np.array([shape,loc,scale])
 
-# Find relationship between shape parameter and annual prob occ
-n_stand=1000
-n_t=2000
-modifier=np.arange(0.45,1.5,0.05)
-for zone in wfss.keys():    
-    shape=np.zeros(modifier.size)
-    Po=np.zeros(modifier.size)
-    for iMod in range(modifier.size):
-        b0=wfss[zone]['Beta_Pareto'].copy()
-        b0[0]=modifier[iMod]*b0[0]
-        y=wfsm.GenerateDisturbancesFromPareto(n_t,n_stand,b0)
-        shape[iMod]=b0[0].copy()
-        Po[iMod]=np.sum(y)/y.size*100
-    
-    plt.close('all')
-    fig,ax=plt.subplots(1)
-    ax.plot(Po,shape,'-',linewidth=2)
-    ax.set(xscale='log',yscale='log',xlabel='Annual probability of occurrence (%/yr)',ylabel='Pareto shape parameter')
-    
-    # Fit model of prob occ vs
-    x=sm.tools.tools.add_constant(np.log(Po))
-    y=np.log(shape)
-    md=sm.OLS(y,x).fit()
-    #md.summary()
-    beta=md.params
-    wfss[zone]['Pareto_shape_for_Po']=beta
-    
-    # Check that relationship is good
-    #Po_hat=Po.copy()
-    #shape_hat=np.exp(beta[1]*np.log(Po_hat)+beta[0])
-    #plt.plot(Po_hat,shape_hat,'x')
-    
+#%% Test models by comparing against observed mean annual prob occurrence
+# Inconsistent agreement
 
-# Remove occurrence data (no need to save)
+n_stand=2000
+Po_hat={}
 for zone in wfss.keys():
-    del wfss[zone]['Oc']
+    Po=np.zeros((tv_scn.size,n_stand))    
+    for iT in range(tv_scn.size):        
+        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(1,n_stand,wfss[zone]['Beta_Pareto'])    
+    # Convert to percent area of occurrence
+    Po_hat[zone]=np.mean(np.sum(Po,axis=1)/n_stand)
 
-# Save
-gu.opickle(PathData,wfss)
-
-# Plot annual time series
 plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,5.5))
-ax.bar(tv_obs,wfss['IDF']['Ao']/wfss['IDF']['Azone']*100,1,facecolor=[0.5,0,0])
-ax.set(position=[0.06,0.1,0.92,0.86],xlim=[tv_obs[0]-0.5,tv_obs[-1]+1+0.5],xticks=np.arange(tv_obs[0],tv_obs[-1]+2,10),
-       ylabel='Probability (% yr$^-$$^1$)')
-gu.PrintFig(PathFigures + '\\Wilfire_ts_IDF','png',900)
-
-# Plot annual probability of occurrence
-Po_obs=np.zeros(len(wfss.keys())); cnt=0
 for k in wfss.keys():
-    Po_obs[cnt]=wfss[k]['Po_obs']; cnt=cnt+1
-    
+    #plt.plot(wfss[k]['Po_obs']*100,Po_hat[k]*100,'ko')
+    plt.plot(wfss[k]['Beta_Pareto'][0],wfss[k]['Po_obs']-Po_hat[k],'ko')
+
+#%% Look at how mean annual probability of occurrence varies with shape and scale parameters
+
+binShape=np.arange(1,5,0.1)
+binScale=np.arange(0,0.02,0.002)
+z=np.zeros((binShape.size,binScale.size))
+for i in range(binShape.size):
+    for j in range(binScale.size):
+        Po=stats.pareto.rvs(binShape[i],-binScale[j],binScale[j],n)
+        z[i,j]=np.mean(Po)
+
+plt.close('all'); fig,ax=plt.subplots(1,2)
+im=ax[0].matshow(z*100,clim=[0,0.6],extent=[binScale[0],binScale[-1],binShape[0],binShape[-1]])
+ax[0].set(position=[0.1,0.1,0.7,0.8],aspect='auto')
+cb=plt.colorbar(im,cax=ax[1])
+ax[1].set(position=[0.881,0.1,0.04,0.8])
+
+# Plot histogram of annual area burned (%/yr)
+n=2000
+Po=stats.pareto.rvs(3.8,-0.009,0.009,n)
+plt.close('all'); 
+plt.hist(Po*100,np.arange(0,3,0.1))
+print(np.median(Po*100))
+print(np.mean(Po*100))
+
+#%% Generate calibrated Pareto parameters by BGC zone
+
+Shape=3.8
+bin=np.arange(0.00005,0.015,0.00001)
+for zone in wfss.keys():
+    Po_hat_mu=np.zeros(bin.size)
+    for iBin in range(bin.size):
+        Po=stats.pareto.rvs(Shape,-bin[iBin],bin[iBin],2000)
+        Po_hat_mu[iBin]=np.mean(Po)
+    d=wfss[zone]['Po_obs']-Po_hat_mu
+    iMin=np.where(np.abs(d)==np.min(np.abs(d)))[0]
+    Po_hat_mu[iMin]
+    Scale=bin[iMin[0]]
+    wfss[zone]['Beta_Pareto_Cal']=np.array([Shape,-Scale,Scale])
+    print(Scale)
+
+# Relationship 
+x=np.zeros(dBECZ['ZONE'].size)
+y=np.zeros(dBECZ['ZONE'].size)
+c=0
+for k in wfss.keys():
+    y[c]=wfss[k]['Beta_Pareto_Cal'][2]
+    x[c]=wfss[k]['Po_obs']*100
+    c=c+1
+
 plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,5.5))
-ax.bar(np.arange(1,Po_obs.size+1),Po_obs*100,facecolor=[0.8,0.8,0.8])
-ax.set(position=[0.07,0.1,0.92,0.86],xlim=[0.5,Po_obs.size+.5],xticks=np.arange(1,Po_obs.size+1),
-       xticklabels=list(wfss.keys()),ylabel='Probability (% yr$^-$$^1$)')
-gu.PrintFig(PathFigures + '\\Wilfire_Occurrence_ByBGCZ','png',900)
+fig,ax=plt.subplots(1)
+ax.plot(x,y,'o',linewidth=2)
+ax.set(xscale='linear',yscale='linear',xlabel='Annual probability of occurrence (%/yr)',ylabel='Pareto scale parameter')
+    
+# Fit model of prob occ vs
+x1=sm.tools.tools.add_constant(x)
+y1=y
+md=sm.OLS(y1,x1).fit()
+#md.summary()
+beta=md.params
+xhat=np.linspace(np.min(x),np.max(x),2)
+plt.plot(xhat,beta[1]*xhat+beta[0],'r--')
+
+# Add model coefficients
+for k in wfss.keys():
+    wfss[k]['Pareto_scale_to_match_Po_mu']=beta
+
+
+#n_stand=5000
+##b0=[2,0.0002,0.001]
+#b0=[3.85,-0.1,0.1]
+#Po=np.zeros((tv_scn.size,n_stand))    
+#for iT in range(tv_scn.size):
+#    Po[iT,:]=FromPareto(1,n_stand,b0)
+#
+## Convert to percent area of occurrence
+#Po_hat=np.sum(Po,axis=1)/n_stand*100
+#print(np.mean(Po_hat))
+#
+#plt.close('all'); 
+#plt.hist(Po_hat);
+#
+## Plot annual percent occurrence
+#t0=2000
+#plt.close('all'); 
+#plt.bar(tv_scn[t0:],Po_hat[t0:],1)
+#plt.plot(tv_scn[t0:],gu.movingave(Po_hat[t0:],50,'historical'),'g',linewidth=3)
+#
+#
+##%%
+#    
+#import scipy.stats as stats
+#def FromPareto(N_t,N_s,beta):
+#
+#    # Initialize occurrence array
+#    oc=np.zeros((N_t,N_s),dtype='int8')
+#    
+#    # Draw a probability of area disturbed per time step
+#    po=stats.pareto.rvs(beta[0],size=N_t)
+#    po=np.reshape(po,(-1,1))
+#    po=np.tile(po,N_s)
+#    
+#    # Loop through time steps
+#    rn=np.random.random((N_t,N_s))
+#    
+#    # Populate occurrence
+#    ind=np.where(rn<po)    
+#    oc[ind[0],ind[1]]=1
+#    
+#    return oc
+#
+##%% Find relationship between shape parameter and annual prob occ
+#
+#n_stand=1000
+#n_t=2000
+#modifier=np.arange(0.45,1.5,0.05)
+#for zone in wfss.keys():    
+#    
+#    shape=np.zeros(modifier.size)
+#    Po=np.zeros(modifier.size)
+#    for iMod in range(modifier.size):
+#        b0=wfss[zone]['Beta_Pareto'].copy()
+#        b0[0]=modifier[iMod]*b0[0]
+#        y=gensm.GenerateDisturbancesFromPareto(n_t,n_stand,b0)
+#        shape[iMod]=b0[0].copy()
+#        Po[iMod]=np.sum(y)/y.size*100
+#    
+#    plt.close('all')
+#    fig,ax=plt.subplots(1)
+#    ax.plot(Po,shape,'-',linewidth=2)
+#    ax.set(xscale='log',yscale='log',xlabel='Annual probability of occurrence (%/yr)',ylabel='Pareto shape parameter')
+#    
+#    # Fit model of prob occ vs
+#    x=sm.tools.tools.add_constant(np.log(Po))
+#    y=np.log(shape)
+#    md=sm.OLS(y,x).fit()
+#    #md.summary()
+#    beta=md.params
+#    wfss[zone]['Pareto_shape_for_Po']=beta
+#    
+#    # Check that relationship is good
+#    #Po_hat=Po.copy()
+#    #shape_hat=np.exp(beta[1]*np.log(Po_hat)+beta[0])
+#    #plt.plot(Po_hat,shape_hat,'x')
+    
 
 #%% Scenario development (deterministic component)
 
@@ -212,12 +340,7 @@ ax.set(position=[0.065,0.17,0.92,0.8],ylim=[0,1.2],xlim=[1000-0.5,tv_scn[-1]+1+0
 gu.PrintFig(PathFigures + '\\Wildfire_Scenarios_ts_IDF','png',900)
 
 #%% Scenario development (deterministic+random component)
-
-# These can be used when applied to multiple tiles - the random component will
-# be stratified by BGC zone, but it will not show edge effects among tiles because
-# the annual random componet is consistent across tiles.
-
-# Right now, it is just generated for a single ensemble. 
+# Make sure it is working as epected
 
 n_stand=2000
 
@@ -227,12 +350,13 @@ for zone in wfss.keys():
     # random components)
     Po=np.zeros((tv_scn.size,n_stand))    
     for iT in range(tv_scn.size):
-        # Adjust shape parameter to match specified annual probability of 
+        # Adjust scale parameter to match specified annual probability of 
         # occurrence from the deterministic component
-        b0=wfss[zone]['Beta_Pareto'].copy()       
-        b_shape=wfss[zone]['Pareto_shape_for_Po'].copy()
-        b0[0]=np.exp(b_shape[1]*np.log(wfss[zone]['Po_Det_WF_Scn1'][iT])+b_shape[0])
-        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(n_stand,b0)    
+        b0=wfss[zone]['Beta_Pareto_Cal'].copy()
+        Scale=wfss[zone]['Pareto_scale_to_match_Po_mu'][1]*wfss[zone]['Po_Det_WF_Scn1'][iT]+wfss[zone]['Pareto_scale_to_match_Po_mu'][0]
+        b0[1]=-Scale
+        b0[2]=Scale
+        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(1,n_stand,b0)    
     # Convert to percent area of occurrence
     wfss[zone]['PctOcc_DetPlusRand_WF_Scn1']=np.sum(Po,axis=1)/n_stand*100
     
@@ -240,36 +364,48 @@ for zone in wfss.keys():
     for iT in range(tv_scn.size):
         # Adjust shape parameter to match specified annual probability of 
         # occurrence from the deterministic component
-        b0=wfss[zone]['Beta_Pareto'].copy()       
-        b_shape=wfss[zone]['Pareto_shape_for_Po'].copy()
-        b0[0]=np.exp(b_shape[1]*np.log(wfss[zone]['Po_Det_WF_Scn4'][iT])+b_shape[0])
-        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(n_stand,b0)  
+        b0=wfss[zone]['Beta_Pareto_Cal'].copy()
+        Scale=wfss[zone]['Pareto_scale_to_match_Po_mu'][1]*wfss[zone]['Po_Det_WF_Scn4'][iT]+wfss[zone]['Pareto_scale_to_match_Po_mu'][0]
+        b0[1]=-Scale
+        b0[2]=Scale
+        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(1,n_stand,b0)  
     # Convert to percent area of occurrence
     wfss[zone]['PctOcc_DetPlusRand_WF_Scn4']=np.sum(Po,axis=1)/n_stand*100
 
 # Plot annual percent occurrence
-t0=1
+zone='IDF'
+t0=1000
 plt.close('all'); 
 plt.bar(tv_scn[t0:],wfss[zone]['PctOcc_DetPlusRand_WF_Scn1'][t0:],1)
 plt.plot(tv_scn[t0:],gu.movingave(wfss[zone]['PctOcc_DetPlusRand_WF_Scn1'][t0:],50,'historical'),linewidth=3)
+plt.bar(tv_scn[t0:],wfss[zone]['PctOcc_DetPlusRand_WF_Scn4'][t0:],1)
+plt.plot(tv_scn[t0:],gu.movingave(wfss[zone]['PctOcc_DetPlusRand_WF_Scn4'][t0:],50,'historical'),linewidth=3)
 
-# Save
+#%% Save
+
+# Remove occurrence data (no need to save)
+flg=0
+if flg==1:
+    for zone in wfss.keys():
+        del wfss[zone]['Oc']
+
 gu.opickle(PathData,wfss)
 
 #%% Histogram of burn severity rating in 2017
+# The mortality rates developed here are manually entered into the Parameters_WildfireStatesModels.xlsx
 
 # Import data
 dBSR=gu.ReadExcel(r'Z:\!Workgrp\Forest Carbon\Data\BC1ha\Disturbances\VEG_BURN_SEVERITY_SP.xlsx')
 zBSR=gis.OpenGeoTiff(r'Z:\!Workgrp\Forest Carbon\Data\BC1ha\Disturbances\VEG_BURN_SEVERITY_SP_2017.tif')
 
 # Check data
-#plt.matshow(zBSR.Data)
+#plt.matshow(zBSR['Data'])
 
 # Get number of occurrences (exclude unknown class)
-u=np.unique(zBSR.Data[zBSR.Data!=5])
+u=np.unique(zBSR['Data'][zBSR['Data']!=5])
 N=np.zeros(u.size)
 for i in range(u.size):
-    ind=np.where(zBSR.Data.flatten()==u[i])[0]
+    ind=np.where(zBSR['Data'].flatten()==u[i])[0]
     N[i]=ind.size
 
 # Percent frequency
@@ -277,17 +413,35 @@ p=N/np.sum(N)*100
 print(np.round(p))
 
 # Define pre-industrial distribution
-p_pi=np.array([25,45,25,5])
+p_pi=p.copy()
+trns=0.2*p_pi[2]
+p_pi[1]=p_pi[1]+trns
+p_pi[2]=p_pi[2]-trns
+trns=0.2*p_pi[3]
+p_pi[2]=p_pi[2]+trns
+p_pi[3]=p_pi[3]-trns
 np.sum(p_pi)
+
+# Define future distribution
+p_fut=p.copy()
+trns=0.2*p_fut[2]
+p_fut[1]=p_fut[1]-trns
+p_fut[2]=p_fut[2]+trns
+trns=0.2*p_fut[3]
+p_fut[2]=p_fut[2]-trns
+p_fut[3]=p_fut[3]+trns
+np.round(np.sum(p_fut))
+np.round(p_fut)
 
 # Plot histogram
 plt.close('all')
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(10,5.5))
-ax.bar(u-0.16,p,0.3,facecolor=[0.8,0.8,0.8],label='Modern era (observed)')
-ax.bar(u+0.16,p_pi,0.3,facecolor=[0.25,0.5,1],label='Pre-industrial era')
+ax.bar(u-0.22,p_pi,0.2,facecolor=[0.25,0.5,1],label='Pre-observation period')
+ax.bar(u,p,0.2,facecolor=[0.7,0.9,0.55],label='Observation period')
+ax.bar(u+0.22,p_fut,0.2,facecolor=[0.7,0,1],label='Future period')
 ax.set(position=[0.1,0.1,0.84,0.86],xticks=np.arange(1,5,1),xticklabels=dBSR['Code'][0:5],
        ylabel='Probability (%)')
-ax.legend(loc='upper right',frameon=False)
+ax.legend(loc='upper left',frameon=False)
 gu.PrintFig(PathFigures + '\\BurnSeverityDistribution2017','png',900)
 
 
