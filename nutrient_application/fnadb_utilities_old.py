@@ -15,9 +15,10 @@ import geopandas as gpd
 import fiona
 import matplotlib.pyplot as plt
 import gc
-from fcgadgets.pyscripts import utilities_general as gu
-from fcgadgets.pyscripts import utilities_gis as gis
+from fcgadgets.macgyver import utilities_general as gu
+from fcgadgets.macgyver import utilities_gis as gis
 from sklearn.utils import resample
+import statsmodels.api as sm
 
 #%% Set paths
 
@@ -51,9 +52,11 @@ plt.rcParams.update(params)
 
 #%% Import NutC database
 
-path=r'G:\My Drive\Data\NutC Database\NutC Database.xlsx'
-sheetname='Table1'
-d=gu.ReadExcel(path,sheetname)
+path=r'C:\Users\rhember\Documents\Data\Nutrient Addition Experiments Database\Nutrient Addition Experiments Database.xlsx'
+d=gu.ReadExcel(path,'Table1')
+
+d['N Total']=d['N Num Apps']*d['N Dose Per App (kgN/ha)']
+
 
 #%% Global relative net stemwood biomass response
 
@@ -62,8 +65,8 @@ ikp=np.where( (d['Stemwood Volume Growth Net DR (%)']>-100) &
              (np.isnan(d['Stemwood Volume Growth Net DR (%)'])==False) &
              (d['Duration (years)']>=5) &
              (d['Thinned']!='NoNo') &
-             (d['P Num Apps']==0) & 
-             (d['Biome']=='Cold Temperate') )[0]
+             (d['P Num Apps']==0) )[0]
+#(d['Biome']=='Cold Temperate')
 
 y=d['Stemwood Volume Growth Net DR (%)'][ikp]
 
