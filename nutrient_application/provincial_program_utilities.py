@@ -54,7 +54,8 @@ def Calc_PercentOfStandsHarvested(meta,dmec):
 
 #%% Age at time of fertilization (from VRI)
 
-def Calc_AgeAtTimeOfFert_FromVRI(meta,dmec,vri):
+def Calc_AgeAtTimeOfFert_FromVRI(meta,dmec,ba):
+    
     AgeAtFert=np.nan*np.ones(1000000)
     cnt=0
     cnt_full=0
@@ -71,14 +72,14 @@ def Calc_AgeAtTimeOfFert_FromVRI(meta,dmec,vri):
         if indFert.size==0:
             continue    
     
-        Age=vri['PROJ_AGE_1'][iStand]
+        Age=ba['PROJ_AGE_1'][iStand]
     
         if Age<0:
             continue
     
         for iFert in range(indFert.size):
             
-            dYear=vri['REFERENCE_YEAR'][iStand]-dmec[iStand]['Year'][indFert[iFert]]
+            dYear=ba['Year'][iStand]-dmec[iStand]['Year'][indFert[iFert]]
             AgeAtFert[cnt]=Age-dYear 
             cnt=cnt+1
 
