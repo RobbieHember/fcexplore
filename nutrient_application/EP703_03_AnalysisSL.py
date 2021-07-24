@@ -3,23 +3,10 @@
 
 ANALYSIS OF EP703 IN SUPPORT OF ESTIMATING THE GHG BENEFIT FROM COASTAL 
 FERTILIZATION
-
-Steps:
-    1) Import data
-    2) Quality assurance
-    3) Descriptive statistics
-    4) N response vs. time since N addition
-
-Inputs:
-    1) EP703 stand-level dataframe from EP703_01_ProcessRawData.py
-
-Outputs:
-    1) Graphics for article
-    2) Spreadsheets for inspection and article tables
     
 ============================================================================'''
 
-#%% Import Modules
+#%% Import modules
 
 import os
 import numpy as np
@@ -33,7 +20,7 @@ import scipy.io as spio
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from scipy import stats, linalg
-from fcgadgets.utilities import utilities_general as gu
+from fcgadgets.macgyver import utilities_general as gu
 
 #%% Set figure properties
 
@@ -178,7 +165,7 @@ for k in d.keys():
 uTSF=np.unique(np.column_stack((sobs['TSF_t0'],sobs['TSF_t1'])).astype(float),axis=0)
 
 dose=450
-spc='FD'
+spc='HW'
 
 iC0=np.where( (sobs['Spc1_ID_t0']==spc) & (sobs['TSF_t0']==-1) & (sobs['N_Dose']==0) )[0]
 iF0=np.where( (sobs['Spc1_ID_t0']==spc) & (sobs['TSF_t0']==-1) & (sobs['N_Dose']==dose) )[0]
@@ -198,7 +185,6 @@ Bsw_t1_C=np.nan*np.ones(id_t0_C.shape[0])
 for i in range(id_t0_C.shape[0]):
     ind=np.where( (sobs['ID_Site']==id_t0_C[i,0]) & (sobs['ID_Plot']==id_t0_C[i,1]) & (sobs['TSF_t0']==0) & (sobs['N_Dose']==0) )[0]
     Bsw_t1_C[i]=np.nanmean(sobs['Bsw_t0'][ind])
-
 Bsw_t1_F=np.nan*np.ones(id_t0_F.shape[0])
 for i in range(id_t0_F.shape[0]):
     ind=np.where( (sobs['ID_Site']==id_t0_F[i,0]) & (sobs['ID_Plot']==id_t0_F[i,1]) & (sobs['TSF_t0']==0) & (sobs['N_Dose']>0) )[0]
@@ -214,7 +200,7 @@ stats_F=np.array([np.nanmean(Gnet_F[ikp]),np.nanstd(Gnet_F[ikp])/np.sqrt(ikp.siz
 print(stats_C)
 print(stats_F)
 
-stats_C[0]/stats_F[0]
+stats_F[0]/stats_C[0]
 
 
 #%% Nitrogen response of biomass fluxes vs. time since fertilization
@@ -365,7 +351,7 @@ uDose=np.array([225,450,675])
 tsf=np.arange(1971,2012,1)
 
 uTSF=np.unique(np.column_stack((sobs['Year_t0'],sobs['Year_t1'])).astype(float),axis=0)
-uTSF=uTSF[1:,:]
+#uTSF=uTSF[1:,:]
 
 uSpc=['FD','HW']
 
@@ -421,7 +407,7 @@ for iSpc in range(len(uSpc)):
 # Plot
 #------------------------------------------------------------------------------
             
-spc='FD'
+spc='HW'
 
 plt.close('all'); ms=2; Alpha=0.14
 fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(15.5,10.5))
@@ -453,9 +439,9 @@ ax[0,1].plot([1965,2015],[0,0],'k-')
 ax[0,1].fill_between(tsf,rsT[spc]['Bsw_M'][225]['DA_mu']-rsT[spc]['Bsw_M'][225]['DA_se'],
   rsT[spc]['Bsw_M'][225]['DA_mu']+rsT[spc]['Bsw_M'][225]['DA_se'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
 ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
-#ax[0,1].fill_between(tsf,rsT[spc]['Bsw_M'][450]['DA_mu']-rsT[spc]['Bsw_M'][450]['DA_se'],
-#  rsT[spc]['Bsw_M'][450]['DA_mu']+rsT[spc]['Bsw_M'][450]['DA_se'],color=[0,0.7,0],alpha=Alpha,linewidth=0)
-#ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][450]['DA_mu'],'-s',color=[0,0.7,0],markersize=ms)
+ax[0,1].fill_between(tsf,rsT[spc]['Bsw_M'][450]['DA_mu']-rsT[spc]['Bsw_M'][450]['DA_se'],
+  rsT[spc]['Bsw_M'][450]['DA_mu']+rsT[spc]['Bsw_M'][450]['DA_se'],color=[0,0.7,0],alpha=Alpha,linewidth=0)
+ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][450]['DA_mu'],'-s',color=[0,0.7,0],markersize=ms)
 #ax[0,1].fill_between(tsf,rsT[spc]['Bsw_M'][675]['DA_mu']-rsT[spc]['Bsw_M'][675]['DA_se'],
 #  rsT[spc]['Bsw_M'][675]['DA_mu']+rsT[spc]['Bsw_M'][675]['DA_se'],color=[0.5,0,1],alpha=Alpha,linewidth=0)
 #ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][675]['DA_mu'],'-d',color=[0.5,0,1],markersize=ms)
@@ -474,10 +460,6 @@ ax[1,1].set(position=[0.57,0.07,0.42,0.41],xlim=[1970,2012],xlabel='Time since N
 gu.axletters(ax,plt,0.03,0.92,['Annual','Annual','Cumulative','Cumulative'],0.05)
 
 #gu.PrintFig(PathFigures + '\\DA_vs_TSF_' + spc,'png',900)
-
-
-
-
 
 
 
@@ -604,7 +586,7 @@ for i in range(len(a)):
 
 #%% Look at relationship between initial biomass and delta growth
 
-Dose=450
+Dose=225
 iTSF=np.where( (uTSF[:,0]>0) & (uTSF[:,0]<20) )[0]
 cols=['dB','dG','dNet','rdB','rdG','rdNet']
 df=pd.DataFrame(data=np.nan*np.ones((len(LeadSpc),len(cols))),columns=cols)
@@ -666,7 +648,6 @@ for i in range(0,2):
 gu.axletters(ax,plt,0.03,0.92)
 
 #gu.PrintFig(PathFigures + '\\SL_DeltaG_Vs_InitB','png',dpi=900)
-
 
 #%% Nonlinear model
 
@@ -1351,16 +1332,18 @@ for iSpc in range(len(uSpc)):
 
 
 
-Spc='HW'
-nam='RGR'
-Dose=450
+Spc='FD'
+nam='Bsw_G'
+Dose=225
+
+plt.close('all')
+plt.plot(tv,np.nanmean(rts[Spc][Dose]['y_f'][nam],axis=1)-np.nanmean(rts[Spc][Dose]['y_c'][nam],axis=1),'-o')
+
+
 
 plt.close('all')
 plt.plot(tv,np.nanmean(rts[Spc][Dose]['y_c'][nam],axis=1),'-o')
 plt.plot(tv,np.nanmean(rts[Spc][Dose]['y_f'][nam],axis=1),'-s')
-
-plt.close('all')
-plt.plot(tv,np.nanmean(rts[Spc][Dose]['y_f'][nam],axis=1)-np.nanmean(rts[Spc][Dose]['y_c'][nam],axis=1),'-o')
 
 
 
@@ -1582,7 +1565,7 @@ ax[3,1].plot(uA,fA_mu[1][0]['Bsw_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[3,1].set(position=[0.58,0.06,0.42,0.2],xlim=xlim,xlabel='Stand age, years',ylim=[0,400],ylabel='Stemwood biomas (Mg C/ha)')
 
 gu.axletters(ax,plt,0.03,0.85,['Douglas-fir','Western hemlock','','','',''],0.05)
-plt.savefig(r'G:\My Drive\Figures\GHGBenefit_EP703\AgeResponse_Yield_StandLevel.png',format='png',dpi=900)
+#plt.savefig(r'G:\My Drive\Figures\GHGBenefit_EP703\AgeResponse_Yield_StandLevel.png',format='png',dpi=900)
 
 
 #%% Quality assurance check
