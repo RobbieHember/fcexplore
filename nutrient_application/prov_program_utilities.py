@@ -384,6 +384,35 @@ def Calc_SiteIndex(meta,ba):
     
     return
 
+#%% Histogram of projected volume
+
+def Plot_MerchVolume(ba):
+
+    y=ba['LIVE_STAND_VOLUME_125']
+    
+    # Exceedences
+    ind=np.where(ba['LIVE_STAND_VOLUME_125']>400)[0]
+    txt='Percent exceeding 400 m3/ha = ' + str(np.round(ind.size/y.size*100)) 
+    print(txt)
+    
+    bw=10; 
+    bin=np.arange(0,1000,bw)
+    bA=np.zeros(bin.size)
+    for i in range(bin.size):
+        ind=np.where( np.abs(y-bin[i])<=bw/2 )[0]
+        bA[i]=ind.size
+    bA=bA/np.sum(bA)*100
+
+    plt.close('all');
+    fig,ax=plt.subplots(1,figsize=gu.cm2inch(12,5));
+    ax.bar(bin,bA,bw*0.8,ec='None') #'o',ms=6,mec='k',mfc='w',lw=1)    
+    #ax[0].set(position=[0.13,0.13,0.82,0.82],xlim=[-2.5,67.5],xticks=np.arange(0,100,5),xlabel='Stand age, years',ylabel='Frequency (%)')
+    ax.set(xlim=[-10,1010],xlabel='Live stemwood volume, UL = DBH > 12.5 cm (m3/ha)',ylabel='Frequency (%)')
+    ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
+    #gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Fertilization\NutrientManagementSummary\HarvestRate','png',500)
+
+    return
+
 #%% Identify what distrubances precede fertilization 
 
 def Calc_PrecedingDisturbance(meta,dmec):
