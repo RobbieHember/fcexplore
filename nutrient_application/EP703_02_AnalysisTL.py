@@ -14,13 +14,13 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from scipy import stats, linalg
 from subprocess import call
-from fcgadgets.utilities import utilities_general as gu
+from fcgadgets.macgyver import utilities_general as gu
 import warnings
 warnings.filterwarnings('ignore')
 
 #%% Import data
 
-PathProject=r'G:\My Drive\Data\EP703'
+PathProject=r'C:\Users\rhember\Documents\Data\EP703'
 PathFigures=r'G:\My Drive\Figures\EP703'
 
 # Import site information
@@ -36,7 +36,6 @@ sobs=gu.ipickle(PathProject + '\\Processed\\EP703_SL.pkl')
 # Import tree-level data
 tobs=gu.ipickle(PathProject + '\\Processed\\EP703_TL.pkl')
 #tobs=pd.read_excel(PathProject + '\\Processed\\EP703_TOBS.xlsx')
-
 
 #%% Add derived variables, adjustments
 
@@ -56,6 +55,89 @@ for i in range(uSite.size):
     else:
         tobs['SpcLead'][indT]=2
         Nhw=Nhw+1
+
+tobs['RGR BA']=(np.log(tobs['BA_t1'])-np.log(tobs['BA_t0']))/tobs['DT']
+
+#%% Individual plots
+
+
+uCC=np.array([1,2,3,4])
+
+DA_Pm=np.zeros(uCC.size)
+DA_Bsw_G=np.zeros(uCC.size)
+DA_BA_G=np.zeros(uCC.size)
+DA_BA_RGR=np.zeros(uCC.size)
+DA_H_obs_G=np.zeros(uCC.size)
+
+DR_Pm=np.zeros(uCC.size)
+DR_Bsw_G=np.zeros(uCC.size)
+DR_BA_G=np.zeros(uCC.size)
+DR_BA_RGR=np.zeros(uCC.size)
+DR_H_obs_G=np.zeros(uCC.size)
+for iCC in range(uCC.size):
+    iC=np.where( (tobs['N_Dose']==0) & (tobs['TSF_t0']>=0) & (tobs['TSF_t1']<=18) & (tobs['CrownClass_t0']==uCC[iCC]) & (tobs['ID_Spc_t0']==2) )[0]
+    iF=np.where( (tobs['N_Dose']==225) & (tobs['TSF_t0']>=0) & (tobs['TSF_t1']<=18) & (tobs['CrownClass_t0']==uCC[iCC]) & (tobs['ID_Spc_t0']==2) )[0]
+    Pm_C=np.nansum(tobs['Mort'][iC])/iC.size*100
+    Pm_F=np.nansum(tobs['Mort'][iF])/iF.size*100
+    Bsw_G_C=np.nanmean(tobs['Bsw_G'][iC])
+    Bsw_G_F=np.nanmean(tobs['Bsw_G'][iF])
+    BA_G_C=np.nanmean(tobs['BA_G'][iC])
+    BA_G_F=np.nanmean(tobs['BA_G'][iF])
+    BA_RGR_C=np.nanmean(tobs['RGR BA'][iC])
+    BA_RGR_F=np.nanmean(tobs['RGR BA'][iF])
+    H_obs_G_C=np.nanmean(tobs['H_obs_G'][iC])
+    H_obs_G_F=np.nanmean(tobs['H_obs_G'][iF])
+    
+    DA_Pm[iCC]=Pm_F-Pm_C
+    #G[iCC]=np.mean(tobs['RGR BA'][ind])
+    DA_Bsw_G[iCC]=Bsw_G_F-Bsw_G_C
+    DA_BA_G[iCC]=BA_G_F-BA_G_C
+    DA_BA_RGR[iCC]=BA_RGR_F-BA_RGR_C
+    DA_H_obs_G[iCC]=H_obs_G_F-H_obs_G_C
+    
+    DR_Pm[iCC]=(Pm_F-Pm_C)/Pm_C*100
+    #G[iCC]=np.mean(tobs['RGR BA'][ind])
+    DR_Bsw_G[iCC]=(Bsw_G_F-Bsw_G_C)/Bsw_G_C*100
+    DR_BA_G[iCC]=(BA_G_F-BA_G_C)/BA_G_C*100
+    DR_BA_RGR[iCC]=(BA_RGR_F-BA_RGR_C)/BA_RGR_C*100
+    DR_H_obs_G[iCC]=(H_obs_G_F-H_obs_G_C)/H_obs_G_C*100
+
+plt.close('all')
+plt.figure(); plt.bar(uCC,DR_Pm,0.85)
+plt.figure(); plt.bar(uCC,DR_BA_G,0.85)
+#plt.figure(); plt.bar(uCC,DR_BA_RGR,0.85)
+plt.figure(); plt.bar(uCC,DR_H_obs_G,0.85)
+
+#%%
+
+
+
+id_Inst=3
+ind=np.where( (tobs['ID_Site']==id_Inst) & (tobs['N_Dose']==0) )[0]
+uP=np.unique(tobs['ID_Plot'][ind])
+
+uCC=np.array([1,2,3,4])
+
+M=np.zeros(uCC.size)
+G=np.zeros(uCC.size)
+for iCC in range(uCC.size):
+    ind=np.where( (tobs['ID_Site']==id_Inst) & (tobs['ID_Plot']==uP[1]) & (tobs['TSF_t0']==0) & (tobs['CrownClass_t0']==uCC[iCC]) )[0]
+    M[iCC]=np.sum(tobs['Mort'][ind])
+    #G[iCC]=np.mean(tobs['RGR BA'][ind])
+    G[iCC]=np.mean(tobs['Bsw_G'][ind])
+
+plt.close('all')
+plt.figure(); plt.bar(uCC,M,0.85)
+plt.figure(); plt.bar(uCC,G,0.85)
+
+#%%
+
+ind=np.where( (tobs['ID_Site']==id_Inst) & (tobs['ID_Plot']==uP[1]) & (tobs['TSF_t0']==0) )[0]
+tobs['Mort'][ind]
+tobs['Bsw_G'][ind]
+plt.close('all')
+plt.hist(tobs['Bsw_t0'][ind])
+plt.hist(tobs['H_obs_G'][ind])
 
 #%% Set graphics parameters
         

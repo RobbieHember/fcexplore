@@ -12,7 +12,6 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import gdal
 import pyproj
 import geopandas as gpd
 from scipy.optimize import curve_fit

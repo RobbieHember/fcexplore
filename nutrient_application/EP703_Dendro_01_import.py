@@ -1,5 +1,5 @@
 '''
-EP703 RETROSPECTIVE MONITORING STUDY
+EP703 RETROSPECTIVE MONITORING STUDY - IMPORT DATA
 '''
 
 #%% Import modules
@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from fcgadgets.macgyver import utilities_general as gu
+import scipy.io
+import copy
 
 from scipy.optimize import curve_fit
 import scipy.io as spio
@@ -18,7 +20,7 @@ from scipy import stats, linalg
 
 #%% Graphics parameters
 
-fs=6
+fs=8
 params={'font.sans-serif':'Arial','font.size':fs,'axes.edgecolor':'black','axes.labelsize':fs,'axes.labelcolor':'black','axes.titlesize':fs,'axes.linewidth':0.5,'lines.linewidth':0.5,
         'text.color':'black','xtick.color':'black','xtick.labelsize':fs,'xtick.major.width':0.5,'xtick.major.size':3,'xtick.direction':'in','ytick.color':'black','ytick.labelsize':fs,
         'ytick.major.width':0.5,'ytick.major.size':3,'ytick.direction':'in','legend.fontsize':fs,'savefig.dpi':300,'savefig.transparent':True}
@@ -28,19 +30,22 @@ plt.rcParams.update(params)
 
 meta={}
 meta['Paths']={}
-meta['Paths']['Inputs']=r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Processed\Cores'
+meta['Paths']['Inputs']=r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Given\cross_dated_cores received 20211105'
+meta['Paths']['Figures']=r'C:\Users\rhember\OneDrive - Government of BC\Figures\EP703\TreeRings'
 
 #%%
 
 # Import tree-level observations
-dTL=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Processed\Cores\EP703_RM_Master_stacked.xlsx')
+dTL=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Given\cross_dated_cores received 20211105\EP703_RM_Master_stacked_pith_est.xlsx')
 
 # Import tree summary file 
-dTS=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Raw\Field Data received 20210125\RM Tree Summary.xlsx')
+dTS=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Given\Field Data received 20210125\RM Tree Summary.xlsx')
 
 # Import plot summary file
-dPS=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Raw\Field Data received 20210125\RM Plot Summary.xlsx')
+dPS=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Given\Field Data received 20210125\RM Plot Summary.xlsx')
 
+# Climate data
+clm=gu.ImportMat(r'C:\Users\rhember\Documents\Data\TreeRings\EP703\Given\Climate\EP703_TR_Climate.mat','clm')
 
 #%% Add derived variables
 
@@ -52,6 +57,9 @@ for iU in range(u.shape[0]):
     ind=np.where( (dTL['ID_Inst']==u[iU,0]) & (dTL['ID_Plot']==u[iU,1]) & (dTL['ID_Tree']==u[iU,2]) )[0]
     dTL['ID_Tree Unique'][ind]=cnt
     cnt=cnt+1
+
+# Adjust units of BAI (cm2/yr)
+dTL['BAI']=dTL['BAI']/100
 
 # Add info from site and tree summary files and add some derived variables
 dTL['BGC SS']=np.zeros(dTL['TRW'].size)
@@ -71,6 +79,8 @@ dTL['Bsw Standardized RR']=np.zeros(dTL['TRW'].size)
 dTL['Gsw Standardized AD']=np.zeros(dTL['TRW'].size)
 dTL['Gsw Standardized RR']=np.zeros(dTL['TRW'].size)
 dTL['RGR Standardized RR']=np.zeros(dTL['TRW'].size)
+dTL['Lat']=np.zeros(dTL['TRW'].size)
+dTL['Lon']=np.zeros(dTL['TRW'].size)
 
 uTID=np.unique(dTL['ID_Tree Unique'])
 for iU in range(uTID.size):
@@ -89,6 +99,8 @@ for iU in range(uTID.size):
     
     # Site series
     dTL['BGC SS'][indUT]=dPS['BGC site series'][indPS]
+    dTL['Lat'][indUT]=dPS['Lat'][indPS]
+    dTL['Lon'][indUT]=dPS['Lon'][indPS]
     
     # Index to tree summary file
     indTS=np.where( (dTS['ID_Inst']==dTL['ID_Inst'][indUT[0]]) & (dTS['ID_Plot']==dTL['ID_Plot'][indUT[0]]) & (dTS['ID_Tree']==dTL['ID_Tree'][indUT[0]]) )[0]
@@ -135,16 +147,97 @@ dTL['Treatment']=dTL['Treatment.EP703']
 # Delete fields
 del dTL['Unnamed: 0'],dTL['Treatment.EP703']
 
+# Summarize QA flags
+dTL['QA Summary']=np.zeros(dTL['TRW'].size)
+ind=np.where( (dTL['QC_xdate_flags']=='Good_correlation') | (dTL['QC_xdate_flags']=='Weak_correlation') )[0]
+dTL['QA Summary'][ind]=1
+print('% retained = ' + str(100*np.where(dTL['QA Summary']==1)[0].size/dTL['QA Summary'].size))
+
 # Define unique installations
 uInst=np.unique(dTL['ID_Inst'])
 
 # Define unique site series
 uSS=np.unique(dTL['BGC SS'])
 
+#%% Add climate data
+
+# Define unique coordinates
+uLL=np.unique(np.column_stack((dTL['ID_Inst'],dTL['ID_Plot'],dTL['Lat'],dTL['Lon'])),axis=0)
+
+# Export to process climate data
+flg=0
+if flg==1:
+    df=pd.DataFrame(uLL)
+    df.to_excel(r'G:\My Drive\EP703 TR coordinates.xlsx')
+
+# Define base period for normals
+iTn_ann=np.where( (clm['tv'][:,0]>=1971) & (clm['tv'][:,0]<=2000) )[0]
+iTn_ws=np.where( (clm['tv'][:,0]>=1971) & (clm['tv'][:,0]<=2000) & (clm['tv'][:,1]>=5) & (clm['tv'][:,0]<=9) )[0]
+
+yrs=np.arange(1950,2022,1)
+
+dTL['tmean_ann_n']=np.zeros(dTL['TRW'].size)
+dTL['prcp_ann_n']=np.zeros(dTL['TRW'].size)
+dTL['tmean_gs_r']=np.zeros(dTL['TRW'].size)
+dTL['prcp_gs_r']=np.zeros(dTL['TRW'].size)
+dTL['cwd_gs_r']=np.zeros(dTL['TRW'].size)
+dTL['ws_gs_r']=np.zeros(dTL['TRW'].size)
+for iLL in range(uLL.shape[0]):
+    ind=np.where( (dTL['Lat']==uLL[iLL,2]) & (dTL['Lon']==uLL[iLL,3]) )[0]
+    dTL['tmean_ann_n'][ind]=np.mean(clm['tmean'][iTn_ann,iLL])
+    dTL['prcp_ann_n'][ind]=np.sum(clm['prcp'][iTn_ann,iLL])/(iTn_ann.size/12)
+    for iY in range(yrs.size):
+        iT=np.where( (clm['tv'][:,0]==yrs[iY]) & (clm['tv'][:,1]>=4) & (clm['tv'][:,1]<=9) )[0]
+        iT2=np.where(dTL['Year'][ind]==yrs[iY])[0]
+        dTL['tmean_gs_r'][ind[iT2]]=np.mean(clm['tmean'][iT,iLL])
+        dTL['prcp_gs_r'][ind[iT2]]=np.mean(clm['prcp'][iT,iLL])
+        dTL['cwd_gs_r'][ind[iT2]]=np.mean(clm['etp_tmw'][iT,iLL]-clm['eta_tmw'][iT,iLL])
+        dTL['ws_gs_r'][ind[iT2]]=np.mean(clm['ws_tmw'][iT,iLL])
+
+uC=np.unique(np.column_stack((dTL['tmean_ann_n'],dTL['prcp_ann_n'])),axis=0)
+
+#plt.plot(uC[:,0],uC[:,1],'.')
+
+#%% Get stand-level information from EP703 dataset
+
+sobs=gu.ipickle(r'C:\Users\rhember\Documents\Data\EP703\Processed\EP703_SL.pkl')
+sobs['RGR']=(np.log(sobs['Bsw_t1'])-np.log(sobs['Bsw_t0']))/sobs['DT']
+
+
+dByInst={}
+dByInst['DA_BA_G']=np.zeros(uInst.size)
+dByInst['DR_BA_G']=np.zeros(uInst.size)
+dByInst['DA_Hobs_G']=np.zeros(uInst.size)
+dByInst['DR_Hobs_G']=np.zeros(uInst.size)
+dByInst['DA_Bsw_G']=np.zeros(uInst.size)
+dByInst['DR_Bsw_G']=np.zeros(uInst.size)
+dByInst['DA_RGR']=np.zeros(uInst.size)
+dByInst['DR_RGR']=np.zeros(uInst.size)
+for iInst in range(uInst.size):
+    iC=np.where( (sobs['ID_Site']==uInst[iInst]) & (sobs['N_Dose']==0) & (sobs['TSF_t0']>=0) & (sobs['TSF_t1']<=9) )[0]
+    iF=np.where( (sobs['ID_Site']==uInst[iInst]) & (sobs['N_Dose']==225) & (sobs['TSF_t0']>=0) & (sobs['TSF_t1']<=9) )[0]
+    dByInst['DA_BA_G'][iInst]=np.mean(sobs['BA_G'][iF]-sobs['BA_G'][iC])
+    dByInst['DR_BA_G'][iInst]=np.mean( (sobs['BA_G'][iF]-sobs['BA_G'][iC])/sobs['BA_G'][iC]*100 )
+    dByInst['DA_Hobs_G'][iInst]=np.nanmean(sobs['H_obs_G'][iF]-sobs['H_obs_G'][iC])
+    dByInst['DR_Hobs_G'][iInst]=np.nanmean( (sobs['H_obs_G'][iF]-sobs['H_obs_G'][iC])/sobs['H_obs_G'][iC]*100 )
+    dByInst['DA_Bsw_G'][iInst]=np.mean(sobs['Bsw_G'][iF]-sobs['Bsw_G'][iC])
+    dByInst['DR_Bsw_G'][iInst]=np.mean( (sobs['Bsw_G'][iF]-sobs['Bsw_G'][iC])/sobs['Bsw_G'][iC]*100 )
+    dByInst['DA_RGR'][iInst]=np.median(sobs['RGR'][iF]-sobs['RGR'][iC])
+    dByInst['DR_RGR'][iInst]=np.median( (sobs['RGR'][iF]-sobs['RGR'][iC])/sobs['RGR'][iC]*100 )
+    
+    #plt.close('all')
+    #plt.plot(sobs['TSF_t0'][iC],sobs['N_t0'][iC],'bo')
+    #plt.plot(sobs['TSF_t0'][iF],sobs['N_t0'][iF],'rs')
+    
+    #plt.plot(sobs['TSF_t0'][iC],sobs['Bsw_G'][iC],'bo')
+    #plt.plot(sobs['TSF_t0'][iF],sobs['Bsw_G'][iF],'rs')
+
+
 #%% Comparison between Dob and Dib from cores
 
 # Isolate data
 ikp=np.where( (dTL['Dob 2020']>0) & (dTL['Dib Last']>0) )[0]
+#ikp=np.where( (dTL['Dob 2020']>0) & (dTL['Dib Last']>0) & (dTL['Pith_status']=='Yes') )[0]
 
 # Fit linear best fit relationship
 y=dTL['Dib Last'][ikp]
@@ -165,5 +258,21 @@ ax.plot(xhat,yhat,'r-',lw=1.25)
 ax.set(xlim=[0,80],ylim=[0,80],xlabel='Tape-based Dob in 2020 (cm)',ylabel='Core-based Dib in 2019 (cm)')
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
 plt.tight_layout()
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\EP703\TreeRings\DiameterComparison','png',150)
+#gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\EP703\TreeRings\DiameterComparison','png',150)
 
+#%% Look at individual trees
+
+ind=np.where( (dTL['ID_Tree Unique']==13) )[0]
+
+print(dTL['Est/mm'][ind[0]])
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
+#ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
+#ax.plot(dTL['Time since first ring'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
+ax.plot(dTL['Year'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
+
+#plt.close('all')
+#fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
+#ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
+#ax.plot(dTL['TRW'][ind],dTL['Gsw'][ind],'-ko',ms=3,mec='k',mfc='k')
