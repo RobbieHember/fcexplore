@@ -283,11 +283,11 @@ plt.close('all');
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(12,8)); 
 ax.plot(bin,np.zeros(bin.size),'k-',lw=1,color='k')
 be=(muF-muC)/muC*100
-#ax.plot(bin,be,'-ko',ms=3.5,mfc='w',mec='k',lw=1,color='k')
-be=(muF-muSS3)/muSS3*100
 ax.plot(bin,be,'-ko',ms=3.5,mfc='w',mec='k',lw=1,color='k')
+be=(muF-muSS3)/muSS3*100
+ax.plot(bin,be,'-ro',ms=3.5,mfc='w',mec='r',lw=1,color='r')
 be=(muF-muSS5)/muSS5*100
-#ax.plot(bin,be,'-ko',ms=3.5,mfc='w',mec='k',lw=1,color='k')
+ax.plot(bin,be,'-bo',ms=3.5,mfc='w',mec='b',lw=1,color='b')
 
 
 ##%% Time response
