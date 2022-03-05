@@ -18,8 +18,8 @@ import matplotlib.pyplot as plt
 import pyproj
 from scipy.optimize import curve_fit
 import scipy.io as spio
-import fcgadgets.macgyver.utilities_general as gu
 import warnings
+from fcgadgets.macgyver import utilities_general as gu
 
 warnings.filterwarnings('ignore')
 
@@ -27,7 +27,7 @@ warnings.filterwarnings('ignore')
 
 meta={}
 meta['Paths']={}
-meta['Paths']['Project']=r'I:\My Drive\Data\EP703'
+meta['Paths']['Project']=r'C:\Users\rhember\Documents\Data\EP703'
 meta['Paths']['Inputs']=meta['Paths']['Project'] + '\\Received20190515'
 meta['Paths']['Outputs']=meta['Paths']['Project'] + '\\Processed'
 meta['Paths']['NACID']=r'E:\Data\Climate\NACID'
@@ -135,7 +135,7 @@ varT=['ID_Site','ID_Plot','ID_Tree','Lat','Lon','BEC','SI','AEF','N_Init','pH_Mi
     'TSF_t0','TSF_t1','SA_t0','SA_t1','SN_t0','SN_t1', \
     'SBsw_t0','SBsw_t1','SBswLT_t0','SBswLT_t1', \
     'ID_Spc_t0','Mort','Rec','TreeClass_t0','CrownClass_t0','TopDead_t0','TopDead_t1', \
-    'TopBroke_t0','TopBroke_t1','DA_t0','DA_t1','BA_t0','BA_t1','BA_G', \
+    'TopBroke_t0','TopBroke_t1','DA_t0','DA_t1','D_t0','D_t1','BA_t0','BA_t1','BA_G', \
     'H_obs_t0','H_obs_t1','H_obs_G','H_mod_t0','H_mod_t1','H_mod_G','H_gf_t0','H_gf_t1','H_gf_G', \
     'Bsw_t0','Bsw_t1','Bsw_G','Bsw_mod_t0','Bsw_mod_t1','H_Fit_ITM_t0','H_Fit_ITM_t1']
 tobs={}
@@ -167,7 +167,7 @@ for i in range(uSite.size):
     else: 
         fnam=str(uSite[i])
     
-    pthin=meta['Paths']['Project']['Inputs'] + '\\EP703_inst' + fnam + '.csv'
+    pthin=meta['Paths']['Inputs'] + '\\EP703_inst' + fnam + '.csv'
         
     dfInst=pd.read_csv(pthin)
     
@@ -214,8 +214,8 @@ for i in range(uSite.size):
     YrEst=dSite.Year_Est[iSite[0]]
     
     # Geographic coordinates
-    Lat=dSite.Lat[iSite[0]]+dSite.Lat_1[iSite[0]]/60+dSite.Lat_2[iSite[0]]/(60*60)
-    Lon=-dSite.Lon[iSite[0]]-dSite.Lon_1[iSite[0]]/60-dSite.Lon_2[iSite[0]]/(60*60)
+    Lat=dSite.Lat_Deg[iSite[0]]+dSite.Lat_Min[iSite[0]]/60+dSite.Lat_Sec[iSite[0]]/(60*60)
+    Lon=-dSite.Lon_Deg[iSite[0]]-dSite.Lon_Min[iSite[0]]/60-dSite.Lon_Sec[iSite[0]]/(60*60)
     
     #--------------------------------------------------------------------------
     # Gap fill heights
@@ -772,7 +772,10 @@ for i in range(uSite.size):
             ID_Tree=id0_all[ia[ind_surv]]
             
             VS_t0=vs0_all[ia[ind_surv]]
-                        
+            
+            D_t0=dbh0_all[ia[ind_surv]]
+            D_t1=dbh1_all[ib[ind_surv]]
+            
             BA_t0=ba0_all[ia[ind_surv]]
             BA_t1=ba1_all[ib[ind_surv]]
             BA_G=(BA_t1-BA_t0)/dt
@@ -841,6 +844,7 @@ for i in range(uSite.size):
                    'ID_Spc_t0':ID_Spc_t0[v],'Mort':0,'Rec':0,'TreeClass_t0':TreeClass_t0[v],
                    'CrownClass_t0':CrownClass_t0[v],'TopDead_t0':TopDead_t0[v],'TopDead_t1':TopDead_t1[v],
                    'TopBroke_t0':TopBroke_t0[v],'TopBroke_t1':TopBroke_t1[v],'DA_t0':DA_t0[v],'DA_t1':DA_t1[v],
+                   'D_t0':D_t0[v],'D_t1':D_t1[v],
                    'BA_t0':BA_t0[v],'BA_t1':BA_t1[v],'BA_G':BA_G[v],
                    'H_obs_t0':H_obs_t0[v],'H_obs_t1':H_obs_t1[v],'H_obs_G':H_obs_G[v],
                    'H_mod_t0':H_mod_t0[v],'H_mod_t1':H_mod_t1[v],'H_mod_G':H_mod_G[v],
@@ -863,7 +867,10 @@ for i in range(uSite.size):
                 ID_Tree=id0_all[ia[ind_mort]]
             
                 VS_t0=vs0_all[ia[ind_mort]]
-                        
+                  
+                D_t0=dbh0_all[ia[ind_mort]]
+                D_t1=dbh1_all[ib[ind_mort]]
+                
                 BA_t0=ba0_all[ia[ind_mort]]
                 BA_t1=ba1_all[ib[ind_mort]]
                 BA_G=(BA_t1-BA_t0)/dt
@@ -929,6 +936,7 @@ for i in range(uSite.size):
                                'ID_Spc_t0':ID_Spc_t0[v],'Mort':1,'Rec':0,'TreeClass_t0':TreeClass_t0[v],
                                'CrownClass_t0':CrownClass_t0[v],'TopDead_t0':TopDead_t0[v],'TopDead_t1':TopDead_t1[v],
                                'TopBroke_t0':TopBroke_t0[v],'TopBroke_t1':TopBroke_t1[v],'DA_t0':DA_t0[v],'DA_t1':DA_t1[v],
+                               'D_t0':D_t0[v],'D_t1':D_t1[v],
                                'BA_t0':BA_t0[v],'BA_t1':BA_t1[v],'BA_G':BA_G[v],
                                'H_obs_t0':H_obs_t0[v],'H_obs_t1':H_obs_t1[v],'H_obs_G':H_obs_G[v],
                                'H_mod_t0':H_mod_t0[v],'H_mod_t1':H_mod_t1[v],'H_mod_G':H_mod_G[v],
@@ -953,7 +961,10 @@ for i in range(uSite.size):
                 ID_Tree=id1_all[ib2[ind_rec]]
             
                 VS_t1=vs1_all[ib2[ind_rec]]
-                        
+                     
+                D_t0=np.nan*np.ones(n,dtype=float)
+                D_t1=dbh1_all[ib2[ind_rec]]
+                
                 BA_t0=np.nan*np.ones(n,dtype=float)
                 BA_t1=ba1_all[ib2[ind_rec]]
                 BA_G=np.nan*np.ones(n,dtype=float)
@@ -1019,6 +1030,7 @@ for i in range(uSite.size):
                                'ID_Spc_t0':ID_Spc_t1[v],'Mort':0,'Rec':1,'TreeClass_t0':TreeClass_t0[v],
                                'CrownClass_t0':CrownClass_t0[v],'TopDead_t0':TopDead_t0[v],'TopDead_t1':TopDead_t1[v],
                                'TopBroke_t0':TopBroke_t0[v],'TopBroke_t1':TopBroke_t1[v],'DA_t0':DA_t0[v],'DA_t1':DA_t1[v],
+                               'D_t0':D_t0[v],'D_t1':D_t1[v],
                                'BA_t0':BA_t0[v],'BA_t1':BA_t1[v],'BA_G':BA_G[v],
                                'H_obs_t0':H_obs_t0[v],'H_obs_t1':H_obs_t1[v],'H_obs_G':H_obs_G[v],
                                'H_mod_t0':H_mod_t0[v],'H_mod_t1':H_mod_t1[v],'H_mod_G':H_mod_G[v],
@@ -1049,8 +1061,8 @@ tobs['N_Dose']=tobs['N_Dose'].astype(float)
 
 #%% Save to file
 
-gu.opickle(meta['Paths']['Project']['Outputs'] + '\\EP703_SL.pkl',sobs)
-gu.opickle(meta['Paths']['Project']['Outputs'] + '\\EP703_TL.pkl',tobs)
+gu.opickle(meta['Paths']['Outputs'] + '\\EP703_SL.pkl',sobs)
+gu.opickle(meta['Paths']['Outputs'] + '\\EP703_TL.pkl',tobs)
 
 
 #%% Add environmental data

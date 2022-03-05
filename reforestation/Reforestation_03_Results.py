@@ -1,9 +1,5 @@
 
-'''
-
-REFORESTATION (ALL) - RESULTS
-
-'''
+''' REFORESTATION (ALL) - RESULTS '''
 
 #%% Prepare session
 
