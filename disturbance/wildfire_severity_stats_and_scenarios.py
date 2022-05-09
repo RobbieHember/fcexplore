@@ -16,11 +16,15 @@ import time
 import gc as garc
 import scipy.stats as stats
 import statsmodels.api as sm
-from fcgadgets.utilities import utilities_general as gu
-from fcgadgets.utilities import utilities_gis as gis
-from fcgadgets.utilities import utilities_inventory as invu
-from fcgadgets.taz import general_stat_models as gensm
-from fcgadgets.taz import wildfire_stat_models as wfsm
+from fcgadgets.macgyver import utilities_general as gu
+from fcgadgets.macgyver import utilities_gis as gis
+from fcgadgets.macgyver import utilities_inventory as invu
+from fcgadgets.taz import aspatial_stat_models as asm
+#from fcgadgets.taz import wildfire_stat_models as wfsm
+
+#%% Set figure properties
+
+plt.rcParams.update( gu.Import_GraphicsParameters('spyder_fs6') )
 
 #%% Path of file to store stats and scenarios
 
@@ -28,10 +32,10 @@ PathData=r'C:\Users\rhember\Documents\Data\Taz Datasets\Wildfire Stats and Scena
 
 PathFigures=r'C:\Users\rhember\Documents\Figures\Wildfire\Wildfire_Stats_Sceanrios_By_BGCZ'
 
-#%% Set figure properties
+#%% Project assumptions
 
-params=gu.Import_GraphicsParameters('spyder_fs7')
-plt.rcParams.update(params)
+tv_obs=np.arange(1920,2020,1)
+tv_scn=np.arange(-2000,2201,1)
 
 #%% Import BGC zones
 
@@ -42,22 +46,20 @@ dBECZ=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz_lut.xlsx')
 
 #%% Total area burned
 
-tv_obs=np.arange(2009,2020,1)
-A=np.zeros(tv_obs.size)
-for iT in range(tv_obs.size):
-    print(tv_obs[iT])
-    zFire=gis.OpenGeoTiff(r'Z:\!Workgrp\Forest Carbon\Data\BC1ha\Disturbances\PROT_HISTORICAL_FIRE_POLYS_SP_' + str(tv_obs[iT]) + '.tif')
-    ind=np.where(zFire['Data'].flatten()>0)[0]
-    A[iT]=ind.size
-    del zFire
-    garc.collect()
-
-plt.bar(tv_obs,A/1e6,0.7,facecolor=[0.5,0,0])
+#tv_obs=np.arange(2009,2020,1)
+#A=np.zeros(tv_obs.size)
+#for iT in range(tv_obs.size):
+#    print(tv_obs[iT])
+#    zFire=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PROT_HISTORICAL_FIRE_POLYS_SP_' + str(tv_obs[iT]) + '.tif')
+#    ind=np.where(zFire['Data'].flatten()>0)[0]
+#    A[iT]=ind.size
+#    del zFire
+#    garc.collect()
+#
+#plt.bar(tv_obs,A/1e6,0.7,facecolor=[0.5,0,0])
 
 
 #%% Import wildfire data and calculate prob occ
-
-tv_obs=np.arange(1920,2020,1)
 
 wfss={}
 for iZ in range(dBECZ['ZONE'].size):
@@ -82,6 +84,9 @@ for iT in range(tv_obs.size):
         wfss[nam]['Oc'][iT,:]=zFires[ind]
     del zFire,zFiref,zFires
     garc.collect()
+
+# Save 
+#gu.opickle(r'C:\Users\rhember\Documents\Data\Wildfire\Taz Calibration\wfss.pkl',wfss)
 
 #%% Calculate annual probability of occurrence
     
@@ -126,7 +131,7 @@ Po_hat={}
 for zone in wfss.keys():
     Po=np.zeros((tv_scn.size,n_stand))    
     for iT in range(tv_scn.size):        
-        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(1,n_stand,wfss[zone]['Beta_Pareto'])    
+        Po[iT,:]=asm.GenerateDisturbancesFromPareto(1,n_stand,wfss[zone]['Beta_Pareto'])    
     # Convert to percent area of occurrence
     Po_hat[zone]=np.mean(np.sum(Po,axis=1)/n_stand)
 
@@ -286,8 +291,6 @@ for k in wfss.keys():
 # Import parameters
 # wfss=gu.ipickle(PathData)
 
-tv_scn=np.arange(-2000,2201,1)
-
 for zone in wfss.keys():
 
     Po_obs=wfss[zone]['Po_obs']*100
@@ -323,8 +326,9 @@ gu.opickle(PathData,wfss)
 
 # Plot deteriministic component of scenarios
 zone='IDF'
+
 plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,5.5))
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(10,5.5))
 rc=patches.Rectangle((1920,0),100,1.2,facecolor=[0.85,0.85,0.85])
 ax.add_patch(rc)
 ax.plot(tv_scn,wfss[zone]['Po_Det_WF_Scn1'],'b-',linewidth=1.5,label='Wildfire occurrence Scn. 1 (pre-industrial baseline)')
@@ -333,7 +337,7 @@ ax.plot(tv_scn,wfss[zone]['Po_Det_WF_Scn3'],'c-.',linewidth=1.5,label='Wildfire 
 ax.plot(tv_scn,wfss[zone]['Po_Det_WF_Scn4'],'r--',linewidth=1.5,label='Wildfire occurrence Scn. 4')
 ax.annotate('Modern era',(1920+50,0.75),ha='center')
 ax.legend(loc='upper left',frameon=False)
-ax.set(position=[0.065,0.17,0.92,0.8],ylim=[0,1.2],xlim=[1000-0.5,tv_scn[-1]+1+0.5],
+ax.set(position=[0.065,0.17,0.92,0.8],ylim=[0,1.2],xlim=[1500-0.5,tv_scn[-1]+1+0.5],
        xticks=np.arange(tv_scn[0],tv_scn[-1]+100,100),
        ylabel='Annual probability (% yr$^-$$^1$)',
        xlabel='Time, calendar year')

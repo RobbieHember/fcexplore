@@ -1,5 +1,7 @@
 '''
+
 EP703 RETROSPECTIVE MONITORING STUDY - IMPORT DATA
+
 '''
 
 #%% Import modules
@@ -46,15 +48,33 @@ dPS=gu.ReadExcel(r'C:\Users\rhember\OneDrive - Government of BC\Shared\EP703\Ret
 # Climate data
 clm=gu.ImportMat(r'C:\Users\rhember\OneDrive - Government of BC\Shared\EP703\Retrospective Monitoring Study\Data\Given\Climate\Received 20211024 from RHember\EP703_TR_Climate.mat','clm')
 
+# Import EP703 tree-level data
+dEPT=gu.ipickle(r'C:\Users\rhember\Documents\Data\EP703\Processed\EP703_TL.pkl')
+
+#%% Custom functions
+
+# Function (tree height as a function of basal area)
+def funcH(x,a,b):
+    return a*x**b
+
 #%% Add derived variables
 
 # Add unique tree ID
-dTL['ID_Tree Unique']=np.zeros(dTL['TRW'].size,dtype=int)
+dTL['ID_Tree_Unique']=np.zeros(dTL['TRW'].size,dtype=int)
 cnt=0
 u=np.unique(np.column_stack((dTL['ID_Inst'],dTL['ID_Plot'],dTL['ID_Tree'])),axis=0)
 for iU in range(u.shape[0]):
     ind=np.where( (dTL['ID_Inst']==u[iU,0]) & (dTL['ID_Plot']==u[iU,1]) & (dTL['ID_Tree']==u[iU,2]) )[0]
-    dTL['ID_Tree Unique'][ind]=cnt
+    dTL['ID_Tree_Unique'][ind]=cnt
+    cnt=cnt+1
+
+# Add unique plot ID
+dTL['ID_Plot_Unique']=np.zeros(dTL['TRW'].size,dtype=int)
+cnt=0
+u=np.unique(np.column_stack( (dTL['ID_Inst'],dTL['ID_Plot']) ),axis=0)
+for iU in range(u.shape[0]):
+    ind=np.where( (dTL['ID_Inst']==u[iU,0]) & (dTL['ID_Plot']==u[iU,1]) )[0]
+    dTL['ID_Plot_Unique'][ind]=cnt
     cnt=cnt+1
 
 # Adjust units of BAI (cm2/yr)
@@ -66,32 +86,34 @@ dTL['Dob 2020']=np.zeros(dTL['TRW'].size)
 dTL['H 2020']=np.zeros(dTL['TRW'].size)
 dTL['Year First']=np.zeros(dTL['TRW'].size)
 dTL['Year Last']=np.zeros(dTL['TRW'].size)
-dTL['Time since first ring']=np.zeros(dTL['TRW'].size)
+dTL['Age']=np.zeros(dTL['TRW'].size)
 dTL['Dib']=np.zeros(dTL['TRW'].size)
 dTL['Dib Last']=np.zeros(dTL['TRW'].size)
+dTL['H obs EP']=np.zeros(dTL['TRW'].size)
+dTL['Dob obs EP']=np.zeros(dTL['TRW'].size)
 dTL['Bsw']=np.zeros(dTL['TRW'].size)
 dTL['Gsw']=np.zeros(dTL['TRW'].size)
 dTL['RGR']=np.zeros(dTL['TRW'].size)
-dTL['TRW Standardized RR']=np.zeros(dTL['TRW'].size)
-dTL['BAI Standardized RR']=np.zeros(dTL['TRW'].size)
-dTL['Bsw Standardized RR']=np.zeros(dTL['TRW'].size)
-dTL['Gsw Standardized AD']=np.zeros(dTL['TRW'].size)
-dTL['Gsw Standardized RR']=np.zeros(dTL['TRW'].size)
-dTL['RGR Standardized RR']=np.zeros(dTL['TRW'].size)
+dTL['TRW RR']=np.zeros(dTL['TRW'].size)
+dTL['BAI RR']=np.zeros(dTL['TRW'].size)
+dTL['Bsw RR']=np.zeros(dTL['TRW'].size)
+dTL['Gsw AD']=np.zeros(dTL['TRW'].size)
+dTL['Gsw RR']=np.zeros(dTL['TRW'].size)
+dTL['RGR RR']=np.zeros(dTL['TRW'].size)
 dTL['Lat']=np.zeros(dTL['TRW'].size)
 dTL['Lon']=np.zeros(dTL['TRW'].size)
 
-uTID=np.unique(dTL['ID_Tree Unique'])
+uTID=np.unique(dTL['ID_Tree_Unique'])
 for iU in range(uTID.size):
     
     # Index to unique tree ID
-    indUT=np.where(dTL['ID_Tree Unique']==uTID[iU])[0]
+    indUT=np.where(dTL['ID_Tree_Unique']==uTID[iU])[0]
     
     # Define first and last year of measurement for each tree
     iWithData=np.where(dTL['Dib'][indUT]>-1.0)[0]
     dTL['Year First'][indUT]=dTL['Year'][indUT[iWithData[0]]]
     dTL['Year Last'][indUT]=dTL['Year'][indUT[iWithData[-1]]]
-    dTL['Time since first ring'][indUT[iWithData]]=np.arange(1,iWithData.size+1,1)
+    dTL['Age'][indUT[iWithData]]=np.arange(1,iWithData.size+1,1)
     
     # Index to site summary info
     indPS=np.where( (dPS['ID_Inst']==dTL['ID_Inst'][indUT[0]]) & (dPS['ID_Plot']==dTL['ID_Plot'][indUT[0]]) )[0]
@@ -132,13 +154,13 @@ for iU in range(uTID.size):
     dTL['RGR'][indUT[1:]]=np.log(dTL['Bsw'][indUT[1:]])-np.log(dTL['Bsw'][indUT[0:-1]])
 
     # Standardized growth relative to mean growth during a period leading up to N application
-    ind0=np.where( (dTL['ID_Tree Unique']==uTID[iU]) & (dTL['Year']>=1971-5) & (dTL['Year']<=1970) )[0]
-    dTL['TRW Standardized RR'][indUT]=dTL['TRW'][indUT]/np.mean(dTL['TRW'][ind0])
-    dTL['BAI Standardized RR'][indUT]=dTL['BAI'][indUT]/np.mean(dTL['BAI'][ind0])
-    dTL['Bsw Standardized RR'][indUT]=dTL['Bsw'][indUT]/np.mean(dTL['Bsw'][ind0])
-    dTL['Gsw Standardized AD'][indUT]=dTL['Gsw'][indUT]-np.mean(dTL['Gsw'][ind0])
-    dTL['Gsw Standardized RR'][indUT]=dTL['Gsw'][indUT]/np.maximum(0.1,np.mean(dTL['Gsw'][ind0]))
-    dTL['RGR Standardized RR'][indUT]=dTL['RGR'][indUT]/np.mean(dTL['RGR'][ind0])
+    ind0=np.where( (dTL['ID_Tree_Unique']==uTID[iU]) & (dTL['Year']>=1971-5) & (dTL['Year']<=1970) )[0]
+    dTL['TRW RR'][indUT]=dTL['TRW'][indUT]/np.mean(dTL['TRW'][ind0])
+    dTL['BAI RR'][indUT]=dTL['BAI'][indUT]/np.mean(dTL['BAI'][ind0])
+    dTL['Bsw RR'][indUT]=dTL['Bsw'][indUT]/np.mean(dTL['Bsw'][ind0])
+    dTL['Gsw AD'][indUT]=dTL['Gsw'][indUT]-np.mean(dTL['Gsw'][ind0])
+    dTL['Gsw RR'][indUT]=dTL['Gsw'][indUT]/np.maximum(0.1,np.mean(dTL['Gsw'][ind0]))
+    dTL['RGR RR'][indUT]=dTL['RGR'][indUT]/np.mean(dTL['RGR'][ind0])
     
 # Change name of treatment
 dTL['Treatment']=dTL['Treatment.EP703']
@@ -171,7 +193,7 @@ ind=np.where( (dTL['BGC SS']==5) | (dTL['BGC SS']==6) )[0]
 dTL['BGC SS Comb'][ind]=99
 
 
-#%% Add standardized ring width (from J Axelson in dplR)
+#%% Add detrended ring width (from J Axelson in dplR)
 
 # Path to data
 pthin=r'C:\Users\rhember\OneDrive - Government of BC\Shared\EP703\Retrospective Monitoring Study\Data\Given\Core Data\Received 20211222 from JAxelson'
@@ -223,16 +245,16 @@ for iI in range(uInst.size):
         # Populate
         dTL['TRW S NE DPLR'][ind0]=d0[k]
 
-# Standardize the standardized time series
-dTL['TRW S NE DPLR Standardized RR']=np.zeros(dTL['TRW S NE DPLR'].size)
+# Standardize the detrended time series
+dTL['TRW S NE DPLR RR']=np.zeros(dTL['TRW S NE DPLR'].size)
 for iU in range(uTID.size):
     
     # Index to unique tree ID
-    indUT=np.where(dTL['ID_Tree Unique']==uTID[iU])[0]
+    indUT=np.where(dTL['ID_Tree_Unique']==uTID[iU])[0]
     
     # Standardized growth relative to mean growth during a period leading up to N application
-    ind0=np.where( (dTL['ID_Tree Unique']==uTID[iU]) & (dTL['Year']>=1971-5) & (dTL['Year']<=1970) )[0]
-    dTL['TRW S NE DPLR Standardized RR'][indUT]=dTL['TRW S NE DPLR'][indUT]/np.mean(dTL['TRW S NE DPLR'][ind0])
+    ind0=np.where( (dTL['ID_Tree_Unique']==uTID[iU]) & (dTL['Year']>=1971-5) & (dTL['Year']<=1970) )[0]
+    dTL['TRW S NE DPLR RR'][indUT]=dTL['TRW S NE DPLR'][indUT]/np.mean(dTL['TRW S NE DPLR'][ind0])
 
 #%% Add climate data
 
@@ -306,6 +328,132 @@ for iInst in range(uInst.size):
     #plt.plot(sobs['TSF_t0'][iC],sobs['Bsw_G'][iC],'bo')
     #plt.plot(sobs['TSF_t0'][iF],sobs['Bsw_G'][iF],'rs')
 
+#%% Get tree-level EP703 data
+ 
+dTL['H obs EP']=np.zeros(dTL['TRW'].size)
+dTL['Dob obs EP']=np.zeros(dTL['TRW'].size)
+for iInst in range(uInst.size):    
+    ind0=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['Treatment']=='C') | (dTL['ID_Inst']==uInst[iInst]) & (dTL['Treatment']=='F1') )[0]    
+    uPlot=np.unique(dTL['ID_Plot'][ind0])    
+    for iPlot in range(uPlot.size):        
+        ind1=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['ID_Plot']==uPlot[iPlot]) & (dTL['QA Summary']==1) )[0]        
+        uTree=np.unique(dTL['ID_Tree'][ind1])        
+        for iTree in range(uTree.size):            
+            ind2=np.where( (dEPT['ID_Site']==uInst[iInst]) & (dEPT['ID_Plot']==uPlot[iPlot]) & (dEPT['ID_Tree']==uTree[iTree]) & (dEPT['H_obs_t0']>0) )[0]            
+            for iY in range(ind2.size):            
+                ind3=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['ID_Plot']==uPlot[iPlot]) & (dTL['ID_Tree']==uTree[iTree]) & (dTL['Year']==dEPT['Year_t0'][ind2[iY]]) )[0]                
+                dTL['H obs EP'][ind3]=dEPT['H_obs_t0'][ind2[iY]]
+                dTL['Dob obs EP'][ind3]=dEPT['D_t0'][ind2[iY]]
+
+##--------------------------------------------------------------------------
+## Gap fill heights
+## *** This is a mess ***
+##--------------------------------------------------------------------------
+#
+## Add 2020 measurements to "obs EP" variables
+#ind=np.where( (dTL['H 2020']>0) & (dTL['Dob 2020']>0) & (dTL['Year']==2020) )[0]
+#dTL['H obs EP'][ind]=dTL['H 2020'][ind]
+#dTL['Dob obs EP'][ind]=dTL['Dob 2020'][ind]
+#
+#def funcH2(x,a,b,c,d):
+#    return a*( 1-np.exp(-b*(x-c)) )**d
+#
+#plt.close('all')
+##plt.plot(dTL['Dob 2020'],dTL['H 2020'],'gs')
+#plt.plot(dTL['Dob obs EP'],dTL['H obs EP'],'k.')
+#
+#iFit1=np.where( (np.isnan(dTL['Dob obs EP']+dTL['H obs EP'])==False) & (dTL['H obs EP']>0) & (dTL['Dob obs EP']>0) )[0]
+#x=dTL['Dob obs EP'][iFit1]
+#y=dTL['H obs EP'][iFit1]
+#poptG,pcovG=curve_fit(funcH2,x,y,[55,0.045,10,1.2])
+#yhat=funcH2(xhat,poptG[0],poptG[1],poptG[2],poptG[3])
+#yhat=funcH2(xhat,55,0.045,10,1.2)
+#plt.plot(xhat,yhat,'r-')        
+#
+#
+#xhat=np.arange(0,60,1)
+#
+#dTL['H gf']=np.zeros(dTL['TRW'].size)
+#for iInst in range(uInst.size):    
+#    ind0=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['Treatment']=='C') | (dTL['ID_Inst']==uInst[iInst]) & (dTL['Treatment']=='F1') )[0]    
+#    uPlot=np.unique(dTL['ID_Plot'][ind0])    
+#    for iPlot in range(uPlot.size):        
+#        ind1=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['ID_Plot']==uPlot[iPlot]) & (dTL['QA Summary']==1) )[0]        
+#        uTree=np.unique(dTL['ID_Tree'][ind1])        
+#        
+#        # Global fit
+#        iFit1=np.where((np.isnan(dTL['Dob obs EP'][ind1]+dTL['H obs EP'][ind1])==False))[0]
+#        x=dTL['Dob obs EP'][ind1[iFit1]]
+#        y=dTL['H obs EP'][ind1[iFit1]]
+#        poptG,pcovG=curve_fit(funcH,x,y,[5,0.25])
+#        yhat=funcH(xhat,poptG[0],poptG[1])
+#        
+#        plt.close('all')
+#        plt.plot(x,y,'ko')
+#        plt.plot(xhat,yhat,'r-')
+#        
+#        for iTree in range(uTree.size):            
+#            ind2=np.where( (dEPT['ID_Site']==uInst[iInst]) & (dEPT['ID_Plot']==uPlot[iPlot]) & (dEPT['ID_Tree']==uTree[iTree]) & (dEPT['H_obs_t0']>0) )[0]            
+#            for iY in range(ind2.size):            
+#                ind3=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['ID_Plot']==uPlot[iPlot]) & (dTL['ID_Tree']==uTree[iTree]) & (dTL['Year']==dEPT['Year_t0'][ind2[iY]]) )[0]                
+#                dTL['H gf'][ind3]=dEPT['H_obs_t0'][ind2[iY]]
+#                dTL['Dob obs EP'][ind3]=dEPT['D_t0'][ind2[iY]]
+#
+#uPlotS=np.unique(dInst.plot)
+#for iPlotS in range(len(uPlotS)):
+#    
+#    # Index to plot
+#    indP=np.where((dInst.plot==uPlotS[iPlotS]))[0]        
+#    idP_all=dInst.tree[indP]
+#    hP_all=dInst.ht[indP]
+#    baP_all=dInst.ba[indP]
+#    
+#    # Global fit
+#    indP_Fit=np.where((np.isnan(hP_all+baP_all)==False))[0]
+#    x=baP_all[indP_Fit].astype(float); 
+#    y=hP_all[indP_Fit].astype(float)        
+#    poptG,pcovG=curve_fit(funcH,x,y,[5,0.25])
+#    
+#    flg=0
+#    if flg==1:
+#        yhat=funcH(x,poptG[0],poptG[1])
+#        N_Fit=indP_Fit.size
+#        b_Perf=np.polyfit(y,yhat,1)
+#        r_Perf=np.corrcoef(y,yhat)[0,1]        
+#        plt.close('all')
+#        fig,ax=plt.subplots(1,2)
+#        ax[0].plot(x,y,'.')
+#        ax[0].plot(x,yhat,'.')
+#        ax[1].plot(y,yhat,'.')        
+#    
+#        #x2=np.c_[np.ones(x.size),np.log(x)]
+#        #md=sm.OLS(np.log(y),x2).fit()
+#        #md.summary()        
+#    
+#    indGF=np.where( (dInst.plot==uPlotS[iPlotS]) & (np.isnan(dInst.ba)==False) )[0]
+#    dInst.ht_mod[indGF]=funcH(dInst.ba[indGF],poptG[0],poptG[1])
+#    
+#    # Individual tree fit
+#    uTree=np.unique(idP_all[indP_Fit])
+#    for k in range(uTree.size):
+#        indCal=np.where( (idP_all==uTree[k]) & (np.isnan(hP_all+baP_all)==False) )[0]
+#        if indCal.size>2:
+#            x=baP_all[indCal].astype(float)
+#            y=hP_all[indCal].astype(float)                      
+#            try:
+#                poptI,pcovI=curve_fit(funcH,x,y,[5,0.25])
+#                yhat=funcH(x,poptI[0],poptI[1])
+#                ax[0].plot(x,yhat,'-')
+#                indGF=np.where( (dInst.plot==uPlotS[j]) & (dInst.tree==uTree[k]) & (np.isnan(dInst.ba)==False) )[0]
+#                dInst.ht_mod[indGF]=funcH(dInst.ba[indGF],poptI[0],poptI[1])
+#                dInst.H_Fit_ITM[indGF]=1
+#            except:
+#                continue        
+#    
+## Create gap-filled variable        
+#ind=np.where( (np.isnan(dInst.ht)==True) & (np.isnan(dInst.ht_mod)==False) )[0]
+#dInst.ht_gf[ind]=dInst.ht_mod[ind]
+
 #%% Comparison between Dob and Dib from cores
 
 def CompareDiameters(dTL,meta):
@@ -340,20 +488,20 @@ def CompareDiameters(dTL,meta):
 
 def LookAtIndividualTrees():
 
-    ind=np.where( (dTL['ID_Tree Unique']==25) )[0]
+    ind=np.where( (dTL['ID_Tree_Unique']==25) )[0]
 
     print(dTL['Est/mm'][ind[0]])
     
     plt.close('all')
     fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
     #ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
-    ax.plot(dTL['Time since first ring'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
+    ax.plot(dTL['Age'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
     #ax.plot(dTL['Year'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
     
     
     fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
     #ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
-    ax.plot(dTL['Time since first ring'][ind],dTL['BAI'][ind],'-ko',ms=3,mec='k',mfc='k')
+    ax.plot(dTL['Age'][ind],dTL['BAI'][ind],'-ko',ms=3,mec='k',mfc='k')
     #ax.plot(dTL['Year'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
     
     #plt.close('all')
@@ -372,11 +520,11 @@ def func(x,a,b,c,d):
 
 def GapFill():
     
-    uTID=np.unique(dTL['ID_Tree Unique'])
+    uTID=np.unique(dTL['ID_Tree_Unique'])
     
     # Initialize new structure
     dGF={}
-    ExclusionList=['TRW S NE DPLR', 'TRW S NE DPLR Standardized RR', 'tmean_ann_n', 'prcp_ann_n', 'tmean_gs_r', 'prcp_gs_r', 'cwd_gs_r', 'ws_gs_r']
+    ExclusionList=['TRW S NE DPLR', 'TRW S NE DPLR RR', 'tmean_ann_n', 'prcp_ann_n', 'tmean_gs_r', 'prcp_gs_r', 'cwd_gs_r', 'ws_gs_r']
     for k in dTL.keys():
         if np.isin(k,ExclusionList)==True:
             continue
@@ -390,24 +538,54 @@ def GapFill():
     for iU in range(uTID.size):
         
         # Index to unique tree ID
-        iAll=np.where( (dTL['ID_Tree Unique']==uTID[iU]) & (dTL['QA Summary']==1) )[0]
-        iGood=np.where( (dTL['ID_Tree Unique']==uTID[iU]) & (dTL['QA Summary']==1) & (np.isnan(dTL['TRW'])==False) )[0]
-        iBad=np.where( (dTL['ID_Tree Unique']==uTID[iU]) & (dTL['QA Summary']==1) & (np.isnan(dTL['TRW'])==True) )[0]
+        iTree=np.where( (dTL['ID_Tree_Unique']==uTID[iU]) & (dTL['QA Summary']==1) )[0]
         
-        if iGood.size==0:
-            continue
+        TRW=dTL['TRW'][iTree]
+        Year=dTL['Year'][iTree]
+        Dob20=dTL['Dob 2020'][iTree]
         
-        iFirst=iAll[0]
+        iBad=np.where( (np.isnan(TRW)==True) )[0]
         
         # Initialize full age series
-        dT=np.maximum(0,2020-np.max(dTL['Year'][iGood]))
+        Age=np.arange(0,iTree.size,1)
         
-        A_full=np.arange(1,np.max(dTL['Time since first ring'][iGood])+dT+1,1)
-        Year_full=np.arange(2020-A_full.size+1,2021,1)    
-        c,ia,ib=np.intersect1d(A_full,dTL['Time since first ring'][iGood],return_indices='On')
+        Dcore=0.1*np.cumsum(2*np.nan_to_num(TRW))
+        
+        
+        D=Dob20[-1]-Dcore[-1]
+        Dcore=Dcore+D
+        Dcore[iBad]=0
+        
+        rw=np.append(0,np.diff(Dcore))
+        rw[0:iBad[-1]+2]=np.nan
+        
+        plt.close('all')
+        plt.plot(Age,rw,'.b-')
+        
+        rw_gf=rw.copy()
+        iFill=np.where(rw==0)[0]
+        p0=[0.5,2.5,5,3]
+        rw_gf=func(Age,p0[0],p0[1],p0[2],p0[3])  
+        #plt.plot(Age,rw_gf,'g--')
+        
+        iFit=np.where( (np.isnan(rw)==False) )[0]
+        x=np.append(np.arange(0,5,1),Age[iFit])
+        y=np.append(np.zeros(5),rw[iFit])
+        p,pcov=curve_fit(func,x,y,p0)
+        rw_gf=func(Age,p[0],p[1],p[2],p[3])  
+        plt.plot(Age,rw_gf,'g--',lw=1.5)
+        
+        
+        
+      
+        
+        
+        
+        
+        
         
         # Prediction
-        x0=np.append(np.zeros(1000),dTL['Time since first ring'][iGood])
+        x0=np.append(np.zeros(1000),dTL['Age'][iGood])
         y0=np.append(np.zeros(1000),dTL['TRW'][iGood])    
         binFit=np.arange(0.05,1.6,0.2)
         dD=np.zeros(binFit.size)
@@ -449,7 +627,7 @@ def GapFill():
         if flg==1:
             p=par[0]
             plt.close('all'); 
-            plt.plot(dTL['Time since first ring'][iGood],dTL['TRW'][iGood],'k-',color=np.random.random(3),lw=1)
+            plt.plot(dTL['Age'][iGood],dTL['TRW'][iGood],'k-',color=np.random.random(3),lw=1)
             plt.plot(A_full,func(A_full,p[0],p[1],p[2],p[3]),'k--')
     
         #TRW_full[iFill]=func(A_full[iFill],p[0],p[1],p[2],p[3])
@@ -458,10 +636,10 @@ def GapFill():
         if flg==1:
             Dib_given=0.1*np.cumsum(2*dTL['TRW'][iGood])
             plt.close('all'); 
-            plt.plot(dTL['Time since first ring'][iGood],Dib_given,'k-',color='b',lw=1)
+            plt.plot(dTL['Age'][iGood],Dib_given,'k-',color='b',lw=1)
             plt.plot(A_full,Dib_full,'k-',color='g',lw=1)
-            plt.plot(dTL['Time since first ring'][iAll[-1]],dTL['Dob 2020'][iGood[-1]],'ks')
-            gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\EP703\TreeRings\GapFill_' + str(uTID[iU]),'png',200)
+            plt.plot(dTL['Age'][iAll[-1]],dTL['Dob 2020'][iGood[-1]],'ks')
+            #gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\EP703\TreeRings\GapFill_' + str(uTID[iU]),'png',200)
         
         # Index to final data dictionary
         ind=np.arange(cnt,cnt+Year_full.size,1)
@@ -473,7 +651,7 @@ def GapFill():
         #Filler=np.ones(Year_full.size)
         
         dGF['Year'][ind]=Year_full
-        dGF['Time since first ring'][ind]=A_full
+        dGF['Age'][ind]=A_full
         dGF['TRW'][ind]=TRW_full
         dGF['Dib'][ind]=Dib_full
         dGF['Dib Last'][ind]=np.max(Dib_full)
@@ -491,13 +669,13 @@ def GapFill():
         dGF['RGR'][ind]=np.append(0,np.log(dGF['Bsw'][ind[1:]])-np.log(dGF['Bsw'][ind[0:-1]]))
     
         # Standardized growth relative to mean growth during a period leading up to N application
-        ind0=np.where( (dGF['ID_Tree Unique']==dGF['ID_Tree Unique'][ind[0]]) & (dGF['Year']>=1971-5) & (dGF['Year']<=1970) )[0]
-        dGF['TRW Standardized RR'][ind]=dGF['TRW'][ind]/np.mean(dGF['TRW'][ind0])
-        dGF['BAI Standardized RR'][ind]=dGF['BAI'][ind]/np.mean(dGF['BAI'][ind0])
-        dGF['Bsw Standardized RR'][ind]=dGF['Bsw'][ind]/np.mean(dGF['Bsw'][ind0])
-        dGF['Gsw Standardized AD'][ind]=dGF['Gsw'][ind]-np.mean(dGF['Gsw'][ind0])
-        dGF['Gsw Standardized RR'][ind]=dGF['Gsw'][ind]/np.maximum(0.1,np.mean(dGF['Gsw'][ind0]))
-        dGF['RGR Standardized RR'][ind]=dGF['RGR'][ind]/np.mean(dGF['RGR'][ind0])
+        ind0=np.where( (dGF['ID_Tree_Unique']==dGF['ID_Tree_Unique'][ind[0]]) & (dGF['Year']>=1971-5) & (dGF['Year']<=1970) )[0]
+        dGF['TRW RR'][ind]=dGF['TRW'][ind]/np.mean(dGF['TRW'][ind0])
+        dGF['BAI RR'][ind]=dGF['BAI'][ind]/np.mean(dGF['BAI'][ind0])
+        dGF['Bsw RR'][ind]=dGF['Bsw'][ind]/np.mean(dGF['Bsw'][ind0])
+        dGF['Gsw AD'][ind]=dGF['Gsw'][ind]-np.mean(dGF['Gsw'][ind0])
+        dGF['Gsw RR'][ind]=dGF['Gsw'][ind]/np.maximum(0.1,np.mean(dGF['Gsw'][ind0]))
+        dGF['RGR RR'][ind]=dGF['RGR'][ind]/np.mean(dGF['RGR'][ind0])
         
         # Update counter
         cnt=cnt+Year_full.size
@@ -506,20 +684,7 @@ def GapFill():
     for k in dGF.keys():
         dGF[k]=dGF[k][0:cnt]
     
-    #
-    uTID=np.unique(dGF['ID_Tree Unique'])
-    
-    for iU in range(uTID.size):
-        
-        # Index to unique tree ID
-        iAll=np.where( (dGF['ID_Tree Unique']==uTID[iU]) )[0]
-        break
-    plt.close('all')
-    plt.plot(dGF['Year'][iAll],'-ko')
-    dGF['Time since first ring'][iAll]
-    dGF['TRW'][iAll]
-    dGF['Dib Last'][iAll]
-    dGF['Dob 2020'][iAll]
+
 
 #%% Comparison between Dob and Dib from cores (after gap-filling)
 
@@ -538,7 +703,7 @@ def CompareDiametersAfterGF():
     yhat=md.predict(np.c_[np.ones(xhat.size),xhat])
     
     # Plot
-    plt.close('all')
+    #plt.close('all')
     fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
     ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
     ax.plot(x,y,'o',ms=4,mec='w',mfc='k')
