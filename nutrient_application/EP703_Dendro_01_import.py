@@ -192,7 +192,6 @@ dTL['BGC SS Comb']=dTL['BGC SS'].copy()
 ind=np.where( (dTL['BGC SS']==5) | (dTL['BGC SS']==6) )[0]
 dTL['BGC SS Comb'][ind]=99
 
-
 #%% Add detrended ring width (from J Axelson in dplR)
 
 # Path to data
@@ -488,27 +487,32 @@ def CompareDiameters(dTL,meta):
 
 def LookAtIndividualTrees():
 
-    ind=np.where( (dTL['ID_Tree_Unique']==25) )[0]
-
-    print(dTL['Est/mm'][ind[0]])
+#    ind=np.where( (dTL['ID_Tree_Unique']==25) )[0]
+#
+#    print(dTL['Est/mm'][ind[0]])
+#    
+#    plt.close('all')
+#    fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
+#    #ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
+#    ax.plot(dTL['Age'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
+#    #ax.plot(dTL['Year'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
+#    
+#    
+#    fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
+#    #ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
+#    ax.plot(dTL['Age'][ind],dTL['Dib'][ind],'-ko',ms=3,mec='k',mfc='k')
+#    #ax.plot(dTL['Year'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
     
-    plt.close('all')
-    fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
-    #ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
-    ax.plot(dTL['Age'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
-    #ax.plot(dTL['Year'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
-    
-    
-    fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
-    #ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
-    ax.plot(dTL['Age'][ind],dTL['BAI'][ind],'-ko',ms=3,mec='k',mfc='k')
-    #ax.plot(dTL['Year'][ind],dTL['TRW'][ind],'-ko',ms=3,mec='k',mfc='k')
-    
-    #plt.close('all')
-    #fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
-    #ax.plot([0,90],[0,90],'k-',lw=2,color=[0.8,0.8,0.8])
-    #ax.plot(dTL['TRW'][ind],dTL['Gsw'][ind],'-ko',ms=3,mec='k',mfc='k')
-    
+    u=np.unique(dGF['ID_Tree_Unique'])
+    for iTree in range(u.size):
+        ind=np.where( (dGF['ID_Tree_Unique']==u[iTree]) )[0]
+        if ind.size==0:
+            continue
+        plt.close('all')
+        fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
+        ax.plot(dGF['Year'][ind],dGF['Dib'][ind],'-b')
+        gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\EP703\TreeRings\IndividualTree\Tree_' + str(int(u[iTree])),'png',300)
+        
     return
 
 #%% Gap-fill early missing rings using Weibul function
@@ -532,129 +536,70 @@ def GapFill():
             dGF[k]=np.zeros(200000)
         else:
             dGF[k]=np.array(['' for _ in range(200000)],dtype=dTL[k].dtype)
-    
-    cnt=0
-    
+       
+    cnt=0    
     for iU in range(uTID.size):
         
         # Index to unique tree ID
         iTree=np.where( (dTL['ID_Tree_Unique']==uTID[iU]) & (dTL['QA Summary']==1) )[0]
+        if iTree.size==0:
+            continue
         
         TRW=dTL['TRW'][iTree]
+        Age=dTL['Age'][iTree]
         Year=dTL['Year'][iTree]
-        Dob20=dTL['Dob 2020'][iTree]
-        
+        D_ob20=dTL['Dob 2020'][iTree]
         iBad=np.where( (np.isnan(TRW)==True) )[0]
         
-        # Initialize full age series
-        Age=np.arange(0,iTree.size,1)
+        #plt.close('all')
+        #fig,ax=plt.subplots(1)
+        #ax.plot(Age,TRW,'.b-')
         
-        Dcore=0.1*np.cumsum(2*np.nan_to_num(TRW))
-        
-        
-        D=Dob20[-1]-Dcore[-1]
-        Dcore=Dcore+D
-        Dcore[iBad]=0
-        
-        rw=np.append(0,np.diff(Dcore))
-        rw[0:iBad[-1]+2]=np.nan
-        
-        plt.close('all')
-        plt.plot(Age,rw,'.b-')
-        
-        rw_gf=rw.copy()
-        iFill=np.where(rw==0)[0]
-        p0=[0.5,2.5,5,3]
-        rw_gf=func(Age,p0[0],p0[1],p0[2],p0[3])  
-        #plt.plot(Age,rw_gf,'g--')
-        
-        iFit=np.where( (np.isnan(rw)==False) )[0]
+        iFit=np.where( (np.isnan(TRW)==False) )[0]
         x=np.append(np.arange(0,5,1),Age[iFit])
-        y=np.append(np.zeros(5),rw[iFit])
-        p,pcov=curve_fit(func,x,y,p0)
-        rw_gf=func(Age,p[0],p[1],p[2],p[3])  
-        plt.plot(Age,rw_gf,'g--',lw=1.5)
+        y=np.append(np.zeros(5),TRW[iFit])
+        try:
+            p,pcov=curve_fit(func,x,y,p0)
+        except:
+            print('Fit failed, skipping')
+            continue
+        TRW_hat=func(Age,p[0],p[1],p[2],p[3])  
+        #ax.plot(Age,TRW_hat,'g--',lw=1.5)
         
+        TRW_gf=TRW.copy()
+        TRW_gf[iBad]=TRW_hat[iBad]
+        #fig,ax=plt.subplots(1)
+        #ax.plot(Age,TRW_gf,'b-')
         
+        # Diameter from core
+        Dg_core_gf=0.1*2*TRW_gf
+        D_core_gf=np.cumsum(Dg_core_gf)
+        #fig,ax=plt.subplots(1)
+        #ax.plot(Age,D_core_gf,'b-')
         
-      
-        
-        
-        
-        
-        
-        
-        # Prediction
-        x0=np.append(np.zeros(1000),dTL['Age'][iGood])
-        y0=np.append(np.zeros(1000),dTL['TRW'][iGood])    
-        binFit=np.arange(0.05,1.6,0.2)
-        dD=np.zeros(binFit.size)
-        par=[None]*binFit.size
-        for iFit in range(binFit.size):        
-            x=np.append(1*np.ones(1000),x0); 
-            y=np.append(binFit[iFit]*np.ones(1000),y0)
-            try:
-                p,pcov=curve_fit(func,x,y,[1,1,25,0.5])
-            except:
-                continue        
-            TRW_full=-999*np.ones(A_full.size)
-            TRW_full[ia]=dTL['TRW'][iGood]
-            iFill=np.where(TRW_full==-999)[0]
-            TRW_full[iFill]=func(A_full[iFill],p[0],p[1],p[2],p[3])        
-            Dib_full=0.1*np.cumsum(2*TRW_full)
-            dD[iFit]=Dib_full[-1]/dTL['Dob 2020'][iGood[-1]]
-            par[iFit]=p
-        
-        # Gap-fill with the best fit to Dob at time of measurement
-        iMinD=np.where( (np.abs(1-dD)==np.min(np.abs(1-dD))) )[0]
-        
-        #iMinD=np.array([0])
-        
-        if (iMinD.size>0) & (np.sum(dD)>0) & (dTL['Dob 2020'][iGood[-1]]>0):
-            TRW_full=-999*np.ones(A_full.size)
-            TRW_full[ia]=dTL['TRW'][iGood]
-            iFill=np.where(TRW_full==-999)[0]
-            p=par[iMinD[0]]
-            TRW_full[iFill]=func(A_full[iFill],p[0],p[1],p[2],p[3])  
-            Dib_full=0.1*np.cumsum(2*TRW_full)
-        else:
-            TRW_full=np.zeros(A_full.size)
-            TRW_full[ia]=dTL['TRW'][iGood]
-            iFill=np.where(TRW_full==0)[0]
-            Dib_full=0.1*np.cumsum(2*TRW_full)
-        
-        flg=0
-        if flg==1:
-            p=par[0]
-            plt.close('all'); 
-            plt.plot(dTL['Age'][iGood],dTL['TRW'][iGood],'k-',color=np.random.random(3),lw=1)
-            plt.plot(A_full,func(A_full,p[0],p[1],p[2],p[3]),'k--')
+        # Force to match measurement of Dob in 2020
+        rat=D_ob20[-1]/D_core_gf[-1]
+        D_core_gf=rat*D_core_gf
+        Dg_core_gf=np.append(0,np.diff(D_core_gf))
     
-        #TRW_full[iFill]=func(A_full[iFill],p[0],p[1],p[2],p[3])
-        #plt.plot(A_full,TRW_full,'ko')
-        flg=0
-        if flg==1:
-            Dib_given=0.1*np.cumsum(2*dTL['TRW'][iGood])
-            plt.close('all'); 
-            plt.plot(dTL['Age'][iGood],Dib_given,'k-',color='b',lw=1)
-            plt.plot(A_full,Dib_full,'k-',color='g',lw=1)
-            plt.plot(dTL['Age'][iAll[-1]],dTL['Dob 2020'][iGood[-1]],'ks')
-            #gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\EP703\TreeRings\GapFill_' + str(uTID[iU]),'png',200)
+        #fig,ax=plt.subplots(1)
+        #ax.plot(Age,D_core_gf,'b-')
+        #ax.plot(Age[-1],D_ob20[-1],'ks')
         
         # Index to final data dictionary
-        ind=np.arange(cnt,cnt+Year_full.size,1)
+        ind=np.arange(cnt,cnt+Year.size,1)
         
         # Populate scalar variables
         for k in dGF.keys():
-            dGF[k][ind]=dTL[k][iFirst]
+            dGF[k][ind]=dTL[k][ iTree[0] ]
             
         #Filler=np.ones(Year_full.size)
         
-        dGF['Year'][ind]=Year_full
-        dGF['Age'][ind]=A_full
-        dGF['TRW'][ind]=TRW_full
-        dGF['Dib'][ind]=Dib_full
-        dGF['Dib Last'][ind]=np.max(Dib_full)
+        dGF['Year'][ind]=Year
+        dGF['Age'][ind]=Age
+        dGF['TRW'][ind]=TRW_gf
+        dGF['Dib'][ind]=D_core_gf
+        dGF['Dib Last'][ind]=np.max(D_core_gf)
         
         BA=np.pi*(dGF['Dib'][ind]/2)**2
         dGF['BAI'][ind]=np.append(0,np.diff(BA))
@@ -678,12 +623,11 @@ def GapFill():
         dGF['RGR RR'][ind]=dGF['RGR'][ind]/np.mean(dGF['RGR'][ind0])
         
         # Update counter
-        cnt=cnt+Year_full.size
+        cnt=cnt+Year.size
     
     # Remove excess data
     for k in dGF.keys():
         dGF[k]=dGF[k][0:cnt]
-    
 
 
 #%% Comparison between Dob and Dib from cores (after gap-filling)
@@ -712,3 +656,15 @@ def CompareDiametersAfterGF():
     ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
     plt.tight_layout()
     #gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\EP703\TreeRings\DiameterComparison_GF','png',150)
+
+#%% Plot of each tree
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,8.5))
+uT=np.unique(dTL['ID_Tree_Unique'])
+for iT in range(uT.size):
+    ind=np.where(dGF['ID_Tree']==uT[iT])[0]
+    cl=np.random.random(3)
+    ax.plot(dGF['Year'][ind],dGF['Age'][ind],'k-',color=cl)
+
+

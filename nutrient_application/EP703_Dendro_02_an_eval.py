@@ -269,7 +269,8 @@ for iI in range(uInst.size):
 
 #%% Calculate time series of response ratio
 
-varL=['TRW RR','TRW S NE DPLR RR','BAI RR','Gsw RR','RGR RR']
+#varL=['TRW RR','TRW S NE DPLR RR','BAI RR','Gsw RR','RGR RR']
+varL=['TRW RR','BAI RR','Gsw RR','RGR RR','Gsw','BAI','RGR']
 treatL=['C','F','SS3','SS5']
 statL=['Mean','Median','SE']
 
@@ -305,6 +306,35 @@ for vd in varL:
         dTS[vd]['SS5']['Mean'][iT]=np.nanmean(dTL[vd][ind])
         dTS[vd]['SS5']['Median'][iT]=np.nanmedian(dTL[vd][ind])
         dTS[vd]['SS5']['SE'][iT]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+
+# Initialize dictionary of results
+dTSgf={}
+for v in varL:
+    dTSgf[v]={}
+    for treat in treatL:
+        dTSgf[v][treat]={}
+        for s in statL:
+            dTSgf[v][treat][s]=np.zeros(binT.size)
+            
+for vd in varL:
+    for iT in range(binT.size):
+        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['Treatment']=='C') & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['QA Summary']==1) )[0]
+        dTSgf[vd]['C']['Mean'][iT]=np.nanmean(dGF[vd][ind])
+        dTSgf[vd]['C']['Median'][iT]=np.nanmedian(dGF[vd][ind])
+        dTSgf[vd]['C']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
+        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['Treatment']=='F1') & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['QA Summary']==1) )[0]
+        dTSgf[vd]['F']['Mean'][iT]=np.nanmean(dGF[vd][ind])
+        dTSgf[vd]['F']['Median'][iT]=np.nanmedian(dGF[vd][ind])
+        dTSgf[vd]['F']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
+        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS']==3) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
+        dTSgf[vd]['SS3']['Mean'][iT]=np.nanmean(dGF[vd][ind])
+        dTSgf[vd]['SS3']['Median'][iT]=np.nanmean(dGF[vd][ind])
+        dTSgf[vd]['SS3']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
+        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS']==5) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
+        #ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS Comb']==99) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
+        dTSgf[vd]['SS5']['Mean'][iT]=np.nanmean(dGF[vd][ind])
+        dTSgf[vd]['SS5']['Median'][iT]=np.nanmedian(dGF[vd][ind])
+        dTSgf[vd]['SS5']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)    
     
 #%% Bar charts of change in C and F1 plots (between pre- and post-application reference periods)
 
@@ -454,8 +484,6 @@ def FittingCurves():
     def Func(x,a,b,c):
         y=1-( ( (1-a) * x**b) / ( c + (x)**b ) )
         return y
-
-
 
 #%% Plot time series of detrended responses (long time series)
 
@@ -700,9 +728,6 @@ if flag_savefigs=='On':
     gu.PrintFig(meta['Paths']['Figures'] + '\\Evaluation of Detrending Bar Chart','png',900)
     #fig.savefig(meta['Paths']['Figures'] + '\\Pseudocontrols test.svg',format='svg',dpi=1200)
 
-
-
-
 #%% Compare core responses with responses from the original trial
 
 dEP={}
@@ -826,45 +851,84 @@ np.std(dI['G_DA_T'][ikp])/np.mean(dI['G_DA_T'][ikp])*100
 np.std(dI['G_DA_C'][ikp])/np.mean(dI['G_DA_C'][ikp])*100
 
 
-#%% Age response
 
-def AnalyzeAgeResponse():
-    # Choose variable to analyze
-    vd='TRW'
-    #vd='TRW RR'
-    #vd='BAI'
-    #vd='Bsw'
-    #vd='Gsw RR'
-    #vd='RGR RR'
-    #vd='TRW S NE DPLR RR'
-    
-    # Time period of analysis
-    bin=np.arange(1,101,1)
-    
-    # Initialize dictionary of results
-    dR={}
-    treatL=['C','F','SS3','SS5','SS6']
-    varL=['Mean','SE']
+
+#%% Age response 
+
+# Time period of analysis
+bin=np.arange(1,101,1)
+
+vL=['TRW','Dib','Bsw','Gsw','BAI','RGR','BAI RR']
+treatL=['C','F','SS3','SS5','SS6']
+stL=['Mean','Median','SE']
+
+# Initialize dictionary of results
+dA={}
+for v in vL:
+    dA[v]={}
     for treat in treatL:
-        dR[treat]={}
-        for var in varL:
-            dR[treat][var]=np.zeros(bin.size)
-    
-    # Populate dictionary of results
+        dA[v][treat]={}
+        for st in stL:
+            dA[v][treat][st]=np.zeros(bin.size)
+
+# Populate dictionary of results
+for v in vL:
     for i in range(bin.size):
-        ind=np.where( (dTL['Age']==bin[i]) & (dTL['Treatment']=='C') & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['QA Summary']==1) )[0]
-        dR['C']['Mean'][i]=np.nanmean(dTL[vd][ind])
-        dR['C']['SE'][i]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
-        ind=np.where( (dTL['Age']==bin[i]) & (dTL['Treatment']=='F1') & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['QA Summary']==1) )[0]
-        dR['F']['Mean'][i]=np.nanmean(dTL[vd][ind])    
-        dR['F']['SE'][i]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
-        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==3) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
-        dR['SS3']['Mean'][i]=np.nanmean(dTL[vd][ind])
-        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==5) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
-        #ind=np.where( (dTL['Year']==bin[i]) & (dTL['BGC SS Comb']==99) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
-        dR['SS5']['Mean'][i]=np.nanmean(dTL[vd][ind])
-        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==6) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
-        dR['SS6']['Mean'][i]=np.nanmean(dTL[vd][ind])
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['Treatment']=='C') & (dTL[v]>0) & (dTL[v]<2000) & (dTL['QA Summary']==1) )[0]
+        dA[v]['C']['Mean'][i]=np.nanmean(dTL[v][ind])
+        dA[v]['C']['SE'][i]=np.nanstd(dTL[v][ind])/np.sqrt(ind.size)
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['Treatment']=='F1') & (dTL[v]>0) & (dTL[v]<2000) & (dTL['QA Summary']==1) )[0]
+        dA[v]['F']['Mean'][i]=np.nanmean(dTL[v][ind])    
+        dA[v]['F']['SE'][i]=np.nanstd(dTL[v][ind])/np.sqrt(ind.size)
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==3) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+        dA[v]['SS3']['Mean'][i]=np.nanmean(dTL[v][ind])
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==5) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+        #ind=np.where( (dTL['Year']==bin[i]) & (dTL['BGC SS Comb']==99) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+        dA[v]['SS5']['Mean'][i]=np.nanmean(dTL[v][ind])
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==6) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+        dA[v]['SS6']['Mean'][i]=np.nanmean(dTL[v][ind])
+
+# Initialize dictionary of results
+dAgf={}
+for v in vL:
+    dAgf[v]={}
+    for treat in treatL:
+        dAgf[v][treat]={}
+        for st in stL:
+            dAgf[v][treat][st]=np.zeros(bin.size)
+
+# Populate dictionary of results
+for v in vL:
+    for i in range(bin.size):
+        ind=np.where( (dGF['Age']==bin[i]) & (dGF['Treatment']=='C') & (dGF[v]>0) & (dGF[v]<2000) & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
+        dAgf[v]['C']['Mean'][i]=np.nanmean(dGF[v][ind])
+        dAgf[v]['C']['Median'][i]=np.nanmedian(dGF[v][ind])
+        dAgf[v]['C']['SE'][i]=np.nanstd(dGF[v][ind])/np.sqrt(ind.size)
+        ind=np.where( (dGF['Age']==bin[i]) & (dGF['Treatment']=='F1') & (dGF[v]>0) & (dGF[v]<2000) & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
+        dAgf[v]['F']['Mean'][i]=np.nanmean(dGF[v][ind])    
+        dAgf[v]['F']['Median'][i]=np.nanmedian(dGF[v][ind])
+        dAgf[v]['F']['SE'][i]=np.nanstd(dGF[v][ind])/np.sqrt(ind.size)
+        ind=np.where( (dGF['Age']==bin[i]) & (dGF['BGC SS']==3) & (dGF[v]>0) & (dGF[v]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
+        dAgf[v]['SS3']['Mean'][i]=np.nanmean(dGF[v][ind])
+        dAgf[v]['SS3']['Median'][i]=np.nanmedian(dGF[v][ind])
+        ind=np.where( (dGF['Age']==bin[i]) & (dGF['BGC SS']==5) & (dGF[v]>0) & (dGF[v]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
+        #ind=np.where( (dGF['Year']==bin[i]) & (dGF['BGC SS Comb']==99) & (dGF[v]>0) & (dGF[v]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
+        dAgf[v]['SS5']['Mean'][i]=np.nanmean(dGF[v][ind])
+        dAgf[v]['SS5']['Median'][i]=np.nanmedian(dGF[v][ind])
+        ind=np.where( (dGF['Age']==bin[i]) & (dGF['BGC SS']==6) & (dGF[v]>0) & (dGF[v]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
+        dAgf[v]['SS6']['Mean'][i]=np.nanmean(dGF[v][ind])
+
+#%%
+
+plt.close('all')
+#plt.plot(bin,dA['BAI']['C']['Mean'],'b-')
+plt.plot(bin,dAgf['Gsw']['C']['Median'],'b-')
+plt.plot(bin,dAgf['Gsw']['F']['Median'],'g--')
+plt.plot(bin,dAgf['Gsw']['SS3']['Median'],'r--')
+plt.plot(bin,dAgf['Gsw']['SS5']['Median'],'c-')
+
+plt.close('all')
+plt.plot(bin,dAgf['Dib']['C']['Median'],'b-')
 
     
 #%%
@@ -1027,3 +1091,50 @@ np.mean(dTL['H 2020'][ind])
 #
 #df=pd.DataFrame(d)
 #df.to_excel(r'C:\Users\rhember\Documents\Data\TreeRings\EP703\ForR_Complete.xlsx')
+
+
+
+#%% Plot time series
+
+# Central tendancy
+stat='Mean'
+#stat='Median'
+
+# Variable
+vd='Gsw'
+#vd='BAI RR'
+#vd='RGR RR'
+#vd='Gsw RR'
+
+# Relative response (%)
+be=(dTSgf[vd]['F'][stat]-dTSgf[vd]['C'][stat])/dTSgf[vd]['C'][stat]*100
+#lo,hi=GetCIsForDR(dTSgf[vd]['C'][stat]-dTSgf[vd]['C']['SE'],dTSgf[vd]['C'][stat]+dTSgf[vd]['C']['SE'],dTSgf[vd]['F'][stat]-dTSgf[vd]['F']['SE'],dTSgf[vd]['F'][stat]+dTSgf[vd]['F']['SE'])
+
+# Time period
+it=np.where( (binT>=1965) & (binT<=2020) )[0]
+
+# Plot
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(12,8)); 
+#ax.plot(binT[it],np.zeros(it.size),'k-',lw=1,color='k')
+ax.plot(binT[it],dTSgf[vd]['C'][stat][it],'-bo',ms=3.5,mfc='w',mec='b',lw=1,color='b')
+#ax.plot(binT[it],dTSgf[vd]['F'][stat][it],'-gs',ms=3.5,mfc='w',mec='g',lw=1,color='g')
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=1.5)
+ax.set(position=[0.14,0.11,0.83,0.86],xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],xticks=np.arange(1970,2025,10),xlabel='Time, years', \
+       ylabel='Relative response (%)')
+
+#%% Model trend
+
+ikp=np.where( (dGF['Treatment']=='C') & (dGF['Gsw']>0) & (dGF['Year']>1960) & (dGF['QA Summary']==1) )[0]
+
+y=dGF['Gsw'][ikp]
+#x=np.column_stack( (dGF['Year'][ikp]) )
+x=dGF['Year'][ikp]
+x=sm.tools.tools.add_constant(x)
+
+md=sm.OLS(y,x).fit()
+md.summary()
+
+yhat1=md.predict(np.c_[1,1965])
+yhat2=md.predict(np.c_[1,2020])
+(yhat2-yhat1)/yhat1*100
+
