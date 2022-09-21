@@ -14,7 +14,7 @@ import time
 from shapely.geometry import Polygon,Point,box
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
-import fcgadgets.macgyver.query_vector_db as qv
+#import fcgadgets.macgyver.query_vector_db as qv
 from fcgadgets.cbrunner import cbrun_utilities as cbu
 from fcgadgets.bc1ha import bc1ha_utilities as bc1ha
 
@@ -58,7 +58,7 @@ def ClimateSpaceProvWide():
     
     plt.close('all')
     fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,7))
-    ax.plot(zT['Data'][0::ivl,0::ivl].flatten(),zW['Data'][0::ivl,0::ivl].flatten(),'.',markerfacecolor=[0.85,0.85,0.85],markeredgecolor='None')
+    ax.plot(zT['Data'][0::ivl,0::ivl].flatten(),zW['Data'][0::ivl,0::ivl].flatten(),'.',markerfacecolor=[0.75,0.75,0.75],markeredgecolor='None')
     ax.plot(zT['Data'][iBurn].flatten()[0::10],zW['Data'][iBurn].flatten()[0::10],'.',markerfacecolor=[0.8,0.7,0.4],markeredgecolor='None')
     for i in range(len(clm['Tmin'])):
         ax.plot(clm['Tmin'][i],clm['W'][i],'s',markersize=15,markeredgecolor='k',mfc='None')

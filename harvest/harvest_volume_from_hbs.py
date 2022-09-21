@@ -67,8 +67,10 @@ gu.opickle(r'C:\Users\rhember\Documents\Data\Harvest\HBS\AnnualSum.pkl',d)
 
 #%% 
 
+# d=gu.ipickle(r'C:\Users\rhember\Documents\Data\Harvest\HBS\AnnualSum.pkl')
+
 plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(9,6)); 
-plt.plot(tv,d['V NP m3']/1e6,'-bo')
+plt.plot(tv,d['V All m3']/1e6,'-bo')
 ax.set(position=[0.085,0.125,0.88,0.84],xlim=[2006.5,2021.5],xticks=np.arange(1800,2120,1), \
        yticks=np.arange(0,100,10),ylabel='Volume removed (Million m$^3$ yr$^-$$^1$)',xlabel='Time, years')
 #ax.legend(loc='upper left',facecolor=[1,1,1],frameon=False)

@@ -344,114 +344,6 @@ for iInst in range(uInst.size):
                 dTL['H obs EP'][ind3]=dEPT['H_obs_t0'][ind2[iY]]
                 dTL['Dob obs EP'][ind3]=dEPT['D_t0'][ind2[iY]]
 
-##--------------------------------------------------------------------------
-## Gap fill heights
-## *** This is a mess ***
-##--------------------------------------------------------------------------
-#
-## Add 2020 measurements to "obs EP" variables
-#ind=np.where( (dTL['H 2020']>0) & (dTL['Dob 2020']>0) & (dTL['Year']==2020) )[0]
-#dTL['H obs EP'][ind]=dTL['H 2020'][ind]
-#dTL['Dob obs EP'][ind]=dTL['Dob 2020'][ind]
-#
-#def funcH2(x,a,b,c,d):
-#    return a*( 1-np.exp(-b*(x-c)) )**d
-#
-#plt.close('all')
-##plt.plot(dTL['Dob 2020'],dTL['H 2020'],'gs')
-#plt.plot(dTL['Dob obs EP'],dTL['H obs EP'],'k.')
-#
-#iFit1=np.where( (np.isnan(dTL['Dob obs EP']+dTL['H obs EP'])==False) & (dTL['H obs EP']>0) & (dTL['Dob obs EP']>0) )[0]
-#x=dTL['Dob obs EP'][iFit1]
-#y=dTL['H obs EP'][iFit1]
-#poptG,pcovG=curve_fit(funcH2,x,y,[55,0.045,10,1.2])
-#yhat=funcH2(xhat,poptG[0],poptG[1],poptG[2],poptG[3])
-#yhat=funcH2(xhat,55,0.045,10,1.2)
-#plt.plot(xhat,yhat,'r-')        
-#
-#
-#xhat=np.arange(0,60,1)
-#
-#dTL['H gf']=np.zeros(dTL['TRW'].size)
-#for iInst in range(uInst.size):    
-#    ind0=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['Treatment']=='C') | (dTL['ID_Inst']==uInst[iInst]) & (dTL['Treatment']=='F1') )[0]    
-#    uPlot=np.unique(dTL['ID_Plot'][ind0])    
-#    for iPlot in range(uPlot.size):        
-#        ind1=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['ID_Plot']==uPlot[iPlot]) & (dTL['QA Summary']==1) )[0]        
-#        uTree=np.unique(dTL['ID_Tree'][ind1])        
-#        
-#        # Global fit
-#        iFit1=np.where((np.isnan(dTL['Dob obs EP'][ind1]+dTL['H obs EP'][ind1])==False))[0]
-#        x=dTL['Dob obs EP'][ind1[iFit1]]
-#        y=dTL['H obs EP'][ind1[iFit1]]
-#        poptG,pcovG=curve_fit(funcH,x,y,[5,0.25])
-#        yhat=funcH(xhat,poptG[0],poptG[1])
-#        
-#        plt.close('all')
-#        plt.plot(x,y,'ko')
-#        plt.plot(xhat,yhat,'r-')
-#        
-#        for iTree in range(uTree.size):            
-#            ind2=np.where( (dEPT['ID_Site']==uInst[iInst]) & (dEPT['ID_Plot']==uPlot[iPlot]) & (dEPT['ID_Tree']==uTree[iTree]) & (dEPT['H_obs_t0']>0) )[0]            
-#            for iY in range(ind2.size):            
-#                ind3=np.where( (dTL['ID_Inst']==uInst[iInst]) & (dTL['ID_Plot']==uPlot[iPlot]) & (dTL['ID_Tree']==uTree[iTree]) & (dTL['Year']==dEPT['Year_t0'][ind2[iY]]) )[0]                
-#                dTL['H gf'][ind3]=dEPT['H_obs_t0'][ind2[iY]]
-#                dTL['Dob obs EP'][ind3]=dEPT['D_t0'][ind2[iY]]
-#
-#uPlotS=np.unique(dInst.plot)
-#for iPlotS in range(len(uPlotS)):
-#    
-#    # Index to plot
-#    indP=np.where((dInst.plot==uPlotS[iPlotS]))[0]        
-#    idP_all=dInst.tree[indP]
-#    hP_all=dInst.ht[indP]
-#    baP_all=dInst.ba[indP]
-#    
-#    # Global fit
-#    indP_Fit=np.where((np.isnan(hP_all+baP_all)==False))[0]
-#    x=baP_all[indP_Fit].astype(float); 
-#    y=hP_all[indP_Fit].astype(float)        
-#    poptG,pcovG=curve_fit(funcH,x,y,[5,0.25])
-#    
-#    flg=0
-#    if flg==1:
-#        yhat=funcH(x,poptG[0],poptG[1])
-#        N_Fit=indP_Fit.size
-#        b_Perf=np.polyfit(y,yhat,1)
-#        r_Perf=np.corrcoef(y,yhat)[0,1]        
-#        plt.close('all')
-#        fig,ax=plt.subplots(1,2)
-#        ax[0].plot(x,y,'.')
-#        ax[0].plot(x,yhat,'.')
-#        ax[1].plot(y,yhat,'.')        
-#    
-#        #x2=np.c_[np.ones(x.size),np.log(x)]
-#        #md=sm.OLS(np.log(y),x2).fit()
-#        #md.summary()        
-#    
-#    indGF=np.where( (dInst.plot==uPlotS[iPlotS]) & (np.isnan(dInst.ba)==False) )[0]
-#    dInst.ht_mod[indGF]=funcH(dInst.ba[indGF],poptG[0],poptG[1])
-#    
-#    # Individual tree fit
-#    uTree=np.unique(idP_all[indP_Fit])
-#    for k in range(uTree.size):
-#        indCal=np.where( (idP_all==uTree[k]) & (np.isnan(hP_all+baP_all)==False) )[0]
-#        if indCal.size>2:
-#            x=baP_all[indCal].astype(float)
-#            y=hP_all[indCal].astype(float)                      
-#            try:
-#                poptI,pcovI=curve_fit(funcH,x,y,[5,0.25])
-#                yhat=funcH(x,poptI[0],poptI[1])
-#                ax[0].plot(x,yhat,'-')
-#                indGF=np.where( (dInst.plot==uPlotS[j]) & (dInst.tree==uTree[k]) & (np.isnan(dInst.ba)==False) )[0]
-#                dInst.ht_mod[indGF]=funcH(dInst.ba[indGF],poptI[0],poptI[1])
-#                dInst.H_Fit_ITM[indGF]=1
-#            except:
-#                continue        
-#    
-## Create gap-filled variable        
-#ind=np.where( (np.isnan(dInst.ht)==True) & (np.isnan(dInst.ht_mod)==False) )[0]
-#dInst.ht_gf[ind]=dInst.ht_mod[ind]
 
 #%% Comparison between Dob and Dib from cores
 
@@ -551,13 +443,20 @@ def GapFill():
         D_ob20=dTL['Dob 2020'][iTree]
         iBad=np.where( (np.isnan(TRW)==True) )[0]
         
-        #plt.close('all')
-        #fig,ax=plt.subplots(1)
-        #ax.plot(Age,TRW,'.b-')
-        
+        flg=0
+        if flg==1:
+            plt.close('all')
+            fig,ax=plt.subplots(1)
+            ax.plot(Age,TRW,'.b-')
+            p0=np.array([1.2,4,13,2.2])
+            TRW_hat=func(x,p0[0],p0[1],p0[2],p0[3])  
+            ax.plot(x,TRW_hat,'g--',lw=1.5)
+            
         iFit=np.where( (np.isnan(TRW)==False) )[0]
         x=np.append(np.arange(0,5,1),Age[iFit])
         y=np.append(np.zeros(5),TRW[iFit])
+        p0=np.array([1.2,4,13,2.2])
+        #p,pcov=curve_fit(func,x,y,p0)
         try:
             p,pcov=curve_fit(func,x,y,p0)
         except:
@@ -629,6 +528,9 @@ def GapFill():
     for k in dGF.keys():
         dGF[k]=dGF[k][0:cnt]
 
+    return dGF
+
+dGF=GapFill()
 
 #%% Comparison between Dob and Dib from cores (after gap-filling)
 

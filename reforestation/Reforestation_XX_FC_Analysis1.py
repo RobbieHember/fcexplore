@@ -12,7 +12,6 @@ plt.rcParams.update(params)
 
 dS=gu.ReadExcel(r'D:\Data\FCI_Projects\SummaryReforestation\Inputs\SummaryActivities_BySXY.xlsx')
 
-
 #%% Add planted species and planting density
 
 # The planting info is only in the row for the planting year - add it to all rows

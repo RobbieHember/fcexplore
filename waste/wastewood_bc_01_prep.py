@@ -168,20 +168,22 @@ gradeL=['1','2','3','4','5','6','7','8','B','C','D','E','F','G','H','L','M','U',
     
 # Initialize
 dTM['Tenure Type']=np.array(['' for _ in range(dTM['TM'].size)],dtype=object)
+dTM['V Logs Delivered m3']=np.zeros(dTM['TM'].size)
+dTM['V Logs Delivered Abs m3']=np.zeros(dTM['TM'].size)
 dTM['V Logs Delivered m3/ha']=np.zeros(dTM['TM'].size)
 dTM['V Logs Delivered Abs m3/ha']=np.zeros(dTM['TM'].size)
-dTM['V Logs Delivered PosOnly m3/ha']=np.zeros(dTM['TM'].size)
 dTM['V Logs Cruise m3/ha']=np.zeros(dTM['TM'].size)
 #dTM['V Logs Delivered m3 By Grade']=np.zeros((dTM['TM'].size,len(gradeL)))
 dTM['V Logs Waste m3/ha']=np.zeros(dTM['TM'].size)
 for Grade in gradeL:
     dTM['V Logs Delivered Grade ' + Grade + ' m3/ha']=np.zeros(dTM['TM'].size)
     dTM['V Logs Delivered Grade ' + Grade + ' Abs m3/ha']=np.zeros(dTM['TM'].size)
+    dTM['V Logs Delivered Grade ' + Grade + ' Abs m3']=np.zeros(dTM['TM'].size)
 dTM['Stump Logs Delivered $']=np.zeros(dTM['TM'].size)
 dTM['Stump Logs Delivered Abs $']=np.zeros(dTM['TM'].size)
 dTM['V NonLog Delivered m3/ha']=np.zeros(dTM['TM'].size)
 dTM['V NonLog Delivered Abs m3/ha']=np.zeros(dTM['TM'].size)
-dTM['V NonLog Delivered PosOnly m3/ha']=np.zeros(dTM['TM'].size)
+dTM['V NonLog Delivered Abs m3']=np.zeros(dTM['TM'].size)
 
 # Populate from annual summary files
 binY=np.arange(YrStart,2021,1)
@@ -216,56 +218,44 @@ for iY in range(binY.size):
         Stump_abs=np.abs(dHB[12][ind])
         Grade=dHB[7][ind]
     
-        # logs Normal (delivered)
-        ind2=np.where( (Type=='NP') & (Mat=='Logs') )[0]
+        # logs delivered
+        ind2=np.where( (Mat=='Logs') )[0]
         if ind2.size>0:
             dTM['Tenure Type'][iTM]=dTM['Tenure Type'][iTM]+dHB[19][ind[ind2][0]]
+            dTM['V Logs Delivered m3'][iTM]=np.round(dTM['V Logs Delivered m3'][iTM]+np.sum(V[ind2]),decimals=0)
+            dTM['V Logs Delivered Abs m3'][iTM]=np.round(dTM['V Logs Delivered Abs m3'][iTM]+np.sum(Vabs[ind2]),decimals=0)
             dTM['V Logs Delivered m3/ha'][iTM]=np.round(dTM['V Logs Delivered m3/ha'][iTM]+np.sum(V[ind2]),decimals=0)
-            dTM['V Logs Delivered Abs m3/ha'][iTM]=np.round(dTM['V Logs Delivered Abs m3/ha'][iTM]+np.sum(Vabs[ind2]),decimals=0)
-            
+            dTM['V Logs Delivered Abs m3/ha'][iTM]=np.round(dTM['V Logs Delivered Abs m3/ha'][iTM]+np.sum(Vabs[ind2]),decimals=0)            
             dTM['Stump Logs Delivered $'][iTM]=np.round(dTM['Stump Logs Delivered $'][iTM]+np.sum(Stump[ind2]),decimals=0)
             dTM['Stump Logs Delivered Abs $'][iTM]=np.round(dTM['Stump Logs Delivered Abs $'][iTM]+np.sum(Stump_abs[ind2]),decimals=0)
-            
-            ind3=np.where( (V[ind2]<=0) )[0]
-            if ind3.size==0:
-                dTM['V Logs Delivered PosOnly m3/ha'][iTM]=np.round(dTM['V Logs Delivered PosOnly m3/ha'][iTM]+np.sum(V[ind2]),decimals=0)
-    
-        # Normal by grade
+                
+        # Logs delivered by grade
         for iGrade in range(len(gradeL)):
-            ind2=np.where( (Grade==gradeL[iGrade]) & (Mat=='Logs') )[0]
+            ind2=np.where( (Mat=='Logs') & (Grade==gradeL[iGrade])  )[0]
             if ind2.size>0:
                 #dTM['V Logs Delivered m3 By Grade'][iTM,iGrade]=np.round(dTM['V Logs Delivered m3 By Grade'][iTM,iGrade]+np.sum(V[ind2]),decimals=0)        
                 dTM['V Logs Delivered Grade ' + gradeL[iGrade] + ' m3/ha'][iTM]=np.round(dTM['V Logs Delivered Grade ' + gradeL[iGrade] + ' m3/ha'][iTM]+np.sum(V[ind2]))
-                dTM['V Logs Delivered Grade ' + gradeL[iGrade] + ' m3/ha'][iTM]=np.round(dTM['V Logs Delivered Grade ' + gradeL[iGrade] + ' m3/ha'][iTM]+np.sum(Vabs[ind2]))
+                dTM['V Logs Delivered Grade ' + gradeL[iGrade] + ' Abs m3/ha'][iTM]=np.round(dTM['V Logs Delivered Grade ' + gradeL[iGrade] + ' Abs m3/ha'][iTM]+np.sum(Vabs[ind2]))
+                dTM['V Logs Delivered Grade ' + gradeL[iGrade] + ' Abs m3'][iTM]=np.round(dTM['V Logs Delivered Grade ' + gradeL[iGrade] + ' Abs m3'][iTM]+np.sum(Vabs[ind2]))
         
-        # Waste
+        # Logs Waste
         ind2=np.where( (Type=='WA') & (Mat=='Logs') | (Type=='WU') & (Mat=='Logs') )[0]
         if ind2.size>0:
             dTM['V Logs Waste m3/ha'][iTM]=np.round(dTM['V Logs Waste m3/ha'][iTM]+np.sum(V[ind2]),decimals=0)
-        
-        # Cruise
-        ind2=np.where( (Type=='CR') & (Mat=='Logs') )[0]
-        if ind2.size>0:
-            dTM['V Logs Cruise m3/ha'][iTM]=np.round(dTM['V Logs Cruise m3/ha'][iTM]+np.sum(V[ind2]),decimals=0)
 
-        # Non-logs Normal (delivered)
-        ind2=np.where( (Type=='NP') & (Mat!='Logs') )[0]
+        # Non-logs delivered
+        ind2=np.where( (Mat!='Logs') )[0]
         if ind2.size>0:
             dTM['V NonLog Delivered m3/ha'][iTM]=np.round(dTM['V NonLog Delivered m3/ha'][iTM]+np.sum(V[ind2]),decimals=0)
             dTM['V NonLog Delivered Abs m3/ha'][iTM]=np.round(dTM['V NonLog Delivered Abs m3/ha'][iTM]+np.sum(Vabs[ind2]),decimals=0)
+            dTM['V NonLog Delivered Abs m3'][iTM]=np.round(dTM['V NonLog Delivered Abs m3'][iTM]+np.sum(Vabs[ind2]),decimals=0)
         
-            ind3=np.where( (V[ind2]<=0) )[0]
-            if ind3.size==0:
-                dTM['V NonLog Delivered PosOnly m3/ha'][iTM]=np.round(dTM['V NonLog Delivered PosOnly m3/ha'][iTM]+np.sum(V[ind2]),decimals=0)
-
 dTM['V Logs Delivered m3/ha']=dTM['V Logs Delivered m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
 dTM['V Logs Delivered Abs m3/ha']=dTM['V Logs Delivered Abs m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
-dTM['V Logs Delivered PosOnly m3/ha']=dTM['V Logs Delivered PosOnly m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
 dTM['V Logs Waste m3/ha']=dTM['V Logs Waste m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
 dTM['V Logs Cruise m3/ha']=dTM['V Logs Cruise m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
 dTM['V NonLog Delivered m3/ha']=dTM['V NonLog Delivered m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
 dTM['V NonLog Delivered Abs m3/ha']=dTM['V NonLog Delivered Abs m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
-dTM['V NonLog Delivered PosOnly m3/ha']=dTM['V NonLog Delivered PosOnly m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
 
 for Grade in gradeL:
     dTM['V Logs Delivered Grade ' + Grade + ' m3/ha']=dTM['V Logs Delivered Grade ' + Grade + ' m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
@@ -504,7 +494,7 @@ for iTM in range(uTM.size):
 
 #%%
     
-plt.hist(dTM['D_Beetle'])
+# plt.hist(dTM['D_Beetle'])
 
 gu.opickle(r'C:\Users\rhember\Documents\Data\Waste Wood\WasteSummary.pkl',dTM)
 

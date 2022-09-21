@@ -167,10 +167,10 @@ var='TRW'
 plt.close('all'); 
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(8,5)); 
 ax.plot([-1,11],[0,0],'k-')
-ax.bar(np.arange(uInst.size),dBM[var]['R'][stat],0.6,fc=[0.7,0.7,0.7])
+ax.bar(np.arange(uInst.size),dBM[var]['R'][stat],0.75,fc=[0.7,0.7,0.7])
 ax.bar(uInst.size,np.mean(dBM[var]['R'][stat]),0.6,fc=[0.35,0.35,0.35])
-ax.set(position=[0.15,0.15,0.8,0.8],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'),ylim=[-0.2,0.5], \
-       yticks=np.arange(-0.3,0.6,0.1),ylabel='$\itR$$_{t1-10}$',xlabel='Installation ID')
+ax.set(position=[0.155,0.15,0.8,0.8],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'),ylim=[-0.2,0.5], \
+       yticks=np.arange(-0.3,0.6,0.1),ylabel='$\Delta$$\itw$$_{t1-10}$ (mm yr$^{-1}$)',xlabel='Installation ID')
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=1.5)
 if flag_savefigs=='On':
     gu.PrintFig(meta['Paths']['Figures'] + '\\Response_BM84' + var,'png',900)
@@ -270,7 +270,7 @@ for iI in range(uInst.size):
 #%% Calculate time series of response ratio
 
 #varL=['TRW RR','TRW S NE DPLR RR','BAI RR','Gsw RR','RGR RR']
-varL=['TRW RR','BAI RR','Gsw RR','RGR RR','Gsw','BAI','RGR']
+varL=['TRW RR','BAI RR','Gsw RR','RGR RR','Gsw','BAI','RGR','TRW S NE DPLR RR']
 treatL=['C','F','SS3','SS5']
 statL=['Mean','Median','SE']
 
@@ -307,76 +307,56 @@ for vd in varL:
         dTS[vd]['SS5']['Median'][iT]=np.nanmedian(dTL[vd][ind])
         dTS[vd]['SS5']['SE'][iT]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
 
-# Initialize dictionary of results
-dTSgf={}
-for v in varL:
-    dTSgf[v]={}
-    for treat in treatL:
-        dTSgf[v][treat]={}
-        for s in statL:
-            dTSgf[v][treat][s]=np.zeros(binT.size)
-            
-for vd in varL:
-    for iT in range(binT.size):
-        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['Treatment']=='C') & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['QA Summary']==1) )[0]
-        dTSgf[vd]['C']['Mean'][iT]=np.nanmean(dGF[vd][ind])
-        dTSgf[vd]['C']['Median'][iT]=np.nanmedian(dGF[vd][ind])
-        dTSgf[vd]['C']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
-        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['Treatment']=='F1') & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['QA Summary']==1) )[0]
-        dTSgf[vd]['F']['Mean'][iT]=np.nanmean(dGF[vd][ind])
-        dTSgf[vd]['F']['Median'][iT]=np.nanmedian(dGF[vd][ind])
-        dTSgf[vd]['F']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
-        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS']==3) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
-        dTSgf[vd]['SS3']['Mean'][iT]=np.nanmean(dGF[vd][ind])
-        dTSgf[vd]['SS3']['Median'][iT]=np.nanmean(dGF[vd][ind])
-        dTSgf[vd]['SS3']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
-        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS']==5) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
-        #ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS Comb']==99) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
-        dTSgf[vd]['SS5']['Mean'][iT]=np.nanmean(dGF[vd][ind])
-        dTSgf[vd]['SS5']['Median'][iT]=np.nanmedian(dGF[vd][ind])
-        dTSgf[vd]['SS5']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)    
+## Initialize dictionary of results
+#dTSgf={}
+#for v in varL:
+#    dTSgf[v]={}
+#    for treat in treatL:
+#        dTSgf[v][treat]={}
+#        for s in statL:
+#            dTSgf[v][treat][s]=np.zeros(binT.size)
+#            
+#for vd in varL:
+#    for iT in range(binT.size):
+#        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['Treatment']=='C') & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['QA Summary']==1) )[0]
+#        dTSgf[vd]['C']['Mean'][iT]=np.nanmean(dGF[vd][ind])
+#        dTSgf[vd]['C']['Median'][iT]=np.nanmedian(dGF[vd][ind])
+#        dTSgf[vd]['C']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
+#        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['Treatment']=='F1') & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['QA Summary']==1) )[0]
+#        dTSgf[vd]['F']['Mean'][iT]=np.nanmean(dGF[vd][ind])
+#        dTSgf[vd]['F']['Median'][iT]=np.nanmedian(dGF[vd][ind])
+#        dTSgf[vd]['F']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
+#        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS']==3) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
+#        dTSgf[vd]['SS3']['Mean'][iT]=np.nanmean(dGF[vd][ind])
+#        dTSgf[vd]['SS3']['Median'][iT]=np.nanmean(dGF[vd][ind])
+#        dTSgf[vd]['SS3']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
+#        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS']==5) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
+#        #ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS Comb']==99) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
+#        dTSgf[vd]['SS5']['Mean'][iT]=np.nanmean(dGF[vd][ind])
+#        dTSgf[vd]['SS5']['Median'][iT]=np.nanmedian(dGF[vd][ind])
+#        dTSgf[vd]['SS5']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)    
     
 #%% Bar charts of change in C and F1 plots (between pre- and post-application reference periods)
 
 var='TRW'
 stat='Mean'
 
-cl1=[0.8,0.8,0.8]; cl2=[0.55,0.55,0.55]
+cl1=[0.8,0.8,0.8]; cl2=[0.4,0.4,0.4]; cl3=[0.6,0.6,0.6]
 
 plt.close('all'); 
-fig,ax=plt.subplots(3,1,figsize=gu.cm2inch(8,11)); 
+fig,ax=plt.subplots(2,1,figsize=gu.cm2inch(8,9)); 
 
 # Both C and F
-ax[0].bar(np.arange(uInst.size)-0.15,dBM[var]['C'][stat],0.3,fc=cl1,label='Unfertilized');
+ax[0].plot([-1,20],[1,1],'k-',lw=0.5)
+ax[0].bar(np.arange(uInst.size)-0.15,dBM[var]['C'][stat],0.3,fc='w',ec='k',lw=0.5,label='Unfertilized');
 ax[0].bar(np.arange(uInst.size)+0.15,dBM[var]['F1'][stat],0.3,fc=cl2,label='Fertilized');
 ax[0].errorbar(np.arange(uInst.size)-0.15,dBM[var]['C'][stat],yerr=[ dBM[var]['C'][stat]-dBM[var]['C']['CI Lo'], dBM[var]['C']['CI Hi']-dBM[var]['C'][stat] ],color='k',ls='',capsize=2)
 ax[0].errorbar(np.arange(uInst.size)+0.15,dBM[var]['F1'][stat],yerr=[ dBM[var]['F1'][stat]-dBM[var]['F1']['CI Lo'], dBM[var]['F1']['CI Hi']-dBM[var]['C'][stat] ],color='k',ls='',capsize=2)
 #ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both')
-ax[0].set(position=[0.16,0.7,0.8,0.29],xlim=[-0.5,uInst.size-0.5],xticks=np.arange(uInst.size),xticklabels='',ylim=[0.5,1.35], \
-  yticks=np.arange(0.4,2,0.2),ylabel='$\itr_f$ or $\itr_u$') # '$\itw$ (mm yr$^-$$^1$)')
+ax[0].set(position=[0.16,0.545,0.8,0.425],xlim=[-0.5,uInst.size-0.5],xticks=np.arange(uInst.size),xticklabels='',ylim=[0,1.4], \
+  yticks=np.arange(0,2,0.2),ylabel='$\itr_f$ and $\itr_u$') # '$\itw$ (mm yr$^-$$^1$)')
 ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both'); ax[0].tick_params(length=1.5)
-ax[0].legend(loc='upper left',frameon=False,fontsize=6,bbox_to_anchor=(0.55,0.45,0.5,0.5))
-
-# Absolute differences
-da_be=dBM[var]['F1'][stat]-dBM[var]['C'][stat]
-da_lo,da_hi=gu.GetCIsFromDifference(dBM[var]['C']['CI Lo'],dBM[var]['C']['CI Hi'],dBM[var]['F1']['CI Lo'],dBM[var]['F1']['CI Hi'])
-
-da_be_mu=np.mean(da_be)
-da_be_se=1*np.nanstd(da_be)/np.sqrt(da_be_mu.size)
-
-da_be=np.append(da_be,da_be_mu)
-da_lo=np.append(da_lo,da_be_mu-da_be_se)
-da_hi=np.append(da_hi,da_be_mu+da_be_se)
-
-#plt.close('all'); 
-#fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,5)); 
-ax[1].plot([-1,20],[0,0],'k-')
-ax[1].bar(np.arange(uInst.size+1),da_be,0.5,fc=cl2)
-ax[1].errorbar(np.arange(uInst.size+1),da_be,yerr=[ da_be-da_lo, da_hi-da_be ],color='k',ls='',capsize=2)
-#ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both')
-ax[1].set(position=[0.16,0.39,0.8,0.29],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels='', \
-  yticks=np.arange(-0.2,0.4,0.1),ylabel='$\itI$$_{a,t1-10}$')
-ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
+ax[0].legend(loc='upper left',frameon=False,fontsize=6,bbox_to_anchor=(0.55,0.47,0.5,0.5))
 
 # Relative differences
 dr_be=(dBM[var]['F1'][stat]-dBM[var]['C'][stat])/dBM[var]['C'][stat]*100
@@ -388,17 +368,81 @@ dr_lo=np.append(dr_lo,dr_be_mu-dr_be_se)
 dr_hi=np.append(dr_hi,dr_be_mu+dr_be_se)
 
 #plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,5)); 
-ax[2].plot([-1,20],[0,0],'k-')
-ax[2].bar(np.arange(uInst.size+1),dr_be,0.5,fc=cl2)
-ax[2].errorbar(np.arange(uInst.size+1),dr_be,yerr=[ dr_be-dr_lo, dr_hi-dr_be ],color='k',ls='',capsize=2)
+ax[1].plot([-1,20],[0,0],'k-')
+ax[1].bar(np.arange(uInst.size+1),dr_be,0.5,fc=cl3)
+ax[1].errorbar(np.arange(uInst.size+1),dr_be,yerr=[ dr_be-dr_lo, dr_hi-dr_be ],color='k',ls='',capsize=2)
 #ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
-ax[2].set(position=[0.16,0.08,0.8,0.29],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'), \
+ax[1].set(position=[0.16,0.09,0.8,0.425],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'), \
   ylim=[-25,50],yticks=np.arange(-20,50,10),ylabel='$\itI$$_{r,t1-10}$ (%)',xlabel='Installation ID')
-ax[2].yaxis.set_ticks_position('both'); ax[2].xaxis.set_ticks_position('both'); ax[2].tick_params(length=1.5)
+ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
 gu.axletters(ax,plt,0.0185,0.875,FontWeight='Bold') # ,LetterStyle='Caps'
 if flag_savefigs=='On':
     gu.PrintFig(meta['Paths']['Figures'] + '\\Response_' + var,'png',900)
     fig.savefig(meta['Paths']['Figures'] + '\\Response_' + var + '.svg',format='svg',dpi=1200)
+
+# Bar charts of change in C and F1 plots (between pre- and post-application reference periods)
+# *** OLD WITH Ia and Ir ***
+#var='TRW'
+#stat='Mean'
+#
+#cl1=[0.8,0.8,0.8]; cl2=[0.4,0.4,0.4]; cl3=[0.6,0.6,0.6]
+#
+#plt.close('all'); 
+#fig,ax=plt.subplots(3,1,figsize=gu.cm2inch(8,11)); 
+#ax[0].plot([-1,20],[1,1],'k-',lw=0.5)
+## Both C and F
+#ax[0].bar(np.arange(uInst.size)-0.15,dBM[var]['C'][stat],0.3,fc='w',ec='k',lw=0.5,label='Unfertilized');
+#ax[0].bar(np.arange(uInst.size)+0.15,dBM[var]['F1'][stat],0.3,fc=cl2,label='Fertilized');
+#ax[0].errorbar(np.arange(uInst.size)-0.15,dBM[var]['C'][stat],yerr=[ dBM[var]['C'][stat]-dBM[var]['C']['CI Lo'], dBM[var]['C']['CI Hi']-dBM[var]['C'][stat] ],color='k',ls='',capsize=2)
+#ax[0].errorbar(np.arange(uInst.size)+0.15,dBM[var]['F1'][stat],yerr=[ dBM[var]['F1'][stat]-dBM[var]['F1']['CI Lo'], dBM[var]['F1']['CI Hi']-dBM[var]['C'][stat] ],color='k',ls='',capsize=2)
+##ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both')
+#ax[0].set(position=[0.16,0.695,0.8,0.29],xlim=[-0.5,uInst.size-0.5],xticks=np.arange(uInst.size),xticklabels='',ylim=[0,1.4], \
+#  yticks=np.arange(0,2,0.2),ylabel='$\itr_f$ and $\itr_u$') # '$\itw$ (mm yr$^-$$^1$)')
+#ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both'); ax[0].tick_params(length=1.5)
+#ax[0].legend(loc='upper left',frameon=False,fontsize=6,bbox_to_anchor=(0.55,0.5,0.5,0.5))
+#
+## Absolute differences
+#da_be=dBM[var]['F1'][stat]-dBM[var]['C'][stat]
+#da_lo,da_hi=gu.GetCIsFromDifference(dBM[var]['C']['CI Lo'],dBM[var]['C']['CI Hi'],dBM[var]['F1']['CI Lo'],dBM[var]['F1']['CI Hi'])
+#
+#da_be_mu=np.mean(da_be)
+#da_be_se=1*np.nanstd(da_be)/np.sqrt(da_be_mu.size)
+#
+#da_be=np.append(da_be,da_be_mu)
+#da_lo=np.append(da_lo,da_be_mu-da_be_se)
+#da_hi=np.append(da_hi,da_be_mu+da_be_se)
+#
+##plt.close('all'); 
+##fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,5)); 
+#ax[1].plot([-1,20],[0,0],'k-')
+#ax[1].bar(np.arange(uInst.size+1),da_be,0.5,fc=cl3)
+#ax[1].errorbar(np.arange(uInst.size+1),da_be,yerr=[ da_be-da_lo, da_hi-da_be ],color='k',ls='',capsize=2)
+##ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both')
+#ax[1].set(position=[0.16,0.385,0.8,0.29],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels='', \
+#  ylim=[-0.25,0.45],yticks=np.arange(-0.2,0.4,0.1),ylabel='$\itI$$_{a,t1-10}$')
+#ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
+#
+## Relative differences
+#dr_be=(dBM[var]['F1'][stat]-dBM[var]['C'][stat])/dBM[var]['C'][stat]*100
+#dr_lo,dr_hi=GetCIsForDR(dBM[var]['C']['CI Lo'],dBM[var]['C']['CI Hi'],dBM[var]['F1']['CI Lo'],dBM[var]['F1']['CI Hi'])
+#dr_be_mu=np.mean(dr_be)
+#dr_be_se=1*np.nanstd(dr_be)/np.sqrt(dr_be_mu.size)
+#dr_be=np.append(dr_be,dr_be_mu)
+#dr_lo=np.append(dr_lo,dr_be_mu-dr_be_se)
+#dr_hi=np.append(dr_hi,dr_be_mu+dr_be_se)
+#
+##plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,5)); 
+#ax[2].plot([-1,20],[0,0],'k-')
+#ax[2].bar(np.arange(uInst.size+1),dr_be,0.5,fc=cl3)
+#ax[2].errorbar(np.arange(uInst.size+1),dr_be,yerr=[ dr_be-dr_lo, dr_hi-dr_be ],color='k',ls='',capsize=2)
+##ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
+#ax[2].set(position=[0.16,0.075,0.8,0.29],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'), \
+#  ylim=[-25,50],yticks=np.arange(-20,50,10),ylabel='$\itI$$_{r,t1-10}$ (%)',xlabel='Installation ID')
+#ax[2].yaxis.set_ticks_position('both'); ax[2].xaxis.set_ticks_position('both'); ax[2].tick_params(length=1.5)
+#gu.axletters(ax,plt,0.0185,0.875,FontWeight='Bold') # ,LetterStyle='Caps'
+#if flag_savefigs=='On':
+#    gu.PrintFig(meta['Paths']['Figures'] + '\\Response_' + var,'png',900)
+#    fig.savefig(meta['Paths']['Figures'] + '\\Response_' + var + '.svg',format='svg',dpi=1200)
 
 #%% Plot time series
 
@@ -493,7 +537,7 @@ stat='Mean'
 # Time period
 it=np.where( (binT>=1965) & (binT<=2010) )[0]
 
-plt.close('all'); 
+plt.close('all'); cl1=[0.24,0.49,0.77]; cl2=[0.8,0,0]; cl3=[0.5,0.9,0]
 fig,ax=plt.subplots(2,1,figsize=gu.cm2inch(12,10)); 
 
 v='TRW RR'
@@ -501,15 +545,15 @@ v='TRW RR'
 
 ax[0].plot(binT[it],np.zeros(it.size),'k-',lw=1,color='k')
 be=(dTS[v]['F'][stat][it]-dTS[v]['C'][stat][it])/dTS[v]['C'][stat][it]*100
-ax[0].plot(binT[it],be,'-ko',ms=3.5,mfc='w',mec='k',lw=1,color='k',label='Original control')
+ax[0].plot(binT[it],be,'-ko',ms=3.5,mfc='w',mec=cl1,lw=1,color=cl1,label='Original control')
 be=(dTS[v]['F'][stat][it]-dTS[v]['SS3'][stat][it])/dTS[v]['SS3'][stat][it]*100
-ax[0].plot(binT[it],be,'-rs',ms=3.5,mfc='w',mec='r',lw=1,color='r',label='Dry control')
+ax[0].plot(binT[it],be,'-rs',ms=3.5,mfc='w',mec=cl2,lw=1,color=cl2,label='Dry control')
 be=(dTS[v]['F'][stat][it]-dTS[v]['SS5'][stat][it])/dTS[v]['SS5'][stat][it]*100
-ax[0].plot(binT[it],be,'-bd',ms=3.5,mfc='w',mec='b',lw=1,color='b',label='Wet control')
+ax[0].plot(binT[it],be,'-bd',ms=3.5,mfc='w',mec=cl3,lw=1,color=cl3,label='Wet control')
 ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both'); ax[0].tick_params(length=1.5)
-ax[0].set(position=[0.11,0.54,0.87,0.44],xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],xticks=np.arange(1965,2025,5),ylim=[-45,45], \
+ax[0].set(position=[0.11,0.54,0.87,0.44],xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],xticks=np.arange(1965,2025,5),ylim=[-25,45], \
   yticks=np.arange(-50,100,10),xticklabels=[''],ylabel='$\itI_{r,t}$ (%)')
-ax[0].legend(loc='lower left',frameon=False,ncol=3,fontsize=6)
+ax[0].legend(loc='upper right',frameon=False,ncol=3,fontsize=6)
 
 v='TRW S NE DPLR RR'
 
@@ -517,16 +561,16 @@ be=(dTS[v]['F'][stat][it]-dTS[v]['C'][stat][it])/dTS[v]['C'][stat][it]*100
 ax[1].add_patch(Rectangle([binT[it[0]]-10,-1*np.std(be)],100,2*np.std(be),fc=[0.875,0.875,0.875],ec="none"))
 ax[1].plot(binT[it],np.zeros(it.size),'k-',lw=1,color='k')
 
-ax[1].plot(binT[it],be,'-ko',ms=3.5,mfc='w',mec='k',lw=1,color='k')
+ax[1].plot(binT[it],be,'-ko',ms=3.5,mfc='w',mec=cl1,lw=1,color=cl1)
 be=(dTS[v]['F'][stat][it]-dTS[v]['SS3'][stat][it])/dTS[v]['SS3'][stat][it]*100
-ax[1].plot(binT[it],be,'-rs',ms=3.5,mfc='w',mec='r',lw=1,color='r')
+ax[1].plot(binT[it],be,'-rs',ms=3.5,mfc='w',mec=cl2,lw=1,color=cl2)
 be=(dTS[v]['F'][stat][it]-dTS[v]['SS5'][stat][it])/dTS[v]['SS5'][stat][it]*100
-ax[1].plot(binT[it],be,'-bd',ms=3.5,mfc='w',mec='b',lw=1,color='b')
+ax[1].plot(binT[it],be,'-bd',ms=3.5,mfc='w',mec=cl3,lw=1,color=cl3)
 ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
-ax[1].set(position=[0.11,0.08,0.87,0.44],xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],xticks=np.arange(1965,2025,5),ylim=[-45,45], \
+ax[1].set(position=[0.11,0.08,0.87,0.44],xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],xticks=np.arange(1965,2025,5),ylim=[-25,45], \
   yticks=np.arange(-50,100,10),ylabel='$\itI_{r,t}$ (%)',xlabel='Time, years')
 
-gu.axletters(ax,plt,0.024,0.9,FontWeight='Bold',Labels=['Without detrending','With detrending'],LabelSpacer=0.04) # ,LetterStyle='Caps'
+gu.axletters(ax,plt,0.024,0.9,FontWeight='Bold',Labels=['W/O detrending','With detrending'],LabelSpacer=0.04) # ,LetterStyle='Caps'
 
 if flag_savefigs=='On':
     gu.PrintFig(meta['Paths']['Figures'] + '\\GrowthIndex_vs_Time2','png',900)
@@ -660,7 +704,7 @@ sig_mult=2.0
 
 rs={}
 
-plt.close('all'); fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(15,7.5)); 
+plt.close('all'); fig,ax=plt.subplots(2,1,figsize=gu.cm2inch(8.8,7.5)); 
 
 var='TRW RR'
 rs[var]={}
@@ -676,12 +720,12 @@ rs[var]['SE'][1]=sig_mult*np.std((dBM[var]['F1'][stat]-dBM[var]['SS3'][stat])/dB
 rs[var]['Mean'][2]=np.nanmean((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])/dBM[var]['SS5'][stat]*100)
 rs[var]['SE'][2]=sig_mult*np.nanstd((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])/dBM[var]['SS5'][stat]*100)/np.sqrt(dBM[var]['F1'][stat].size)
 
-ax[0,0].plot([0,5],[0,0],'k-')
-ax[0,0].bar([1,2,3],rs[var]['Mean'],0.75,fc=[0.7,0.7,0.7])
-ax[0,0].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
-ax[0,0].set(position=[0.08,0.56,0.4,0.4],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)',xlim=[0.5,3.5], \
+ax[0].plot([0,5],[0,0],'k-')
+ax[0].bar([1,2,3],rs[var]['Mean'],0.75,fc=[0.7,0.7,0.7])
+ax[0].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
+ax[0].set(position=[0.12,0.56,0.84,0.42],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)',xlim=[0.5,3.5], \
   xticks=np.arange(1,4,1),xticklabels=[''])
-ax[0,0].yaxis.set_ticks_position('both'); ax[0,0].xaxis.set_ticks_position('both'); ax[0,0].tick_params(length=1.5)
+ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both'); ax[0].tick_params(length=1.5)
 
 var='TRW S NE DPLR RR'
 rs[var]={}
@@ -697,36 +741,95 @@ rs[var]['SE'][1]=sig_mult*np.std((dBM[var]['F1'][stat]-dBM[var]['SS3'][stat])/dB
 rs[var]['Mean'][2]=np.nanmean((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])/dBM[var]['SS5'][stat]*100)
 rs[var]['SE'][2]=sig_mult*np.nanstd((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])/dBM[var]['SS5'][stat]*100)/np.sqrt(dBM[var]['F1'][stat].size)
 
-ax[0,1].plot([0,5],[0,0],'k-')
-ax[0,1].bar([1,2,3],rs[var]['Mean'],0.75,fc=[0.7,0.7,0.7])
-ax[0,1].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
-ax[0,1].set(position=[0.58,0.58,0.4,0.4],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
-  xlim=[0.5,3.5],xticks=np.arange(1,4,1),xticklabels=[''])
-ax[0,1].yaxis.set_ticks_position('both'); ax[0,1].xaxis.set_ticks_position('both'); ax[0,1].tick_params(length=1.5)
-
-#------------------------------------------------------------------------------
-
-ax[1,0].plot([0,5],[0,0],'k-')
-ax[1,0].bar([1,2,3],rsShort,0.75,fc=[0.7,0.7,0.7])
-#ax[1,0].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
-ax[1,0].set(position=[0.08,0.09,0.4,0.4],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
+ax[1].plot([0,5],[0,0],'k-')
+ax[1].bar([1,2,3],rs[var]['Mean'],0.75,fc=[0.7,0.7,0.7])
+ax[1].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
+ax[1].set(position=[0.12,0.09,0.84,0.42],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
   xlim=[0.5,3.5],xticks=np.arange(1,4,1),xticklabels=['Original\ncontrol','Dry\ncontrol','Wet\ncontrol'])
-ax[1,0].yaxis.set_ticks_position('both'); ax[1,0].xaxis.set_ticks_position('both'); ax[1,0].tick_params(length=1.5)
+ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
 
-ax[1,1].plot([0,5],[0,0],'k-')
-ax[1,1].bar([1,2,3],rsShortE,0.75,fc=[0.7,0.7,0.7])
-#ax[1,0].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
-ax[1,1].set(position=[0.58,0.09,0.4,0.4],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
-  xlim=[0.5,3.5],xticks=np.arange(1,4,1),xticklabels=['Original\ncontrol','Dry\ncontrol','Wet\ncontrol'])
-ax[1,1].yaxis.set_ticks_position('both'); ax[1,1].xaxis.set_ticks_position('both'); ax[1,1].tick_params(length=1.5)
-
-
-gu.axletters(ax,plt,0.025,0.87,FontWeight='Bold',Labels=['Without detrending','Detrended (full time series)','Detrended (short)','Detrend (short excluding first 5 years)'],LabelSpacer=0.05) # ,LetterStyle='Caps'
-
+gu.axletters(ax,plt,0.025,0.87,FontWeight='Bold',Labels=['W/O detrending','With detrending'],LabelSpacer=0.06) # ,LetterStyle='Caps'
 
 if flag_savefigs=='On':
     gu.PrintFig(meta['Paths']['Figures'] + '\\Evaluation of Detrending Bar Chart','png',900)
     #fig.savefig(meta['Paths']['Figures'] + '\\Pseudocontrols test.svg',format='svg',dpi=1200)
+
+
+#%% Bar chart comparison of response using original and post facto controls
+# *** OLD ***
+#stat='Mean'
+#
+#sig_mult=2.0
+#
+#rs={}
+#
+#plt.close('all'); fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(15,7.5)); 
+#
+#var='TRW RR'
+#rs[var]={}
+#rs[var]['Mean']=np.zeros(3)
+#rs[var]['SE']=np.zeros(3)
+#
+#rs[var]['Mean'][0]=np.mean((dBM[var]['F1'][stat]-dBM[var]['C'][stat])/dBM[var]['C'][stat]*100)
+#rs[var]['SE'][0]=sig_mult*np.std((dBM[var]['F1'][stat]-dBM[var]['C'][stat])/dBM[var]['C'][stat]*100)/np.sqrt(dBM[var]['F1'][stat].size)
+#
+#rs[var]['Mean'][1]=np.mean((dBM[var]['F1'][stat]-dBM[var]['SS3'][stat])/dBM[var]['SS3'][stat]*100)
+#rs[var]['SE'][1]=sig_mult*np.std((dBM[var]['F1'][stat]-dBM[var]['SS3'][stat])/dBM[var]['SS3'][stat]*100)/np.sqrt(dBM[var]['F1'][stat].size)
+#
+#rs[var]['Mean'][2]=np.nanmean((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])/dBM[var]['SS5'][stat]*100)
+#rs[var]['SE'][2]=sig_mult*np.nanstd((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])/dBM[var]['SS5'][stat]*100)/np.sqrt(dBM[var]['F1'][stat].size)
+#
+#ax[0,0].plot([0,5],[0,0],'k-')
+#ax[0,0].bar([1,2,3],rs[var]['Mean'],0.75,fc=[0.7,0.7,0.7])
+#ax[0,0].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
+#ax[0,0].set(position=[0.08,0.56,0.4,0.4],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)',xlim=[0.5,3.5], \
+#  xticks=np.arange(1,4,1),xticklabels=[''])
+#ax[0,0].yaxis.set_ticks_position('both'); ax[0,0].xaxis.set_ticks_position('both'); ax[0,0].tick_params(length=1.5)
+#
+#var='TRW S NE DPLR RR'
+#rs[var]={}
+#rs[var]['Mean']=np.zeros(3)
+#rs[var]['SE']=np.zeros(3)
+#
+#rs[var]['Mean'][0]=np.mean((dBM[var]['F1'][stat]-dBM[var]['C'][stat])/dBM[var]['C'][stat]*100)
+#rs[var]['SE'][0]=sig_mult*np.std((dBM[var]['F1'][stat]-dBM[var]['C'][stat])/dBM[var]['C'][stat]*100)/np.sqrt(dBM[var]['F1'][stat].size)
+#
+#rs[var]['Mean'][1]=np.mean((dBM[var]['F1'][stat]-dBM[var]['SS3'][stat])/dBM[var]['SS3'][stat]*100)
+#rs[var]['SE'][1]=sig_mult*np.std((dBM[var]['F1'][stat]-dBM[var]['SS3'][stat])/dBM[var]['SS3'][stat]*100)/np.sqrt(dBM[var]['F1'][stat].size)
+#
+#rs[var]['Mean'][2]=np.nanmean((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])/dBM[var]['SS5'][stat]*100)
+#rs[var]['SE'][2]=sig_mult*np.nanstd((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])/dBM[var]['SS5'][stat]*100)/np.sqrt(dBM[var]['F1'][stat].size)
+#
+#ax[0,1].plot([0,5],[0,0],'k-')
+#ax[0,1].bar([1,2,3],rs[var]['Mean'],0.75,fc=[0.7,0.7,0.7])
+#ax[0,1].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
+#ax[0,1].set(position=[0.58,0.58,0.4,0.4],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
+#  xlim=[0.5,3.5],xticks=np.arange(1,4,1),xticklabels=[''])
+#ax[0,1].yaxis.set_ticks_position('both'); ax[0,1].xaxis.set_ticks_position('both'); ax[0,1].tick_params(length=1.5)
+#
+##------------------------------------------------------------------------------
+#
+#ax[1,0].plot([0,5],[0,0],'k-')
+#ax[1,0].bar([1,2,3],rsShort,0.75,fc=[0.7,0.7,0.7])
+##ax[1,0].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
+#ax[1,0].set(position=[0.08,0.09,0.4,0.4],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
+#  xlim=[0.5,3.5],xticks=np.arange(1,4,1),xticklabels=['Original\ncontrol','Dry\ncontrol','Wet\ncontrol'])
+#ax[1,0].yaxis.set_ticks_position('both'); ax[1,0].xaxis.set_ticks_position('both'); ax[1,0].tick_params(length=1.5)
+#
+#ax[1,1].plot([0,5],[0,0],'k-')
+#ax[1,1].bar([1,2,3],rsShortE,0.75,fc=[0.7,0.7,0.7])
+##ax[1,0].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
+#ax[1,1].set(position=[0.58,0.09,0.4,0.4],ylim=[-5,25],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
+#  xlim=[0.5,3.5],xticks=np.arange(1,4,1),xticklabels=['Original\ncontrol','Dry\ncontrol','Wet\ncontrol'])
+#ax[1,1].yaxis.set_ticks_position('both'); ax[1,1].xaxis.set_ticks_position('both'); ax[1,1].tick_params(length=1.5)
+#
+#
+#gu.axletters(ax,plt,0.025,0.87,FontWeight='Bold',Labels=['Without detrending','Detrended (full time series)','Detrended (short)','Detrend (short excluding first 5 years)'],LabelSpacer=0.05) # ,LetterStyle='Caps'
+#
+#
+#if flag_savefigs=='On':
+#    gu.PrintFig(meta['Paths']['Figures'] + '\\Evaluation of Detrending Bar Chart','png',900)
+#    #fig.savefig(meta['Paths']['Figures'] + '\\Pseudocontrols test.svg',format='svg',dpi=1200)
 
 #%% Compare core responses with responses from the original trial
 
@@ -900,35 +1003,33 @@ for v in vL:
 # Populate dictionary of results
 for v in vL:
     for i in range(bin.size):
-        ind=np.where( (dGF['Age']==bin[i]) & (dGF['Treatment']=='C') & (dGF[v]>0) & (dGF[v]<2000) & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
-        dAgf[v]['C']['Mean'][i]=np.nanmean(dGF[v][ind])
-        dAgf[v]['C']['Median'][i]=np.nanmedian(dGF[v][ind])
-        dAgf[v]['C']['SE'][i]=np.nanstd(dGF[v][ind])/np.sqrt(ind.size)
-        ind=np.where( (dGF['Age']==bin[i]) & (dGF['Treatment']=='F1') & (dGF[v]>0) & (dGF[v]<2000) & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
-        dAgf[v]['F']['Mean'][i]=np.nanmean(dGF[v][ind])    
-        dAgf[v]['F']['Median'][i]=np.nanmedian(dGF[v][ind])
-        dAgf[v]['F']['SE'][i]=np.nanstd(dGF[v][ind])/np.sqrt(ind.size)
-        ind=np.where( (dGF['Age']==bin[i]) & (dGF['BGC SS']==3) & (dGF[v]>0) & (dGF[v]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
-        dAgf[v]['SS3']['Mean'][i]=np.nanmean(dGF[v][ind])
-        dAgf[v]['SS3']['Median'][i]=np.nanmedian(dGF[v][ind])
-        ind=np.where( (dGF['Age']==bin[i]) & (dGF['BGC SS']==5) & (dGF[v]>0) & (dGF[v]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
-        #ind=np.where( (dGF['Year']==bin[i]) & (dGF['BGC SS Comb']==99) & (dGF[v]>0) & (dGF[v]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
-        dAgf[v]['SS5']['Mean'][i]=np.nanmean(dGF[v][ind])
-        dAgf[v]['SS5']['Median'][i]=np.nanmedian(dGF[v][ind])
-        ind=np.where( (dGF['Age']==bin[i]) & (dGF['BGC SS']==6) & (dGF[v]>0) & (dGF[v]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) & (dGF['Year Last']==2020) )[0]
-        dAgf[v]['SS6']['Mean'][i]=np.nanmean(dGF[v][ind])
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['Treatment']=='C') & (dTL[v]>0) & (dTL[v]<2000) & (dTL['QA Summary']==1) & (dTL['Year Last']==2020) )[0]
+        dAgf[v]['C']['Mean'][i]=np.nanmean(dTL[v][ind])
+        dAgf[v]['C']['Median'][i]=np.nanmedian(dTL[v][ind])
+        dAgf[v]['C']['SE'][i]=np.nanstd(dTL[v][ind])/np.sqrt(ind.size)
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['Treatment']=='F1') & (dTL[v]>0) & (dTL[v]<2000) & (dTL['QA Summary']==1) & (dTL['Year Last']==2020) )[0]
+        dAgf[v]['F']['Mean'][i]=np.nanmean(dTL[v][ind])    
+        dAgf[v]['F']['Median'][i]=np.nanmedian(dTL[v][ind])
+        dAgf[v]['F']['SE'][i]=np.nanstd(dTL[v][ind])/np.sqrt(ind.size)
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==3) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) & (dTL['Year Last']==2020) )[0]
+        dAgf[v]['SS3']['Mean'][i]=np.nanmean(dTL[v][ind])
+        dAgf[v]['SS3']['Median'][i]=np.nanmedian(dTL[v][ind])
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==5) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) & (dTL['Year Last']==2020) )[0]
+        #ind=np.where( (dTL['Year']==bin[i]) & (dTL['BGC SS Comb']==99) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+        dAgf[v]['SS5']['Mean'][i]=np.nanmean(dTL[v][ind])
+        dAgf[v]['SS5']['Median'][i]=np.nanmedian(dTL[v][ind])
+        ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==6) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) & (dTL['Year Last']==2020) )[0]
+        dAgf[v]['SS6']['Mean'][i]=np.nanmean(dTL[v][ind])
 
 #%%
 
 plt.close('all')
-#plt.plot(bin,dA['BAI']['C']['Mean'],'b-')
-plt.plot(bin,dAgf['Gsw']['C']['Median'],'b-')
-plt.plot(bin,dAgf['Gsw']['F']['Median'],'g--')
-plt.plot(bin,dAgf['Gsw']['SS3']['Median'],'r--')
-plt.plot(bin,dAgf['Gsw']['SS5']['Median'],'c-')
+plt.plot(bin,dA['TRW']['C']['Mean'],'b-')
+plt.plot(bin,dA['TRW']['F']['Mean'],'g-')
+plt.plot(bin,dA['TRW']['SS3']['Mean'],'r--')
+plt.plot(bin,dA['TRW']['SS5']['Mean'],'c--')
 
-plt.close('all')
-plt.plot(bin,dAgf['Dib']['C']['Median'],'b-')
+
 
     
 #%%
@@ -1137,4 +1238,35 @@ md.summary()
 yhat1=md.predict(np.c_[1,1965])
 yhat2=md.predict(np.c_[1,2020])
 (yhat2-yhat1)/yhat1*100
+
+
+#%%
+
+uInst
+iInst=1
+ind=np.where( (dGF['ID_Inst']==uInst[iInst]) )[0]
+
+np.unique(dGF['BGC SS'][ind])
+
+plt.close('all')
+ind=np.where( (dGF['ID_Inst']==uInst[iInst]) & (dGF['BGC SS']==1) )[0]
+print(np.unique(dGF['ID_Tree_Unique'][ind]))
+ind=np.where( (dGF['ID_Inst']==uInst[iInst]) & (dGF['ID_Tree_Unique']==71) )[0]
+plt.plot(dGF['Bsw'][ind],dGF['Gsw'][ind],'-b.')
+
+ind=np.where( (dGF['ID_Inst']==uInst[iInst]) & (dGF['BGC SS']==5) )[0]
+np.unique(dGF['ID_Tree'][ind])
+ind=np.where( (dGF['ID_Inst']==uInst[iInst]) & (dGF['ID_Tree_Unique']==dGF['ID_Tree_Unique'][ind[0]]) )[0]
+plt.plot(dGF['Bsw'][ind],dGF['Gsw'][ind],'-g.')
+
+#%%
+
+
+plt.close('all')
+ind=np.where( (dGF['ID_Inst']==uInst[iInst]) & (dGF['BGC SS']==1) )[0]
+plt.plot(dGF['Bsw'][ind],dGF['Gsw'][ind],'b.')
+ind=np.where( (dGF['ID_Inst']==uInst[iInst]) & (dGF['BGC SS']==5) )[0]
+plt.plot(dGF['Bsw'][ind],dGF['Gsw'][ind],'g.')
+
+
 
