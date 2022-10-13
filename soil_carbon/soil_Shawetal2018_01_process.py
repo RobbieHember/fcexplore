@@ -25,6 +25,7 @@ from rasterio.transform import from_origin
 from osgeo import osr
 from scipy.interpolate import griddata
 import statsmodels.formula.api as smf
+import cv2
 
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
@@ -59,7 +60,8 @@ for k in ufd.keys():
 
 #%% Get BC1ha grid coords
 
-zTSA=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\tsa.tif')
+# FAIB standard grid
+zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\FAIB_Standard.tif')
 
 srs=gis.ImportSRSs()
 ufd['x']=np.zeros(ufd['LOCATION_ID'].size)
@@ -67,8 +69,8 @@ ufd['y']=np.zeros(ufd['LOCATION_ID'].size)
 for i in range(ufd['x'].size):
     ufd['x'][i],ufd['y'][i]=srs['Proj']['BC1ha'](ufd['LONGITUDE'][i],ufd['LATITUDE'][i])
 
-x=zTSA['X'][0,:]
-y=zTSA['Y'][:,0]
+x=zRef['X'][0,:]
+y=zRef['Y'][:,0]
 ix=np.zeros(ufd['LOCATION_ID'].size,dtype=int)
 iy=np.zeros(ufd['LOCATION_ID'].size,dtype=int)
 for i in range(ufd['x'].size):
@@ -76,9 +78,11 @@ for i in range(ufd['x'].size):
     iy[i]=np.where( np.abs(ufd['y'][i]-y)==np.min(np.abs(ufd['y'][i]-y)) )[0]
 
 # Check that it worked
-x=zTSA['X'][iy,ix]
-y=zTSA['Y'][iy,ix]
-plt.plot(x,y,'k.')
+flg=0
+if flg==1:
+    x=zRef['X'][iy,ix]
+    y=zRef['Y'][iy,ix]
+    plt.plot(x,y,'k.')
 
 # Import BC1ha data
 becz=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
@@ -143,66 +147,65 @@ dP3=mr3.params.to_dict()
 
 #%% Import BC Soil survey data
 
-bcss=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\soil_dev1a.tif')
-bcss=gis.ClipToRaster(bcss,zTSA)
-lut_bcss=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\soil_dev1.tif.vat.dbf.xlsx')
+bcss=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\BC Soil Surveys\soil_dev1a.tif')
+bcss=gis.ClipToRaster(bcss,zRef)
+lut_bcss=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\BC Soil Surveys\soil_dev1.tif.vat.dbf.xlsx')
+
+plt.matshow(bcss['Data'])
 
 #%% Import SLC
+# Dead end - they don't include any way to reconstruct great group/subgroup outside the soil surveys
 
-slc=gpd.read_file(r'C:\Users\rhember\Documents\Data\Soils\Soil Landscapes of Canada\Version32\ca_all_slc_v3r2.shp')
+# slc=gpd.read_file(r'C:\Users\rhember\Documents\Data\Soils\Soil Landscapes of Canada\Version32\ca_all_slc_v3r2.shp')
 
-# Clip
-slc=slc.cx[-142:-112,47:61]
-slc=slc.reset_index(drop=True)
+# # Clip
+# slc=slc.cx[-142:-112,47:61]
+# slc=slc.reset_index(drop=True)
 
-# Reproject
-rst=rasterio.open(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\tsa.tif')
-slc=slc.to_crs(rst.crs.to_dict())
+# # Reproject
+# rst=rasterio.open(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\tsa.tif')
+# slc=slc.to_crs(rst.crs.to_dict())
 
-out_arr=np.zeros(rst.shape,dtype=float)
-# This is where we create a generator of geom, value pairs to use in rasterizing
-shapes=((geom,value) for geom, value in zip(slc.geometry,slc.POLY_ID))
-z_slc=features.rasterize(shapes=shapes,fill=0,out=out_arr,transform=out.transform)
+# out_arr=np.zeros(rst.shape,dtype=float)
+# # This is where we create a generator of geom, value pairs to use in rasterizing
+# shapes=((geom,value) for geom, value in zip(slc.geometry,slc.POLY_ID))
+# z_slc=features.rasterize(shapes=shapes,fill=0,out=out_arr,transform=zRef['Transform'])
 
-# Delete info overlapping BC soil surveys
-# z_slc2=z_slc.copy()
-# ind=np.where( (bcss['Data']>=1) & (bcss['Data']<128) )
-# z_slc2[ind]=0
+# # Delete info overlapping BC soil surveys
+# # z_slc2=z_slc.copy()
+# # ind=np.where( (bcss['Data']>=1) & (bcss['Data']<128) )
+# # z_slc2[ind]=0
 
-lut_slc1=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Soils\Soil Landscapes of Canada\Version32\ca_all_slc_v3r2_cmp.dbf.xlsx')
-# ind=np.where(lut_slc1['CMP']==1)[0]
-# for k in lut_slc1.keys():
-#     lut_slc1[k]=lut_slc1[k][ind]
+# lut_slc1=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Soils\Soil Landscapes of Canada\Version32\ca_all_slc_v3r2_cmp.dbf.xlsx')
+# # ind=np.where(lut_slc1['CMP']==1)[0]
+# # for k in lut_slc1.keys():
+# #     lut_slc1[k]=lut_slc1[k][ind]
 
-lut_slc2=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Soils\Soil Landscapes of Canada\soil_name_bc_v2r20150610.xlsx')
+# lut_slc2=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Soils\Soil Landscapes of Canada\soil_name_bc_v2r20150610.xlsx')
 
-u_pid=np.unique(z_slc[z_slc>0])
-nam_slc=np.array(['' for _ in range(u_pid.size)],dtype=object)
+# u_pid=np.unique(z_slc[z_slc>0])
+# nam_slc=np.array(['' for _ in range(u_pid.size)],dtype=object)
 
-ind=np.where(lut_slc1['PROVINCE']=='BC')[0]
-np.unique(lut_slc1['POLY_ID'][ind]).size
+# ind=np.where(lut_slc1['PROVINCE']=='BC')[0]
+# np.unique(lut_slc1['POLY_ID'][ind]).size
 
-for i in range(u_pid.size):
-    ind2=np.where( lut_slc1['POLY_ID']==u_pid[i] )
-    if ind2[0].size==0:
-        ind=np.where(z_slc==u_pid[i])
-        a[ind]=1
-        continue
-    soil_name=lut_slc1['SOIL_ID'][ind2]
+# for i in range(u_pid.size):
+#     ind2=np.where( lut_slc1['POLY_ID']==u_pid[i] )
+#     if ind2[0].size==0:
+#         ind=np.where(z_slc==u_pid[i])
+#         a[ind]=1
+#         continue
+#     soil_name=lut_slc1['SOIL_ID'][ind2]
 
-    ind3=np.where( lut_slc2['SOIL_ID']==soil_name )
-    if ind3[0].size==0:
-        continue
-    gg=lut_slc2['G_GROUP2'][ind3]
-    sg=lut_slc2['S_GROUP2'][ind3]
-    nam_slc[i]=sg[0] + '.' + gg[0]
-u_nam_slc=np.unique(nam_slc)
-u_nam_slc=u_nam_slc[u_nam_slc!='']
-u_nam_slc=u_nam_slc[u_nam_slc!='-.-']
-
-#%% Import bec zone
-
-becz=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
+#     ind3=np.where( lut_slc2['SOIL_ID']==soil_name )
+#     if ind3[0].size==0:
+#         continue
+#     gg=lut_slc2['G_GROUP2'][ind3]
+#     sg=lut_slc2['S_GROUP2'][ind3]
+#     nam_slc[i]=sg[0] + '.' + gg[0]
+# u_nam_slc=np.unique(nam_slc)
+# u_nam_slc=u_nam_slc[u_nam_slc!='']
+# u_nam_slc=u_nam_slc[u_nam_slc!='-.-']
 
 #%% Map predictions
 
@@ -210,7 +213,7 @@ flg=0
 if flg==1:
 
     # Model 1
-    zSOC1=copy.deepcopy(zTSA)
+    zSOC1=copy.deepcopy(zRef)
     zSOC1['Data']=dP1['Intercept']+0*zSOC1['Data']
 
     # Add BEC
@@ -223,7 +226,7 @@ if flg==1:
         zSOC1['Data'][ind1]=zSOC1['Data'][ind1]+dP1[k]
 
     # Model 2
-    zSOC2=copy.deepcopy(zTSA)
+    zSOC2=copy.deepcopy(zRef)
     zSOC2['Data']=0*zSOC2['Data']
     for i in range(u_nam_slc.size):
         ind1=np.where( nam_slc==u_nam_slc[i] )[0]
@@ -238,44 +241,31 @@ if flg==1:
             if k=='C(CSSC_CODE)[T.' + nam + ']':
                 zSOC2['Data'][ind2]=dP2['Intercept']+dP2[k]
 
-    # Add soil type from BC Soil Surveys
-    u=np.unique(bcss['Data'])
-    for i in range(u.size):
-        ind1=np.where( bcss['Data']==u[i])
-        ind2=np.where(lut_bcss['VALUE']==u[i])[0]
-        if ind2.size==0:
-            continue
-        nam=lut_bcss['DEV_1'][ind2][0]
-        for k in dP2:
-            if k=='C(CSSC_CODE)[T.' + nam + ']':
-                #zSOC2['Data'][ind1]=zSOC2['Data'][ind1]+dP2[k]
-                zSOC2['Data'][ind1]=dP2[k]
+    # # Add soil type from BC Soil Surveys
+    # u=np.unique(bcss['Data'])
+    # for i in range(u.size):
+    #     ind1=np.where( bcss['Data']==u[i])
+    #     ind2=np.where(lut_bcss['VALUE']==u[i])[0]
+    #     if ind2.size==0:
+    #         continue
+    #     nam=lut_bcss['DEV_1'][ind2][0]
+    #     for k in dP2:
+    #         if k=='C(CSSC_CODE)[T.' + nam + ']':
+    #             #zSOC2['Data'][ind1]=zSOC2['Data'][ind1]+dP2[k]
+    #             zSOC2['Data'][ind1]=dP2[k]
 
     # Model 3
-    zSOC2=copy.deepcopy(zTSA)
-    zSOC2['Data']=dP2['Intercept']+0*zSOC2['Data']
+    zSOC3=copy.deepcopy(zRef)
+    zSOC3['Data']=dP3['Intercept']+0*zSOC3['Data']
 
     # Add BEC
     u=np.unique(becz['Data'][becz['Data']<255])
     for i in range(u.size):
         ind1=np.where( becz['Data']==u[i] )
-        for k in dP2:
+        for k in dP3:
             if k=='C(becz)[T.' + str(u[i]) + ']':
                 break
-        zSOC2['Data'][ind1]=zSOC2['Data'][ind1]+dP2[k]
-
-    # Add soil type from Soil Landscapes of Canada
-    for i in range(u_nam_slc.size):
-        ind1=np.where( nam_slc==u_nam_slc[i] )[0]
-        #print(ind1.size)
-        list=[]
-        for j in range(ind1.size):
-            list.append(u_pid[ind1[j]])
-        ind2=np.where(np.isin(z_slc,list)==True)
-        nam=u_nam_slc[i]
-        for k in dP2:
-            if k=='C(CSSC_CODE)[T.' + nam + ']':
-                zSOC2['Data'][ind1]=zSOC2['Data'][ind1]+dP2[k]
+        zSOC3['Data'][ind1]=zSOC3['Data'][ind1]+dP3[k]
 
     # Add soil type from BC Soil Surveys
     u=np.unique(bcss['Data'])
@@ -285,31 +275,30 @@ if flg==1:
         if ind2.size==0:
             continue
         nam=lut_bcss['DEV_1'][ind2][0]
-        for k in dP2:
+        for k in dP3:
             if k=='C(CSSC_CODE)[T.' + nam + ']':
-                zSOC2['Data'][ind1]=zSOC2['Data'][ind1]+dP2[k]
+                zSOC3['Data'][ind1]=zSOC3['Data'][ind1]+dP3[k]
 
-    # Combined
+    # Combine model 1 and model 3
     zSOC=copy.deepcopy(zSOC1)
     ind=np.where( (bcss['Data']>0) & (bcss['Data']<=95) & (bcss['Data']!=5) & (bcss['Data']!=32) )
-    #ind=np.where( (zSOC2['Data']>0) & (zSOC2['Data']<250) )
-    zSOC['Data'][ind]=zSOC2['Data'][ind]
+    zSOC['Data'][ind]=zSOC3['Data'][ind]
 
     # Save map
     zSOC['Data']=zSOC['Data'].astype('int16')
     gis.SaveGeoTiff(zSOC,r'C:\Users\rhember\Documents\Data\BC1ha\Soil\soc_tot_forest_Shawetal2018.tif')
 
-#%% Import predicted SOC map
-
-zSOC=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\soc_tot_forest_Shawetal2018.tif')
+else:
+    # Import predicted SOC map
+    zSOC=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\soc_tot_forest_Shawetal2018.tif')
 
 #plt.close('all')
-#plt.matshow(zSOC['Data'],clim=[0,250])
+#plt.matshow(zSOC['Data'],clim=[0,450])
 
 #%% Calculate mean SOC
 
 # Forest mask
-btm=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\landuse.btm2.tif')
+btm=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\landuse.btm.tif')
 iMask=np.where( (btm['Data']==8) | (btm['Data']==11) | (btm['Data']==12) | (btm['Data']==16) | (btm['Data']==21) )
 
 np.sum(zSOC['Data'][iMask])/1e9
@@ -379,18 +368,18 @@ gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Soils\SOC_By_
 
 #%%
 
-u=np.unique(ufd['ORDER'])
-lab=np.array(['' for _ in range(u.size)],dtype=object)
-soc_mu=np.zeros(u.size)
-for i in range(u.size):
-    ind=np.where( (ufd['ORDER']==u[i]) & (ufd['TOT_C_THA']>0) )
-    soc_mu[i]=np.mean(ufd['TOT_C_THA'][ind])
+Mask=0*zRef['Data'].copy()
+ind=np.where( (bcss['Data']>0) & (bcss['Data']<=95) & (bcss['Data']!=5) & (bcss['Data']!=32) )
+Mask[ind]=1
+plt.matshow(Mask)
 
+# Create binary image
+z=np.zeros((m,n,3),dtype=np.uint8)
+z[tsa==id,:]=255
+z=cv2.cvtColor(z,cv2.COLOR_BGR2GRAY) # Convert to grey scale
 
-plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(14,8))
-ax.bar(np.arange(u.size),soc_mu)
-ax.set(xticks=np.arange(u.size),xticklabels=u)
+# Calculate contour of object
+cont=cv2.findContours(image=Mask,mode=cv2.RETR_LIST,method=cv2.CHAIN_APPROX_SIMPLE)
 
 
 

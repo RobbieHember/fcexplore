@@ -85,10 +85,11 @@ print(np.std(slo['Cag_L_t0'][ind])/np.sqrt(ind.size))
 
 #%% Stats all
 
-ind=np.where( (sl['EcoZone_BC_L1']==9) & (sl['PlotType']==1) & (sl['Age_t0']>200) & (sl['Cag_L_t0']>0) & (sl['Cag_L_t0']<2000) |
-             (sl['EcoZone_BC_L1']==9) & (sl['PlotType']==9) & (sl['Age_t0']>200) & (sl['Cag_L_t0']>0) & (sl['Cag_L_t0']<2000))[0]
+ind=np.where( (sl['EcoZone_BC_L1']==9) & (sl['PlotType']==1) & (sl['Age_t0']>150) & (sl['Cag_L_t0']>0) & (sl['Cag_L_t0']<2000) |
+             (sl['EcoZone_BC_L1']==9) & (sl['PlotType']==1) & (sl['Age_t0']>150) & (sl['Cag_L_t0']>0) & (sl['Cag_L_t0']<2000))[0]
 print(ind.size)
 print(np.mean(np.real(sl['Cag_L_t0'][ind])))
+print(np.mean(np.real(sl['Age_t0'][ind])))
 print(np.std(sl['Cag_L_t0'][ind])/np.sqrt(ind.size))
 
 #%%
