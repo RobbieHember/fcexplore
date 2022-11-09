@@ -19,11 +19,13 @@ from fcgadgets.cbrunner import cbrun_utilities as cbu
 
 #%% Graphics parameters
 
-fs=7
-params={'font.sans-serif':'Arial','font.size':fs,'axes.edgecolor':'black','axes.labelsize':fs,'axes.labelcolor':'black','axes.titlesize':fs,'axes.linewidth':0.5,'lines.linewidth':0.5,
-        'text.color':'black','xtick.color':'black','xtick.labelsize':fs,'xtick.major.width':0.5,'xtick.major.size':3,'xtick.direction':'in','ytick.color':'black','ytick.labelsize':fs,
-        'ytick.major.width':0.5,'ytick.major.size':3,'ytick.direction':'in','legend.fontsize':fs,'savefig.dpi':300,'savefig.transparent':True}
-plt.rcParams.update(params)
+# fs=7
+# params={'font.sans-serif':'Arial','font.size':fs,'axes.edgecolor':'black','axes.labelsize':fs,'axes.labelcolor':'black','axes.titlesize':fs,'axes.linewidth':0.5,'lines.linewidth':0.5,
+#         'text.color':'black','xtick.color':'black','xtick.labelsize':fs,'xtick.major.width':0.5,'xtick.major.size':3,'xtick.direction':'in','ytick.color':'black','ytick.labelsize':fs,
+#         'ytick.major.width':0.5,'ytick.major.size':3,'ytick.direction':'in','legend.fontsize':fs,'savefig.dpi':300,'savefig.transparent':True}
+# plt.rcParams.update(params)
+
+gp=gu.SetGraphics('Manuscript')
 
 #%% Prepare
 
@@ -31,6 +33,17 @@ tv=np.arange(1950,2022,1)
 
 # For CRS
 gdf_bm=gpd.read_file(r'C:\Users\rhember\Documents\Data\Basemaps\Basemaps.gdb',layer='NRC_POLITICAL_BOUNDARIES_1M_SP')
+
+#%% National Forest Database
+
+d=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Harvest\Harvest Area\NFD - Area harvested by ownership and harvesting method - EN FR.xlsx')
+dNFD={}
+dNFD['Area']=np.zeros(tv.size)
+for iT in range(tv.size):
+    ind=np.where( (d['Juridiction']=='British Columbia') & (d['Year']==tv[iT]) )[0]
+    if ind.size==0:
+        continue
+    dNFD['Area']=d['Area (hectares)']
 
 #%% Annual harvest area from consolidated cutblock DB
 
@@ -149,18 +162,19 @@ for iT in range(tv.size):
 
 #gu.opickle(r'C:\Users\rhember\Documents\Data\Harvest\Harvest Area\AnnualHarvestAreaFromRESULTS.pkl',metaAT)
 
-
 #%% Plot
 
-plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,7.5));
-ax.plot(tv,dCC['Area Harvested']/1e3,'-bo',ms=4,label='Consolidated cutblocks database')
-ax.plot(tv,metaOP['ts']['OPENING_GROSS_AREA']/1e3,'-gs',ms=4,label='Gross area (RESULTS)')
-ax.plot(tv,(metaOP['ts']['OPENING_GROSS_AREA']-metaOP['ts']['Area Reserves'])/1e3,'-cs',markerfacecolor='w',ms=4,label='Gross area minus reserves (RESULTS)')
-ax.plot(tv,metaAT['ts']['Area Regen Total']/1e3,'-r^',ms=4,label='Area established (RESULTS AT Layer)')
+gp['ms']=3
+
+plt.close('all');
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,7.5));
+ax.plot(tv,dCC['Area Harvested']/1e3,'-bo',color=[0.27,0.49,0.78],ms=gp['ms'],label='Harvest area (consolidated cutblocks database)')
+#ax.plot(tv,metaOP['ts']['OPENING_GROSS_AREA']/1e3,'-gs',markerfacecolor='w',ms=gp['ms'],label='Gross area (RESULTS)')
+ax.plot(tv,(metaOP['ts']['OPENING_GROSS_AREA']-metaOP['ts']['Area Reserves'])/1e3,'-gs',ms=gp['ms'],label='Gross area minus reserves (RESULTS)')
+ax.plot(tv,metaAT['ts']['Area Regen Total']/1e3,'-r^',ms=gp['ms'],label='Area reforested (RESULTS)')
 ax.set(position=[0.085,0.125,0.88,0.84],xticks=np.arange(1800,2120,5),yticks=np.arange(0,275,25),ylabel='Area harvested (Thousand ha yr$^-$$^1$)',xlabel='Time, years',xlim=[1949.5,2021.5])
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=1.5)
 ax.legend(loc='upper left',facecolor=[1,1,1],frameon=False)
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Harvest\Harvest Area\AnnualAreaHarvested','png',900)
-
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Harvest\Harvest Area\AreaHarvestedBC','png',900)
 
 

@@ -121,6 +121,10 @@ ind=np.where( (ufd['becz']!=255) )[0]
 for k in ufd.keys():
     ufd[k]=ufd[k][ind]
 
+#%% Save to pickle
+
+gu.opickle(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.pkl',ufd)
+
 #%% Model 1 - BGC zone only
 
 df=pd.DataFrame.from_dict(ufd)
@@ -314,6 +318,8 @@ soc['mu']=np.zeros(u.size)
 soc['se']=np.zeros(u.size)
 soc['min_mu']=np.zeros(u.size)
 soc['org_mu']=np.zeros(u.size)
+soc['Model A']=np.zeros(u.size)
+soc['Model Soil C']=np.zeros(u.size)
 for i in range(u.size):
     ind=np.where( (ufd['becz']==u[i]) & (ufd['TOT_C_THA']>0) )[0]
     soc['N'][i]=ind.size
@@ -321,6 +327,8 @@ for i in range(u.size):
     soc['se'][i]=np.nanstd(ufd['TOT_C_THA'][ind])/np.sqrt(ind.size)
     soc['min_mu'][i]=np.nanmean(ufd['MIN_C_THA'][ind])
     soc['org_mu'][i]=np.nanmean(ufd['ORG_C_THA'][ind])
+    soc['Model A'][i]=np.nanmean(mos['Scenarios'][0]['Mean']['A']['Ensemble Mean'][-1,0,ind])
+    soc['Model Soil C'][i]=np.nanmean(mos['Scenarios'][0]['Mean']['C_Soil_Tot']['Ensemble Mean'][-1,0,ind])
     ind=np.where(lutBGC['VALUE']==u[i])[0]
     if ind.size>0:
         lab[i]=lutBGC['ZONE'][ind][0]
@@ -330,18 +338,45 @@ for k in soc:
     soc[k]=np.flip(soc[k][ord])
 lab=np.flip(lab[ord])
 
+#%%
+
 plt.close('all')
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,6))
 ax.bar(np.arange(u.size),soc['min_mu'],facecolor=[0.45,0.3,0.3],label='Mineral horizons')
 ax.bar(np.arange(u.size),soc['org_mu'],facecolor=[0.15,0.05,0.05],bottom=soc['min_mu'],label='Organic horizon')
 ax.errorbar(np.arange(u.size),soc['mu'],yerr=soc['se'],color='k',fmt='none',capsize=2)
+ax.plot(np.arange(u.size),soc['Model Soil C'],'bo',lw=1,ms=8,mfc='w')
 for i in range(u.size):
     ax.text(i,10,str(soc['N'][i].astype(int)),color='w',ha='center',fontsize=8)
 ax.set(position=[0.08,0.12,0.9,0.86],xlim=[-0.5,u.size-0.5],ylim=[0,375],xticks=np.arange(u.size),
        xticklabels=lab,ylabel='Soil organic carbon (MgC ha$^{-1}$ yr$^{-1}$)')
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Soils\SOC_By_BGCZone_PointSample' ,'png',900)
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Soils\Bars_BGCSpinupRI' ,'png',900)
+
+#%% Scatterplot
+
+x=soc['min_mu']
+y=soc['Model Soil C']
+rs,txt=gu.GetRegStats(x,y)
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(11,11))
+ax.plot([0,1000],[0,1000],'-k',lw=3,color=[0.8,0.8,0.8])
+ax.plot(x,y,'ko',mfc='k',mec='w',lw=0.5,ms=6)
+ax.plot(rs['xhat'],rs['yhat'],'r-',lw=1,label='Best fit')
+ax.text(350,30,txt,fontsize=10,color='r',ha='right')
+ax.text(300,300,'1:1',fontsize=8,ha='center')
+ax.set(position=[0.1,0.1,0.86,0.86],xlabel='Observed SOC (MgC ha$^{-1}$)',ylabel='Predicted SOC (MgC ha$^{-1}$)',xlim=[0,375],ylim=[0,375])
+#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Soils\Scatter_BGCSpinupRI' ,'png',900)
+
+#%%
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,6))
+ax.plot(np.arange(u.size),soc['Model A'],'bo',lw=1,ms=8,mfc='w')
 
 #%% Confirm that map predictions agree with point sample
 
