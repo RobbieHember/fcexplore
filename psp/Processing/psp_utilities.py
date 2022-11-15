@@ -11,7 +11,7 @@ def ImportParameters(meta):
 
     # Allometry
     meta['Allo B']=gu.ReadExcel(meta['Paths']['DB'] + '\\Parameters\\Parameters Allometry Biomass.xlsx')
-    meta['Allo V']=gu.ReadExcel(meta['Paths']['DB'] + '\\Parameters\\Parameters Allometry Volume Merch BC Nigh2016.xlsx')
+    meta['Allo V Tot Nigh16']=gu.ReadExcel(meta['Paths']['DB'] + '\\Parameters\\Parameters Allometry Volume Total BC Nigh 2016.xlsx')
 
     # Species kyes
     meta['Species']={}
@@ -24,9 +24,14 @@ def ImportParameters(meta):
         meta['LUT Tables'][tab]=gu.ReadExcel(meta['Paths']['DB'] + '\\Parameters\\Parameters LUTs.xlsx',tab)
 
     meta['LUT']={}
+
     meta['LUT']['Source']={}
     for i in range(meta['LUT Tables']['Source']['ID'].size):
         meta['LUT']['Source'][ meta['LUT Tables']['Source']['Value'][i] ]=meta['LUT Tables']['Source']['ID'][i]
+
+    meta['LUT']['Species']={}
+    for i in range(meta['Allo B']['ID'].size):
+            meta['LUT']['Species'][ meta['Allo B']['Code'][i] ]=meta['Allo B']['ID'][i]
 
     meta['LUT']['Plot Type BC']={}
     for i in range(meta['LUT Tables']['Plot Type']['Given'].size):
@@ -85,6 +90,14 @@ def ImportParameters(meta):
         'TN','TX','UT','VA','VT','WA','WI','WV','WY']
 
     return meta
+
+#%% Get code from LUT ID
+
+def lut_id2cd(meta,nam_lut,id):
+    for k in meta['LUT'][nam_lut].keys():
+        if meta['LUT'][nam_lut][k]==id:
+            cd=k
+    return cd
 
 #%% Read tree level data by species
 

@@ -38,13 +38,15 @@ import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
 from fcgadgets.macgyver import utilities_inventory as invu
 
-#%% Set figure properties
+#%% Plotting parameters
 
-fs=7
-params={'font.sans-serif':'Arial','font.size':fs,'axes.edgecolor':'black','axes.labelsize':fs,'axes.labelcolor':'black','axes.titlesize':fs,'axes.linewidth':0.5,'lines.linewidth':0.5,
-        'text.color':'black','xtick.color':'black','xtick.labelsize':fs,'xtick.major.width':0.5,'xtick.major.size':3,'xtick.direction':'in','ytick.color':'black','ytick.labelsize':fs,
-        'ytick.major.width':0.5,'ytick.major.size':3,'ytick.direction':'in','legend.fontsize':fs,'savefig.dpi':300,'savefig.transparent':True}
-plt.rcParams.update(params)
+gp=gu.SetGraphics('Presentation Dark')
+
+# fs=7
+# params={'font.sans-serif':'Arial','font.size':fs,'axes.edgecolor':'black','axes.labelsize':fs,'axes.labelcolor':'black','axes.titlesize':fs,'axes.linewidth':0.5,'lines.linewidth':0.5,
+#         'text.color':'black','xtick.color':'black','xtick.labelsize':fs,'xtick.major.width':0.5,'xtick.major.size':3,'xtick.direction':'in','ytick.color':'black','ytick.labelsize':fs,
+#         'ytick.major.width':0.5,'ytick.major.size':3,'ytick.direction':'in','legend.fontsize':fs,'savefig.dpi':300,'savefig.transparent':True}
+# plt.rcParams.update(params)
 
 #%% Import data
 
@@ -135,63 +137,20 @@ ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
 gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\GlobBiomass_ByGBCZone','png',900)
 
 
-#%% Comparison with ground plots
-
-gp=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\GroundPlots\BC From ShinyApp\bc_sample_data.xlsx')
-
-# Only keep CMI and NFI
-ind=np.where( (gp['sampletype']=='CMI') | (gp['sampletype']=='NFI') )[0]
-for k in gp.keys():
-    gp[k]=gp[k][ind]
-#plt.close('all')
-#plt.plot(gp['bcalb_x'][ind],gp['bcalb_y'][ind],'b.')
-
-# Lve
-gps={}
-gps['N']=np.zeros(uo.size)
-gps['mu']=np.zeros(uo.size)
-gps['sd']=np.zeros(uo.size)
-gps['se']=np.zeros(uo.size)
-gps['mu_D']=np.zeros(uo.size)
-for i in range(uo.size):
-    ind=np.where( (gp['bgc_zone']==lab[i]) & (gp['stemsha_L']>0) )[0]
-    if ind.size==0:
-        continue
-    gps['N'][i]=ind.size
-    gps['mu'][i]=1.2*0.5*0.5*np.nanmean(gp['wsvha_L'][ind])
-    gps['sd'][i]=1.2*0.5*0.5*np.nanstd(gp['wsvha_L'][ind])
-    gps['se'][i]=1.2*0.5*0.5*np.nanstd(gp['wsvha_L'][ind])/np.sqrt(ind.size)
-    gps['mu_D'][i]=1.2*0.5*0.5*np.nanmean(gp['wsvha_D'][ind])
-
-
 #%%
 
-plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,6))
-ax.bar(np.arange(u.size),gps['mu'],0.85,facecolor=[0.75,0.9,0],label='Live')
-ax.bar(np.arange(u.size),gps['mu_D'],0.85,bottom=gps['mu'],facecolor=[0.8,0.55,0.5],label='Dead standing')
-for i in range(u.size):
-    ax.text(i,5,str(N[i].astype(int)),color='k',ha='center',fontsize=7)
-ax.set(position=[0.08,0.12,0.9,0.86],xlim=[-0.5,u.size-0.5],ylim=[0,180],xticks=np.arange(u.size),
-       xticklabels=lab,ylabel='Aboveground biomass (MgC ha$^{-1}$ yr$^{-1}$)')
-plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
-ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\GroundPlotBiomass_ByBGCZone','png',900)
-
-#%%
-
-plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,6))
-ax.bar(np.arange(u.size)-0.225,B['mu'],0.45,facecolor=[0.29,0.47,0.79],label='Global Biomass')
-ax.errorbar(np.arange(u.size)-0.225,B['mu'],yerr=2*B['se'],color='k',fmt='none',capsize=2)
-ax.bar(np.arange(u.size)+0.225,gps['mu'],0.45,facecolor=[0.75,0.9,0],label='BC Plot Sample')
-ax.errorbar(np.arange(u.size)+0.225,gps['mu'],yerr=2*gps['se'],color='k',fmt='none',capsize=2)
-for i in range(u.size):
-    ax.text(i+0.225,5,str(N[i].astype(int)),color='k',ha='center',fontsize=7)
-ax.set(position=[0.08,0.12,0.9,0.86],xlim=[-0.5,u.size-0.5],ylim=[0,160],xticks=np.arange(u.size),
-       xticklabels=lab,ylabel='Aboveground biomass (MgC ha$^{-1}$ yr$^{-1}$)')
-plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
-ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\GlobBiomass_CompWithGPs','png',900)
+# plt.close('all')
+# fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,6))
+# ax.bar(np.arange(u.size)-0.225,B['mu'],0.45,facecolor=[0.29,0.47,0.79],label='Global Biomass')
+# ax.errorbar(np.arange(u.size)-0.225,B['mu'],yerr=2*B['se'],color='k',fmt='none',capsize=2)
+# ax.bar(np.arange(u.size)+0.225,gps['mu'],0.45,facecolor=[0.75,0.9,0],label='BC Plot Sample')
+# ax.errorbar(np.arange(u.size)+0.225,gps['mu'],yerr=2*gps['se'],color='k',fmt='none',capsize=2)
+# for i in range(u.size):
+#     ax.text(i+0.225,5,str(N[i].astype(int)),color='k',ha='center',fontsize=7)
+# ax.set(position=[0.08,0.12,0.9,0.86],xlim=[-0.5,u.size-0.5],ylim=[0,160],xticks=np.arange(u.size),
+#        xticklabels=lab,ylabel='Aboveground biomass (MgC ha$^{-1}$ yr$^{-1}$)')
+# plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+# ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
+# gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\GlobBiomass_CompWithGPs','png',900)
 
 

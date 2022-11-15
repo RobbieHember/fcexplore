@@ -2,6 +2,7 @@
 '''
 Site ID 6004993 is missing from header
 No site series
+Where does the whole-stem volume calculation come from?
 
 '''
 
@@ -16,6 +17,7 @@ import time
 import matplotlib.pyplot as plt
 from fcgadgets.macgyver import utilities_general as gu
 from fcexplore.psp.Processing import psp_utilities as utl
+from scipy.optimize import curve_fit
 
 #%% Import project info
 
@@ -61,6 +63,7 @@ pl['Ecozone BC L1']=np.zeros(N,dtype=int)
 pl['Ecozone BC L2']=np.zeros(N,dtype=int)
 pl['Site Series']=np.zeros(N,dtype=int)
 pl['Plot Type']=np.zeros(N,dtype=int)
+pl['Num Plots']=np.zeros(N,dtype=int)
 pl['Age']=np.zeros(N,dtype=float)
 pl['SI']=np.zeros(N,dtype=float)
 pl['Elev']=np.zeros(N,dtype=float)
@@ -84,18 +87,17 @@ for i in range(N):
     pl['Lon'][i]=hd0['Longitude'][ind0]
     pl['X'][i]=hd0['BC_ALBERS_X'][ind0]
     pl['Y'][i]=hd0['BC_ALBERS_Y'][ind0]
-
     pl['Ecozone BC L1'][i]=meta['LUT']['Ecozone BC L1'][ hd0['BEC_ZONE'][ind0[0]] ]
-
     pl['Ecozone BC L2'][i]=meta['LUT']['Ecozone BC L2'][ hd0['BEC_ZONE'][ind0[0]] + hd0['BEC_SBZ'][ind0[0]]  ]
 
 u=np.unique(pl0['sampletype'])
 for i in range(u.size):
-    ind0=np.where( pl0['sampletype'] )[0]
-    ind1=np.where( (meta['LUT Tables']['Plot Type']['Given']==u[i]) & (meta['LUT Tables']['Plot Type']['Jurisdiction']=='BC') )[0]
-    pl['Plot Type'][ind0]=meta['LUT Tables']['Plot Type']['Value'][ind1]
+    ind0=np.where( pl0['sampletype']==u[i] )[0]
+    ind1=np.where( (meta['LUT Tables']['Plot Type']['Jurisdiction']=='BC') & (meta['LUT Tables']['Plot Type']['Given']==u[i]) )[0]
+    pl['Plot Type'][ind0]=meta['LUT Tables']['Plot Type']['Value'][ind1[0]]
 
 for i in range(pl0['MEAS_DT'].size):
+    pl['Num Plots'][i]=pl0['NO_PLOTS'][i]
     pl['Age'][i]=pl0['PROJ_AGE_1'][i]
 
 #%% Compile tree-level data
@@ -112,7 +114,12 @@ tl['Vital Status']=np.zeros(N_tl,dtype=int)
 tl['DBH']=tl0['DBH']
 tl['H']=tl0['HEIGHT']
 tl['H Obs']=tl0['HEIGHT']
+tl['Vws']=tl0['VOL_WSV']
 tl['AEF']=tl0['PHF_TREE']
+tl['Flag WithinPlot']=np.ones(N_tl,dtype=int)
+
+ind=np.where(tl0['MEAS_INTENSE']=='OUT_OF_PLOT')[0]
+tl['Flag WithinPlot'][ind]=0
 
 u=np.unique( np.column_stack( (tl['ID Plot'],tl['ID Tree']) ),axis=0 )
 for i in range(u.shape[0]):
@@ -168,6 +175,51 @@ for i in range(u.size):
 tl['Age']=-999*np.ones(N_tl,dtype=float)
 ind=np.where(tl0['AGE_TOT']>0)[0]
 tl['Age'][ind]=tl0['AGE_TOT'][ind]
+
+#%% Gap-fill heights
+
+def fun(x,a,b,c,d):
+    yhat=d+a*((1-np.exp(-b*x))**(1/(1-c))) # From Dzierzon and Mason 2006
+    return yhat
+xhat=np.arange(0,100,1)
+
+indM=np.where( (tl['DBH']>0) & (np.isnan(tl['H'])==True) | (tl['DBH']>0) & (tl['H']<=0) )[0]
+indM.size/tl['DBH'].size
+
+indG=np.where( (tl['DBH']>0) & (tl['H']>0) )[0]
+indG.size/tl['DBH'].size
+
+# Global model
+ikp=np.where( (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['Damage Agents']['None']) )[0]
+x=tl['DBH'][ikp]
+y=tl['H'][ikp]
+popt_glob0=[26,0.1,0.66,2]
+popt_glob,pcov=curve_fit(fun,x,y,popt_glob0)
+#yhat=fun(xhat,popt_glob[0],popt_glob[1],popt_glob[2],popt_glob[3])
+rs_glob,txt=gu.GetRegStats(x,y)
+
+uS=np.unique(tl['ID Species'])
+rs=[None]*uS.size
+for iS in range(uS.size):
+    ikp=np.where( (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['Damage Agents']['None']) )[0]
+    x=tl['DBH'][ikp]
+    y=tl['H'][ikp]
+    #plt.plot(x,y,'b.')
+
+    indGF=np.where( (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (np.isnan(tl['H'])==True) |
+                   (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (tl['H']==0) )[0]
+
+    try:
+        popt0=[26,0.1,0.66,2]
+        popt,pcov=curve_fit(fun,x,y,popt0)
+        yhat=fun(xhat,popt[0],popt[1],popt[2],popt[3])
+        plt.plot(xhat,yhat,'g-')
+        rs0,txt=gu.GetRegStats(x,y)
+        rs[iS]=rs0
+        tl['H'][indGF]=fun(tl['DBH'][indGF],popt[0],popt[1],popt[2],popt[3])
+    except:
+        tl['H'][indGF]=fun(tl['DBH'][indGF],popt_glob[0],popt_glob[1],popt_glob[2],popt_glob[3])
+
 
 #%% Save
 
