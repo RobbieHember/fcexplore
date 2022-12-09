@@ -30,100 +30,105 @@ import cv2
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
 from fcgadgets.macgyver import utilities_inventory as invu
+from fcexplore.psp.Processing import psp_utilities as utl_gp
 
 #%% Set figure properties
 
-fs=7
-params={'font.sans-serif':'Arial','font.size':fs,'axes.edgecolor':'black','axes.labelsize':fs,'axes.labelcolor':'black','axes.titlesize':fs,'axes.linewidth':0.5,'lines.linewidth':0.5,
-        'text.color':'black','xtick.color':'black','xtick.labelsize':fs,'xtick.major.width':0.5,'xtick.major.size':3,'xtick.direction':'in','ytick.color':'black','ytick.labelsize':fs,
-        'ytick.major.width':0.5,'ytick.major.size':3,'ytick.direction':'in','legend.fontsize':fs,'savefig.dpi':300,'savefig.transparent':True}
-plt.rcParams.update(params)
+#gp=gu.SetGraphics('Presentation Dark')
+gp=gu.SetGraphics('Manuscript')
 
 #%% Import Canadian Upland forest database
 
-ufd=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.xlsx')
-ufd_p=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\PROFILES.xlsx')
-
-# Add depth from profiles to site
-ufd['Depth']=np.zeros(ufd['LOCATION_ID'].size)
-for i in range(ufd['LOCATION_ID'].size):
-    ind=np.where(ufd_p['LOCATION_ID']==ufd['LOCATION_ID'][i])[0]
-    if ind.size==0:
-        continue
-    ind2=np.where( ufd_p['UPPER_HZN_LIMIT'][ind]==np.max(ufd_p['UPPER_HZN_LIMIT'][ind]) )[0]
-    ufd['Depth'][i]=ufd_p['UPPER_HZN_LIMIT'][ind[ind2]]+ufd_p['HZN_THICKNESS'][ind[ind2]]
-
-# Just keep BC
-ind=np.where( (ufd['PROV_TERR']=='BC') )[0]
-for k in ufd.keys():
-    ufd[k]=ufd[k][ind]
-
-#%% Get BC1ha grid coords
-
-# FAIB standard grid
-zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\FAIB_Standard.tif')
-
-srs=gis.ImportSRSs()
-ufd['x']=np.zeros(ufd['LOCATION_ID'].size)
-ufd['y']=np.zeros(ufd['LOCATION_ID'].size)
-for i in range(ufd['x'].size):
-    ufd['x'][i],ufd['y'][i]=srs['Proj']['BC1ha'](ufd['LONGITUDE'][i],ufd['LATITUDE'][i])
-
-x=zRef['X'][0,:]
-y=zRef['Y'][:,0]
-ix=np.zeros(ufd['LOCATION_ID'].size,dtype=int)
-iy=np.zeros(ufd['LOCATION_ID'].size,dtype=int)
-for i in range(ufd['x'].size):
-    ix[i]=np.where( np.abs(ufd['x'][i]-x)==np.min(np.abs(ufd['x'][i]-x)) )[0]
-    iy[i]=np.where( np.abs(ufd['y'][i]-y)==np.min(np.abs(ufd['y'][i]-y)) )[0]
-
-# Check that it worked
 flg=0
 if flg==1:
-    x=zRef['X'][iy,ix]
-    y=zRef['Y'][iy,ix]
-    plt.plot(x,y,'k.')
 
-# Import BC1ha data
-becz=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
-lutBGC=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz_lut.xlsx')
-ufd['becz']=becz['Data'][iy,ix]
+    ufd=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.xlsx')
+    ufd_p=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\PROFILES.xlsx')
 
-#elev=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Terrain\elevation.tif')
-#ws=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_ws_gs_norm_1971to2000_comp_hist_v1.tif')
-#dwf=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_dwf_ann_norm_1971to2000_si_hist_v1.tif')
-#age1=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\age1.tif')
-#gsoc=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\gsoc2010_bc1ha.tif')
+    # Add depth from profiles to site
+    ufd['Depth']=np.zeros(ufd['LOCATION_ID'].size)
+    for i in range(ufd['LOCATION_ID'].size):
+        ind=np.where(ufd_p['LOCATION_ID']==ufd['LOCATION_ID'][i])[0]
+        if ind.size==0:
+            continue
+        ind2=np.where( ufd_p['UPPER_HZN_LIMIT'][ind]==np.max(ufd_p['UPPER_HZN_LIMIT'][ind]) )[0]
+        ufd['Depth'][i]=ufd_p['UPPER_HZN_LIMIT'][ind[ind2]]+ufd_p['HZN_THICKNESS'][ind[ind2]]
 
-#ufd['elev']=elev['Data'][iy,ix]
-#ufd['gsoc']=gsoc['Data'][iy,ix]
-#ufd['ws']=ws['Data'][iy,ix]
-#ufd['dwf']=dwf['Data'][iy,ix]
-#ufd['age1']=age1['Data'][iy,ix]
-#ufd['age1'][np.where(ufd['age1']<=0)[0]]=0
+    # Just keep BC
+    ind=np.where( (ufd['PROV_TERR']=='BC') )[0]
+    for k in ufd.keys():
+        ufd[k]=ufd[k][ind]
 
-#del elev,ws,age1,gsoc,becz,dwf
-#del gsoc
-garc.collect()
+    # Get BC1ha grid coords
 
-#%% Plot
+    # FAIB standard grid
+    zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\FAIB_Standard.tif')
 
-# ind=np.where(ufd['gsoc']>0)[0]
-# plt.close('all')
-# plt.plot(ufd['MIN_C_THA'][ind],ufd['gsoc'][ind],'.')
+    srs=gis.ImportSRSs()
+    ufd['x']=np.zeros(ufd['LOCATION_ID'].size)
+    ufd['y']=np.zeros(ufd['LOCATION_ID'].size)
+    for i in range(ufd['x'].size):
+        ufd['x'][i],ufd['y'][i]=srs['Proj']['BC1ha'](ufd['LONGITUDE'][i],ufd['LATITUDE'][i])
 
-#%% Delete no BGC zone
+    x=zRef['X'][0,:]
+    y=zRef['Y'][:,0]
+    ix=np.zeros(ufd['LOCATION_ID'].size,dtype=int)
+    iy=np.zeros(ufd['LOCATION_ID'].size,dtype=int)
+    for i in range(ufd['x'].size):
+        ix[i]=np.where( np.abs(ufd['x'][i]-x)==np.min(np.abs(ufd['x'][i]-x)) )[0]
+        iy[i]=np.where( np.abs(ufd['y'][i]-y)==np.min(np.abs(ufd['y'][i]-y)) )[0]
 
-# Only two
-ind=np.where( (ufd['becz']==255) )[0]
+    # Check that it worked
+    flg=0
+    if flg==1:
+        x=zRef['X'][iy,ix]
+        y=zRef['Y'][iy,ix]
+        plt.plot(x,y,'k.')
 
-ind=np.where( (ufd['becz']!=255) )[0]
-for k in ufd.keys():
-    ufd[k]=ufd[k][ind]
+    # Import BC1ha data
+    becz=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
+    lutBGC=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz_lut.xlsx')
+    ufd['becz']=becz['Data'][iy,ix]
 
-#%% Save to pickle
+    #elev=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Terrain\elevation.tif')
+    #ws=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_ws_gs_norm_1971to2000_comp_hist_v1.tif')
+    #dwf=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_dwf_ann_norm_1971to2000_si_hist_v1.tif')
+    #age1=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\age1.tif')
+    #gsoc=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\gsoc2010_bc1ha.tif')
 
-gu.opickle(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.pkl',ufd)
+    #ufd['elev']=elev['Data'][iy,ix]
+    #ufd['gsoc']=gsoc['Data'][iy,ix]
+    #ufd['ws']=ws['Data'][iy,ix]
+    #ufd['dwf']=dwf['Data'][iy,ix]
+    #ufd['age1']=age1['Data'][iy,ix]
+    #ufd['age1'][np.where(ufd['age1']<=0)[0]]=0
+
+    #del elev,ws,age1,gsoc,becz,dwf
+    #del gsoc
+    garc.collect()
+
+    # Plot
+
+    # ind=np.where(ufd['gsoc']>0)[0]
+    # plt.close('all')
+    # plt.plot(ufd['MIN_C_THA'][ind],ufd['gsoc'][ind],'.')
+
+    # Delete no BGC zone
+
+    # Only two
+    ind=np.where( (ufd['becz']==255) )[0]
+
+    ind=np.where( (ufd['becz']!=255) )[0]
+    for k in ufd.keys():
+        ufd[k]=ufd[k][ind]
+
+    # Save to pickle
+
+    gu.opickle(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.pkl',ufd)
+
+else:
+
+    ufd=gu.ipickle(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.pkl')
 
 #%% Model 1 - BGC zone only
 
@@ -327,8 +332,8 @@ for i in range(u.size):
     soc['se'][i]=np.nanstd(ufd['TOT_C_THA'][ind])/np.sqrt(ind.size)
     soc['min_mu'][i]=np.nanmean(ufd['MIN_C_THA'][ind])
     soc['org_mu'][i]=np.nanmean(ufd['ORG_C_THA'][ind])
-    soc['Model A'][i]=np.nanmean(mos['Scenarios'][0]['Mean']['A']['Ensemble Mean'][-1,0,ind])
-    soc['Model Soil C'][i]=np.nanmean(mos['Scenarios'][0]['Mean']['C_Soil_Tot']['Ensemble Mean'][-1,0,ind])
+    #soc['Model A'][i]=np.nanmean(mos['Scenarios'][0]['Mean']['A']['Ensemble Mean'][-1,0,ind])
+    #soc['Model Soil C'][i]=np.nanmean(mos['Scenarios'][0]['Mean']['C_Soil_Tot']['Ensemble Mean'][-1,0,ind])
     ind=np.where(lutBGC['VALUE']==u[i])[0]
     if ind.size>0:
         lab[i]=lutBGC['ZONE'][ind][0]
@@ -345,14 +350,14 @@ fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,6))
 ax.bar(np.arange(u.size),soc['min_mu'],facecolor=[0.45,0.3,0.3],label='Mineral horizons')
 ax.bar(np.arange(u.size),soc['org_mu'],facecolor=[0.15,0.05,0.05],bottom=soc['min_mu'],label='Organic horizon')
 ax.errorbar(np.arange(u.size),soc['mu'],yerr=soc['se'],color='k',fmt='none',capsize=2)
-ax.plot(np.arange(u.size),soc['Model Soil C'],'bo',lw=1,ms=8,mfc='w')
+#ax.plot(np.arange(u.size),soc['Model Soil C'],'bo',lw=1,ms=8,mfc='w')
 for i in range(u.size):
     ax.text(i,10,str(soc['N'][i].astype(int)),color='w',ha='center',fontsize=8)
 ax.set(position=[0.08,0.12,0.9,0.86],xlim=[-0.5,u.size-0.5],ylim=[0,375],xticks=np.arange(u.size),
        xticklabels=lab,ylabel='Soil organic carbon (MgC ha$^{-1}$ yr$^{-1}$)')
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Soils\Bars_BGCSpinupRI' ,'png',900)
+#gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Soils\Bars_BGCSpinupRI' ,'png',900)
 
 #%% Scatterplot
 

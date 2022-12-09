@@ -38,28 +38,33 @@ plt.rcParams.update(params)
 
 tv_hbs=np.arange(2007,2022,1)
 
+gradeL=[' ','1','2','3','4','5','6','7','8','B','C','D','E','F','G','H','I','J','K','L','M','U','W','X','Y','Z']
+
 d={}
 d['Year']=tv_hbs
-d['V All (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V All (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V All Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
-d['V All Logs (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V All Logs (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V All Logs Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
-d['V All NonLogs (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V All NonLogs (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V All NonLogs Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
-d['V All Hogged (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V All Hogged (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V All Hogged Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
-d['V All Chips (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V All Chips (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V All Chips Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
 
-d['V Waste All (Mm3/yr)']=np.zeros(tv_hbs.size)
+for Grade in gradeL:
+    d['V All Logs Grade ' + Grade + ' (Mm3/yr)']=np.zeros(tv_hbs.size)
+
+#d['V Waste All (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V Waste All Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
-d['V Waste Logs (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V Waste Logs (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V Waste Logs Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
-d['V Waste NonLogs (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V Waste NonLogs (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V Waste NonLogs Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
-d['V Waste Hogged (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V Waste Hogged (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V Waste Hogged Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
-d['V Waste Chips (Mm3/yr)']=np.zeros(tv_hbs.size)
+#d['V Waste Chips (Mm3/yr)']=np.zeros(tv_hbs.size)
 d['V Waste Chips Abs (Mm3/yr)']=np.zeros(tv_hbs.size)
 
 #d['V NP (Mm3/yr)']=np.zeros(tv_hbs.size)
@@ -77,6 +82,8 @@ for iT in range(tv_hbs.size):
     Type=dHB[9]
     Material=dHB[6]
     Vol=dHB[11]
+    Grade=dHB[7]
+    #print(np.unique(Grade))
 
     iAllLogs=np.where( (Material=='Logs') )[0]
     iAllNonLogs=np.where( (Material!='Logs') )[0]
@@ -93,17 +100,32 @@ for iT in range(tv_hbs.size):
     #ind1b=np.where( (Type=='NP') )[0]
     #ind2=np.where( (Type=='NP') & (Vol>0) & (Material=='Logs') )[0]
 
-    d['V All (Mm3/yr)'][iT]=np.sum(Vol)/1e6; d['V All Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol))/1e6
-    d['V All Logs (Mm3/yr)'][iT]=np.sum(Vol[iAllLogs])/1e6; d['V All Logs Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iAllLogs]))/1e6
-    d['V All NonLogs (Mm3/yr)'][iT]=np.sum(Vol[iAllNonLogs])/1e6; d['V All NonLogs Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iAllNonLogs]))/1e6
-    d['V All Hogged (Mm3/yr)'][iT]=np.sum(Vol[iAllHogged])/1e6; d['V All Hogged Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iAllHogged]))/1e6
-    d['V All Chips (Mm3/yr)'][iT]=np.sum(Vol[iAllChips])/1e6; d['V All Chips Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iAllChips]))/1e6
+    #d['V All (Mm3/yr)'][iT]=np.sum(Vol)/1e6;
+    d['V All Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol))/1e6
+    #d['V All Logs (Mm3/yr)'][iT]=np.sum(Vol[iAllLogs])/1e6;
+    d['V All Logs Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iAllLogs]))/1e6
+    #d['V All NonLogs (Mm3/yr)'][iT]=np.sum(Vol[iAllNonLogs])/1e6;
+    d['V All NonLogs Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iAllNonLogs]))/1e6
+    #d['V All Hogged (Mm3/yr)'][iT]=np.sum(Vol[iAllHogged])/1e6;
+    d['V All Hogged Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iAllHogged]))/1e6
+    #d['V All Chips (Mm3/yr)'][iT]=np.sum(Vol[iAllChips])/1e6;
+    d['V All Chips Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iAllChips]))/1e6
 
-    d['V Waste All (Mm3/yr)'][iT]=np.sum(Vol[iWasteAll])/1e6; d['V Waste All Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteAll]))/1e6
-    d['V Waste Logs (Mm3/yr)'][iT]=np.sum(Vol[iWasteLogs])/1e6; d['V Waste Logs Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteLogs]))/1e6
-    d['V Waste NonLogs (Mm3/yr)'][iT]=np.sum(Vol[iWasteNonLogs])/1e6; d['V Waste NonLogs Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteNonLogs]))/1e6
-    d['V Waste Hogged (Mm3/yr)'][iT]=np.sum(Vol[iWasteHogged])/1e6; d['V Waste Hogged Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteHogged]))/1e6
-    d['V Waste Chips (Mm3/yr)'][iT]=np.sum(Vol[iWasteChips])/1e6; d['V Waste Chips Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteChips]))/1e6
+    #d['V Waste All (Mm3/yr)'][iT]=np.sum(Vol[iWasteAll])/1e6;
+    d['V Waste All Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteAll]))/1e6
+    #d['V Waste Logs (Mm3/yr)'][iT]=np.sum(Vol[iWasteLogs])/1e6;
+    d['V Waste Logs Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteLogs]))/1e6
+    #d['V Waste NonLogs (Mm3/yr)'][iT]=np.sum(Vol[iWasteNonLogs])/1e6;
+    d['V Waste NonLogs Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteNonLogs]))/1e6
+    #d['V Waste Hogged (Mm3/yr)'][iT]=np.sum(Vol[iWasteHogged])/1e6;
+    d['V Waste Hogged Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteHogged]))/1e6
+    #d['V Waste Chips (Mm3/yr)'][iT]=np.sum(Vol[iWasteChips])/1e6;
+    d['V Waste Chips Abs (Mm3/yr)'][iT]=np.sum(np.abs(Vol[iWasteChips]))/1e6
+
+    for iGrade in range(len(gradeL)):
+        indG=np.where( (Grade==gradeL[iGrade])  )[0]
+        if indG.size>0:
+            d['V All Logs Grade ' + gradeL[iGrade] + ' (Mm3/yr)'][iT]=np.sum(np.abs(Vol[indG]))/1e6
 
     #d['V NP (Mm3/yr)'][iT]=np.sum(Vol[ind1])/1e6
     #d['V NP With Negatives (Mm3/yr)'][iT]=np.sum(Vol[ind1b])/1e6

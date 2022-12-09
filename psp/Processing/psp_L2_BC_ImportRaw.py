@@ -3,6 +3,11 @@
 Site ID 6004993 is missing from header
 No site series
 Where does the whole-stem volume calculation come from?
+VRI remeasurements:
+    1) Why are there remeasurements
+    2) Tree ID does not align in the Integrated Plot Centre, which leads to bogus p
+    growth and mortlaity. I assume they are not meant to be used for growth, but
+    why do they get remeasured?
 
 '''
 
@@ -176,6 +181,12 @@ tl['Age']=-999*np.ones(N_tl,dtype=float)
 ind=np.where(tl0['AGE_TOT']>0)[0]
 tl['Age'][ind]=tl0['AGE_TOT'][ind]
 
+tl['Stature']=np.zeros(N_tl,dtype=int)
+ind=np.where(tl0['s_f']=='S')[0]
+tl['Stature'][ind]=meta['LUT']['Stature']['Standing']
+ind=np.where(tl0['s_f']=='F')[0]
+tl['Stature'][ind]=meta['LUT']['Stature']['Fallen']
+
 #%% Gap-fill heights
 
 def fun(x,a,b,c,d):
@@ -190,7 +201,7 @@ indG=np.where( (tl['DBH']>0) & (tl['H']>0) )[0]
 indG.size/tl['DBH'].size
 
 # Global model
-ikp=np.where( (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['Damage Agents']['None']) )[0]
+ikp=np.where( (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['Damage Agents']['None']) & (tl['Stature']==meta['LUT']['Stature']['Standing']) )[0]
 x=tl['DBH'][ikp]
 y=tl['H'][ikp]
 popt_glob0=[26,0.1,0.66,2]
@@ -201,7 +212,7 @@ rs_glob,txt=gu.GetRegStats(x,y)
 uS=np.unique(tl['ID Species'])
 rs=[None]*uS.size
 for iS in range(uS.size):
-    ikp=np.where( (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['Damage Agents']['None']) )[0]
+    ikp=np.where( (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['Damage Agents']['None']) & (tl['Stature']==meta['LUT']['Stature']['Standing']) )[0]
     x=tl['DBH'][ikp]
     y=tl['H'][ikp]
     #plt.plot(x,y,'b.')
@@ -216,9 +227,9 @@ for iS in range(uS.size):
         plt.plot(xhat,yhat,'g-')
         rs0,txt=gu.GetRegStats(x,y)
         rs[iS]=rs0
-        tl['H'][indGF]=fun(tl['DBH'][indGF],popt[0],popt[1],popt[2],popt[3])
+        tl['H'][indGF]=np.maximum(0.0,fun(tl['DBH'][indGF],popt[0],popt[1],popt[2],popt[3]))
     except:
-        tl['H'][indGF]=fun(tl['DBH'][indGF],popt_glob[0],popt_glob[1],popt_glob[2],popt_glob[3])
+        tl['H'][indGF]=np.maximum(0.0,fun(tl['DBH'][indGF],popt_glob[0],popt_glob[1],popt_glob[2],popt_glob[3]))
 
 
 #%% Save

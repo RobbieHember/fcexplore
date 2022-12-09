@@ -38,12 +38,12 @@ gdf_bm=gpd.read_file(r'C:\Users\rhember\Documents\Data\Basemaps\Basemaps.gdb',la
 
 d=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Harvest\Harvest Area\NFD - Area harvested by ownership and harvesting method - EN FR.xlsx')
 dNFD={}
-dNFD['Area']=np.zeros(tv.size)
+dNFD['Area']=np.nan*np.ones(tv.size)
 for iT in range(tv.size):
-    ind=np.where( (d['Juridiction']=='British Columbia') & (d['Year']==tv[iT]) )[0]
+    ind=np.where( (d['Jurisdiction']=='British Columbia') & (d['Year']==tv[iT]) )[0]
     if ind.size==0:
         continue
-    dNFD['Area']=d['Area (hectares)']
+    dNFD['Area'][iT]=np.nansum(d['Area (hectares)'][ind])
 
 #%% Annual harvest area from consolidated cutblock DB
 
@@ -164,11 +164,12 @@ for iT in range(tv.size):
 
 #%% Plot
 
-gp['ms']=3
+gp['ms']=2.5
 
 plt.close('all');
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,7.5));
-ax.plot(tv,dCC['Area Harvested']/1e3,'-bo',color=[0.27,0.49,0.78],ms=gp['ms'],label='Harvest area (consolidated cutblocks database)')
+ax.plot(tv,dNFD['Area']/1e3,'-bo',color=[0.27,0.49,0.78],ms=gp['ms'],label='Harvest area (NFD)')
+ax.plot(tv,dCC['Area Harvested']/1e3,'-bo',color=[1,0.5,0.],ms=gp['ms'],label='Harvest area (consolidated cutblocks database)')
 #ax.plot(tv,metaOP['ts']['OPENING_GROSS_AREA']/1e3,'-gs',markerfacecolor='w',ms=gp['ms'],label='Gross area (RESULTS)')
 ax.plot(tv,(metaOP['ts']['OPENING_GROSS_AREA']-metaOP['ts']['Area Reserves'])/1e3,'-gs',ms=gp['ms'],label='Gross area minus reserves (RESULTS)')
 ax.plot(tv,metaAT['ts']['Area Regen Total']/1e3,'-r^',ms=gp['ms'],label='Area reforested (RESULTS)')

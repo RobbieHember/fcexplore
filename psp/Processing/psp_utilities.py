@@ -78,6 +78,10 @@ def ImportParameters(meta):
     for i in range(meta['LUT Tables']['PFT']['ID'].size):
         meta['LUT']['PFT'][ meta['LUT Tables']['PFT']['Value'][i] ]=meta['LUT Tables']['PFT']['ID'][i]
 
+    meta['LUT']['Stature']={}
+    meta['LUT']['Stature']['Standing']=1
+    meta['LUT']['Stature']['Fallen']=2
+
     # List of jurisdictions
 
     #%% Jurisdiction lists

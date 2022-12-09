@@ -25,13 +25,10 @@ from rasterio.transform import from_origin
 from osgeo import osr
 from scipy.interpolate import griddata
 import statsmodels.formula.api as smf
-from scipy.io import loadmat
-import pyproj
-
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
 from fcgadgets.macgyver import utilities_inventory as invu
-from fcexplore.psp.Processing import psp_utilities as utl
+from fcexplore.psp.Processing import psp_utilities as utl_gp
 
 #%% Set figure properties
 
@@ -42,9 +39,9 @@ gp=gu.SetGraphics('Manuscript')
 meta={}
 meta['Paths']={}
 meta['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
-meta=utl.ImportParameters(meta)
+meta=utl_gp.ImportParameters(meta)
 d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
-sl=d['sobs']
+sl=d['sobs'].copy()
 del d
 
 #%% Filter
@@ -76,7 +73,7 @@ d={}
 ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['VRI']) )[0]
 for k in sl.keys():
     d[k]=np.round(np.nanmean(sl[k][ind]),decimals=2)
-ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['FLT']) )[0]
+ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['YSM']) )[0]
 for k in sl.keys():
     d[k]=np.append(d[k],np.round(np.nanmean(sl[k][ind]),decimals=2))
 ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (sl['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) )[0]
@@ -85,12 +82,12 @@ for k in sl.keys():
 df=pd.DataFrame(d,index=[0,1,2])
 df.to_excel(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\Processed\SummarySL_ByPlotType.xlsx')
 
-
 #%% Plot by BGC zone
 
 vL=['Age t0','Cbk L t0','Cbr L t0','Cf L t0','Csw L t0','Cr L t0','Cag L t0','Ctot L t0']
 
 u=np.unique(sl['Ecozone BC L1'])
+u=u[u>0]
 lab=np.array(['' for _ in range(u.size)],dtype=object)
 
 d={}
@@ -102,7 +99,7 @@ for v in vL:
     d[v]['se']=np.zeros(u.size)
 data=[None]*u.size
 for i in range(u.size):
-    lab[i]=utl.lut_id2cd(meta,'Ecozone BC L1',u[i])
+    lab[i]=utl_gp.lut_id2cd(meta,'Ecozone BC L1',u[i])
     for v in vL:
         ind=np.where( (sl['Ecozone BC L1']==u[i]) &
                      (sl['pt_ind']==1) &
@@ -145,30 +142,90 @@ ax.set(position=[0.08,0.065,0.9,0.92],xlim=[-0.5,u.size-0.5],ylim=[0,500],yticks
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 
-vio=ax.violinplot(data2,np.arange(u.size),widths=0.7,showmeans=False,showextrema=True,showmedians=True)
-for pc in vio['bodies']:
-    pc.set_facecolor('none')
-    pc.set_edgecolor([0.25,0.25,0.25])
-    pc.set_linewidth(0.5)
-    #pc.set_alpha(1)
-for partname in ('cbars','cmins','cmaxes','cmedians'):
-    vp=vio[partname]
+flg=0
+if flg==1:
+    vio=ax.violinplot(data2,np.arange(u.size),widths=0.7,showmeans=False,showextrema=True,showmedians=True)
+    for pc in vio['bodies']:
+        pc.set_facecolor('none')
+        pc.set_edgecolor([0.25,0.25,0.25])
+        pc.set_linewidth(0.5)
+        #pc.set_alpha(1)
+    for partname in ('cbars','cmins','cmaxes','cmedians'):
+        vp=vio[partname]
+        vp.set_edgecolor([0.75,0.75,0.75])
+        vp.set_linewidth(0.5)
+        vp.set_alpha(0.75)
+
+    vp=vio['cbars']
+    vp.set_alpha(0)
+
+    vp=vio['cmedians']
     vp.set_edgecolor([0.75,0.75,0.75])
-    vp.set_linewidth(0.5)
-    vp.set_alpha(0.75)
-
-vp=vio['cbars']
-vp.set_alpha(0)
-
-vp=vio['cmedians']
-vp.set_edgecolor([0.75,0.75,0.75])
-vp.set_linewidth(2)
-#vp.set_alpha(0.75)
+    vp.set_linewidth(2)
+    #vp.set_alpha(0.75)
 
 for i in range(u.size):
     ax.text(i,6,str(d['Csw L t0']['N'][i].astype(int)),color='k',ha='center',fontsize=7,fontweight='normal')
 
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\BiomassFromPlots_ByGBCZone','png',900)
+#gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\BiomassFromPlots_ByGBCZone','png',900)
+
+
+#%% Net Biomass Production
+
+gp=gu.SetGraphics('Manuscript')
+gp=gu.SetGraphics('Presentation Light')
+
+# Import ground plot data
+metaGP={}
+metaGP['Paths']={}
+metaGP['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
+metaGP=utl_gp.ImportParameters(metaGP)
+d=gu.ipickle(metaGP['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
+sl=d['sobs']
+del d
+
+# Filter
+sl['flag_pt']=np.zeros(sl['ID Plot'].size)
+ind=np.where( (sl['Plot Type']==metaGP['LUT']['Plot Type BC']['CMI']) | (sl['Plot Type']==metaGP['LUT']['Plot Type BC']['NFI']) )[0]
+sl['flag_pt'][ind]=1
+
+ikp=np.where( (sl['flag_pt']==1) & (sl['Year t1']>0) & (sl['Lat']>0) & (sl['Lon']!=0) )[0]
+
+A=57000000
+
+vL=['Year t0','Year t1','Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot Mort Harv','Ctot Net']
+sts={}
+for v in vL:
+    sts['mu ' + v]=A*np.nanmean(sl[v][ikp])/1e6*3.667
+    sts['se ' + v]=A*np.nanstd(sl[v][ikp])/np.sqrt(ikp.size)/1e6*3.667
+
+print( str(np.nanpercentile(sl['Year t0'],25)) + ' ' + str(np.nanpercentile(sl['Year t1'],75)) )
+print(sts['mu Ctot Net'])
+print(sts['mu Ctot Mort Harv'])
+
+cl=np.array([[0.24,0.49,0.77],[0.6,1,0]])
+cle=[0.05,0.2,0.45]
+barw=0.5
+lab=['Survivor\ngrowth','Recruitment\ngrowth','Natural\nmortality','Harvest\nmortality','Net\ngrowth']
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,8))
+ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
+ax.bar(1,sts['mu Ctot G Surv'],barw,facecolor=cl[0,:],label='Growth survivors')
+ax.bar(2,sts['mu Ctot G Recr'],barw,facecolor=cl[0,:],label='Growth recruitment')
+ax.bar(3,-sts['mu Ctot Mort']+sts['mu Ctot Mort Harv'],barw,facecolor=cl[0,:],label='Mortality')
+ax.bar(4,-sts['mu Ctot Mort Harv'],barw,facecolor=cl[0,:],label='Mortality')
+ax.bar(5,sts['mu Ctot Net'],barw,facecolor=cl[0,:],label='Mortality')
+ax.errorbar(1,sts['mu Ctot G Surv'],yerr=sts['se Ctot G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(2,sts['mu Ctot G Recr'],yerr=sts['se Ctot G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(3,-sts['mu Ctot Mort']+sts['mu Ctot Mort Harv'],yerr=sts['se Ctot Mort'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(4,-sts['mu Ctot Mort Harv'],yerr=sts['se Ctot Mort Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(5,sts['mu Ctot Net'],yerr=sts['se Ctot Net'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,6),xticklabels=lab,ylabel='Carbon balance of trees (MtCO$_{2}$e yr$^{-1}$)',xlim=[0.5,5.5],ylim=[-300,300])
+#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\BC Tree Carbon Dynamics from Ground Plots','png',900)
+
 
 #%% Compare plot AGB with VRI polygon estimates
 
@@ -268,7 +325,7 @@ for v in vL:
     d[v]['sd']=np.zeros(u.size)
     d[v]['se']=np.zeros(u.size)
 for i in range(u.size):
-    lab[i]=utl.lut_id2cd(meta,'Ecozone BC L1',u[i])
+    lab[i]=utl_gp.lut_id2cd(meta,'Ecozone BC L1',u[i])
     for v in vL:
         ind=np.where( (d_vri2['Ecozone BC L1']==u[i]) & (d_vri2['pt_ind']==1) & (d_vri2[v]>=0) & (d_vri2[v]<2000) )[0]
         d[v]['N'][i]=ind.size

@@ -31,11 +31,16 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import geopandas as gpd
 import gc as garc
 import time
 import warnings
+from shapely.geometry import Point, Polygon
+from shapely import geometry
 from fcgadgets.macgyver import utilities_general as gu
+import fcgadgets.macgyver.utilities_query_gdb as qgdb
 from fcexplore.psp.Processing import psp_utilities as utl
+
 warnings.filterwarnings("ignore")
 
 #%% Import project info
@@ -54,8 +59,6 @@ meta['prm']['Carbon Content']=0.5
 #%% Select source databases to run
 
 jurL=['BC']
-
-#%% Gap-fill missing allometric parameters
 
 #%% QA flags
 
@@ -158,23 +161,25 @@ for iJur in range(len(jurL)):
          'Utilization Level','Management','SI','Year t0','Year t1','Month t0','Month t1',
          'Delta t','Age t0','Age t1','Spc1 ID','Spc1 %BA','Spc1 %N','Spc2 ID','Spc2 %BA',
          'Spc2 %N','Spc3 ID','Spc3 %BA','Spc3 %N','Spc4 ID','Spc4 %BA','Spc4 %N',
-         'N L t0','N L t1','N D t0','N D t1','N Recr','N Mort','N Harv','N Net',
+         'N L t0','N L t1','N D t0','N D t1','N Recr','N Mort','N L Lost','N D Lost','N Net',
          'Dam L t0','Dam L t1','Dam G Surv',
          'Dqm L t0','Dqm L t1',
          'BA L t0','BA L t1','BA G Surv','BA Mort',
          'H L t0','H L t1','H G Surv',
          'H L max t0','H L max t1',
          'Vws L t0','Vws L t1',
-         'Cag L t0','Cag L t1','Cag D t0','Cag D t1','Cag G Surv','Cag G Recr','Cag Mort','Cag Harv',
+         'Cag L t0','Cag L t1','Cag D t0','Cag D t1','Cag L Fallen t0','Cag L Fallen t1','Cag D Fallen t0','Cag D Fallen t1','Cag G Surv','Cag G Recr','Cag Mort','Cag Harv',
          'Cbk L t0','Cbk L t1','Cbk G Surv','Cbk G Recr','Cbk Mort',
          'Cbr L t0','Cbr L t1','Cbr G Surv','Cbr G Recr','Cbr Mort',
          'Cf L t0','Cf L t1','Cf G Surv','Cf G Recr','Cf Mort',
          'Cr L t0','Cr L t1','Cr G Surv','Cr G Recr','Cr Mort',
          'Csw L t0','Csw L t1','Csw G Surv','Csw G Recr','Csw Mort',
          'Csw Harv','Csw D t0','Csw D t1','Csw125 L t0','Csw125 L t1',
-         'Ctot L t0','Ctot L t1','Ctot D t0','Ctot D t1','Ctot G Surv','Ctot G Recr','Ctot Mort',
-         'Ctot Mort None','Ctot Mort Insect','Ctot Mort Disease','Ctot Mort Plant Competition','Ctot Mort Animal Browsing','Ctot Mort Fire','Ctot Mort Frost','Ctot Mort Drought','Ctot Mort Snow and Ice','Ctot Mort Wind','Ctot Mort Silviculture','Ctot Mort Other','Ctot Mort Unknown',
-         'Ctot Harv','Ctot Litf']
+         'Ctot L t0','Ctot L t1','Ctot D t0','Ctot D t1',
+         'Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot Net',
+         'Ctot Mort None','Ctot Mort Insect','Ctot Mort Disease','Ctot Mort Plant Competition','Ctot Mort Animal Browsing','Ctot Mort Fire','Ctot Mort Frost','Ctot Mort Drought','Ctot Mort Snow and Ice','Ctot Mort Wind','Ctot Mort Silviculture','Ctot Mort Other','Ctot Mort Unknown','Ctot Mort Harv',
+         'Ctot L Lost','Ctot L Lost None','Ctot L Lost Insect','Ctot L Lost Disease','Ctot L Lost Plant Competition','Ctot L Lost Animal Browsing','Ctot L Lost Fire','Ctot L Lost Frost','Ctot L Lost Drought','Ctot L Lost Snow and Ice','Ctot L Lost Wind','Ctot L Lost Silviculture','Ctot L Lost Other','Ctot L Lost Unknown',
+         'Ctot D Lost','Ctot Litf']
 
     sobs={}
     for v in slvL:
@@ -189,7 +194,7 @@ for iJur in range(len(jurL)):
          'Stand DA Fire t0','Stand DA Fire t1','Stand DA Animal t0','Stand DA Animal t1','Stand DA Weather t0','Stand DA WEather t1',
          'Stand DA Silviculture t0','Stand DA Silviculture t1','Stand DA Mechanical t0','Stand DA Mechanical t1',
          'Stand DA SnowAndIce t0','Stand DA SnowAndIce t1','Stand DA Unknown t0','Stand DA Unknown t1',
-         'Vital Status t0','Vital Status t1','AEF','DA t0','DA t1','DAI t0','DAI t1','DAP t0','DAP t1','DA IDW t0','DA IDW t1',
+         'Vital Status t0','Vital Status t1','Stature t0','Stature t1','AEF','DA t0','DA t1','DAI t0','DAI t1','DAP t0','DAP t1','DA IDW t0','DA IDW t1',
          'Mortality','Recruitment','DBH t0','DBH t1','DBH G','BA t0','BA t1','BA G',
          'H t0','H t1','H G','H Obs t0','H Obs t1','Vws t0','Vws t1',
          'Cag t0','Cag t1','Cag G',
@@ -208,6 +213,9 @@ for iJur in range(len(jurL)):
 
     # Loop through plots
     for iP in range(uP.size):
+
+        #if uP[iP]==1100981:
+        #    break
 
         # Index to plot from tree structure
         iPlot=np.where(tl['ID Plot']==uP[iP])[0]
@@ -236,7 +244,7 @@ for iJur in range(len(jurL)):
                 continue
 
             # Flag indicating PSP (1) or TSP (0)
-            if iPlot_t1.size==0:
+            if (iPlot_t1.size==0):# | (pl['Year'][iPlot_t1]==pl['Year'][iPlot_t0]):
                 flg_PSP=0
             else:
                 flg_PSP=1
@@ -307,6 +315,7 @@ for iJur in range(len(jurL)):
             vws0_all=tl['Vws'][ind_all0]
             pft0_all=tl['ID PFT'][ind_all0]
             vital_status0_all=tl['Vital Status'][ind_all0]
+            stature0_all=tl['Stature'][ind_all0]
             aef0_all=tl['AEF'][ind_all0]
             spc0_all=tl['ID Species'][ind_all0]
             da0_all=tl['ID DA1'][ind_all0]
@@ -333,6 +342,7 @@ for iJur in range(len(jurL)):
                 vws1_all=tl['Vws'][ind_all1]
                 pft1_all=tl['ID PFT'][ind_all1]
                 vital_status1_all=tl['Vital Status'][ind_all1]
+                stature1_all=tl['Stature'][ind_all1]
                 aef1_all=tl['AEF'][ind_all1]
                 spc1_all=tl['ID Species'][ind_all1]
                 da1_all=tl['ID DA1'][ind_all1]
@@ -354,17 +364,27 @@ for iJur in range(len(jurL)):
             # Index to trees that were alive in t0 (including those that died)
             ind_live0=np.where(vital_status0_all==meta['LUT']['Vital Status']['Live'])[0]
 
+            ind_live_fallen0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (stature0_all==meta['LUT']['Stature']['Fallen']) )[0]
+
             # Index to trees that were dead at t0
             ind_dead0=np.where(vital_status0_all==meta['LUT']['Vital Status']['Dead'])[0]
+
+            ind_dead_fallen0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (stature0_all==meta['LUT']['Stature']['Fallen']) )[0]
 
             if flg_PSP==1:
 
                 # Index to trees that were alive in t1 (including those that were
                 # Recrited)
                 ind_live1=np.where(vital_status1_all==meta['LUT']['Vital Status']['Live'])[0]
+                ind_live_fallen1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Live']) & (stature1_all==meta['LUT']['Stature']['Fallen']) )[0]
+
+                # Trees that go uncounted at t1
+                ind_live_lost1=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (np.isin(id0_all,id1_all)==False) )[0]
+                ind_dead_lost1=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (np.isin(id0_all,id1_all)==False) )[0]
 
                 # Index to trees that were dead at t1
                 ind_dead1=np.where(vital_status1_all==meta['LUT']['Vital Status']['Dead'])[0]
+                ind_dead_fallen1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Dead']) & (stature1_all==meta['LUT']['Stature']['Fallen']) )[0]
 
                 # Index to survivors
                 ind_surv=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Live']) )[0]
@@ -380,6 +400,12 @@ for iJur in range(len(jurL)):
                 for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
                     ind_mort_da.append(np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) & (da0_all[ia1]==meta['LUT Tables']['Damage Agents']['ID'][iDA]) |
                                                  (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) & (da1_all[ib1]==meta['LUT Tables']['Damage Agents']['ID'][iDA]) )[0])
+
+                ind_lost_da=[]
+                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
+                    ind_lost_da.append(np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) &
+                                                (np.isin(id0_all,id1_all)==False) &
+                                                (da0_all==meta['LUT Tables']['Damage Agents']['ID'][iDA]) )[0])
 
                 # Index to Recrited trees that died during interval
                 ind_mort_r=np.where(vital_status1_all[ib2]==meta['LUT']['Vital Status']['Dead'])[0]
@@ -451,7 +477,9 @@ for iJur in range(len(jurL)):
                 sobs['Spc' + str(iSpc+1) + ' %BA'][cnt]=np.round(SpcComp[iSpc,1]*100,decimals=0)
                 sobs['Spc' + str(iSpc+1) + ' %N'][cnt]=np.round(SpcComp[iSpc,2]*100,decimals=0)
 
-            # Populate stand-level state variables
+            #------------------------------------------------------------------
+            # Populate state variables
+            #------------------------------------------------------------------
 
             # Stand density (stems ha-1)
             sobs['N L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
@@ -460,22 +488,25 @@ for iJur in range(len(jurL)):
             #sobs['N_R'][cnt]=np.round(sum(aef1_all[ib2[ind_rec]])/dt*100)/100
 
             # Diameter, arithmetic mean (cm)
-            sobs['Dam L t0'][cnt]=np.round(np.nanmean(dbh0_all[ind_live0]),decimals=1)
+            sobs['Dam L t0'][cnt]=np.round(np.nansum(dbh0_all[ind_live0]*aef0_all[ind_live0])/np.nansum(aef0_all[ind_live0]),decimals=1)
 
             # Diameter, quadratic mean (cm)
-            sobs['Dqm L t0'][cnt]=np.round(np.sqrt(np.mean(dbh0_all[ind_live0]**2)),decimals=1)
+            sobs['Dqm L t0'][cnt]=np.round(np.sqrt(np.nanmean(dbh0_all[ind_live0]**2)),decimals=1)
 
             # Basal area (m2 ha-1)
             sobs['BA L t0'][cnt]=np.round(np.nansum((np.pi*(dbh0_all[ind_live0]/200)**2)*aef0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=1)
 
             # Height (m)
-            sobs['H L t0'][cnt]=np.round(np.nanmean(h0_all[ind_live0]),decimals=1)
+            sobs['H L t0'][cnt]=np.round(np.nanmean(h0_all[ind_live0]*aef0_all[ind_live0])/np.nansum(aef0_all[ind_live0]),decimals=1)
 
             # Volume whole stem (m3/ha)
             sobs['Vws L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*vws0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
 
             # Aboveground carbon, live (Mg C ha-1)
             sobs['Cag L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*0.001*Cag0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
+            sobs['Cag D t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead0]*0.001*Cag0_all[ind_dead0])/sobs['Num Plots'][cnt],decimals=0)
+            sobs['Cag L Fallen t0'][cnt]=np.round(np.nansum(aef0_all[ind_live_fallen0]*0.001*Cag0_all[ind_live_fallen0])/sobs['Num Plots'][cnt],decimals=0)
+            sobs['Cag D Fallen t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead_fallen0]*0.001*Cag0_all[ind_dead_fallen0])/sobs['Num Plots'][cnt],decimals=0)
 
             # Bark carbon, live (Mg C ha-1)
             sobs['Cbk L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*0.001*Cbk0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
@@ -491,29 +522,24 @@ for iJur in range(len(jurL)):
 
             # Stemwood carbon, live (Mg C ha-1)
             sobs['Csw L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*0.001*Csw0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
+            sobs['Csw D t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead0]*0.001*Csw0_all[ind_dead0])/sobs['Num Plots'][cnt],decimals=0)
 
             # Stemwood carbon, live (Mg C ha-1)
             sobs['Csw125 L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*0.001*Csw125_0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
 
             # Total carbon, live (Mg C ha-1)
             sobs['Ctot L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*0.001*Ctot0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
-
-            # Stemwood carbon, dead (Mg C ha-1)
-            sobs['Csw D t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead0]*0.001*Csw0_all[ind_dead0])/sobs['Num Plots'][cnt],decimals=0)
-
-            # Aboveground carbon, dead (Mg C ha-1)
-            sobs['Cag D t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead0]*0.001*Cag0_all[ind_dead0])/sobs['Num Plots'][cnt],decimals=0)
-
-            # Total carbon, dead (Mg C ha-1)
             sobs['Ctot D t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead0]*0.001*Ctot0_all[ind_dead0])/sobs['Num Plots'][cnt],decimals=0)
 
-            # Populate stand-level growth and litterfall of survivors
-
-            if flg_PSP==1:
+            if (flg_PSP==1) & (sobs['Plot Type'][cnt]!=meta['LUT']['Plot Type BC']['VRI']):
 
                 # Stand density (stems ha-1)
                 sobs['N L t1'][cnt]=np.round(np.nansum(aef1_all[ind_live1])/sobs['Num Plots'][cnt],decimals=0)
                 sobs['N D t1'][cnt]=np.round(np.nansum(aef1_all[ind_dead1])/sobs['Num Plots'][cnt],decimals=0)
+
+                # Demographic lost (trees yr-1)
+                sobs['N L Lost'][cnt]=np.round(np.nansum(aef0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
+                sobs['N D Lost'][cnt]=np.round(np.nansum(aef0_all[ind_dead_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
 
                 # Diameter, arithmetic mean (cm)
                 sobs['Dam L t1'][cnt]=np.round(np.nanmean(dbh1_all[ind_live1]),decimals=1)
@@ -533,6 +559,8 @@ for iJur in range(len(jurL)):
                 # Aboveground carbon, live (Mg C ha-1)
                 sobs['Cag L t1'][cnt]=np.round(np.nansum(aef1_all[ind_live1]*0.001*Cag1_all[ind_live1])/sobs['Num Plots'][cnt],decimals=0)
                 sobs['Cag D t1'][cnt]=np.round(np.nansum(aef1_all[ind_dead1]*0.001*Cag1_all[ind_dead1])/sobs['Num Plots'][cnt],decimals=0)
+                sobs['Cag L Fallen t1'][cnt]=np.round(np.nansum(aef1_all[ind_live_fallen1]*0.001*Cag1_all[ind_live_fallen1])/sobs['Num Plots'][cnt],decimals=0)
+                sobs['Cag D Fallen t1'][cnt]=np.round(np.nansum(aef1_all[ind_dead_fallen1]*0.001*Cag1_all[ind_dead_fallen1])/sobs['Num Plots'][cnt],decimals=0)
 
                 # Bark carbon, live (Mg C ha-1)
                 sobs['Cbk L t1'][cnt]=np.round(np.nansum(aef1_all[ind_live1]*0.001*Cbk1_all[ind_live1])/sobs['Num Plots'][cnt],decimals=0)
@@ -553,9 +581,15 @@ for iJur in range(len(jurL)):
                 # Stemwood carbon, live (Mg C ha-1)
                 sobs['Csw125 L t1'][cnt]=np.round(np.nansum(aef1_all[ind_live1]*0.001*Csw125_1_all[ind_live1])/sobs['Num Plots'][cnt],decimals=0)
 
-                # total carbon, live (Mg C ha-1)
+                # Total carbon (Mg C ha-1)
                 sobs['Ctot L t1'][cnt]=np.round(np.nansum(aef1_all[ind_live1]*0.001*Ctot1_all[ind_live1])/sobs['Num Plots'][cnt],decimals=0)
                 sobs['Ctot D t1'][cnt]=np.round(np.nansum(aef1_all[ind_dead1]*0.001*Ctot1_all[ind_dead1])/sobs['Num Plots'][cnt],decimals=0)
+
+                #--------------------------------------------------------------
+                # Growth of survivors
+                #--------------------------------------------------------------
+
+                # Stand-level growth:
 
                 # Diameter, arithmetic mean, growth (cm yr-1)
                 Dam_t0_surv=dbh0_all[ia1[ind_surv]]
@@ -612,6 +646,8 @@ for iJur in range(len(jurL)):
                 dCtot_surv=(Ctot_t1_surv-Ctot_t0_surv)/dt
                 sobs['Ctot G Surv'][cnt]=np.round(np.nansum(dCtot_surv)/sobs['Num Plots'][cnt],decimals=2)
 
+                # Litterfall of survivors:
+
                 # Litterfall Litterfall from foliage biomass (Mg C ha-1 yr-1)
                 Cf_Litterfall_t0=aef0_all[ia1[ind_surv]]*0.001*Cf_Litterfall0_all[ia1[ind_surv]]
                 Cf_Litterfall_t1=aef1_all[ib1[ind_surv]]*0.001*Cf_Litterfall1_all[ib1[ind_surv]]
@@ -639,7 +675,7 @@ for iJur in range(len(jurL)):
                 # Litterfall total (Mg C ha-1 yr-1)
                 sobs['Ctot Litf'][cnt]=np.round( (Cf_Litterfall+Cbk_Litterfall+Cbr_Litterfall+Cr_Litterfall)/sobs['Num Plots'][cnt] ,decimals=2)
 
-                # Populate tree-level growth of survivors
+                # Tree-level growth of survivors:
 
                 # Find where to add tree level data
                 iStart=np.where(np.isnan(tobs['ID Tree'])==True)[0]
@@ -669,10 +705,8 @@ for iJur in range(len(jurL)):
                 tobs['Stand Spc1 %N'][iFill]=sobs['Spc1 %N'][cnt]
                 tobs['Stand N L t0'][iFill]=sobs['N L t0'][cnt]
                 tobs['Stand N L t1'][iFill]=sobs['N L t1'][cnt]
-                #tobs['Stand Dqm L t0'][iFill]=sobs['Dqm L t0'][cnt]
                 tobs['Stand Cag L t0'][iFill]=sobs['Cag L t0'][cnt]
                 tobs['Stand Cag L t1'][iFill]=sobs['Cag L t1'][cnt]
-                #tobs['Management'][iFill]=sobs['Management'][cnt]
 
                 tobs['AEF'][iFill]=aef0_all[ia1[ind_surv]]
                 tobs['Vital Status t0'][iFill]=1*np.ones(ind_surv.size)
@@ -705,8 +739,7 @@ for iJur in range(len(jurL)):
 
                 tobs['Cag t0'][iFill]=Cag0_all[ia1[ind_surv]]
                 tobs['Cag t1'][iFill]=Cag1_all[ib1[ind_surv]]
-                Gag=(Cag1_all[ib1[ind_surv]]-Cag0_all[ia1[ind_surv]])/dt
-                tobs['Cag G'][iFill]=Gag
+                tobs['Cag G'][iFill]=(Cag1_all[ib1[ind_surv]]-Cag0_all[ia1[ind_surv]])/dt
 
                 tobs['Cbk t0'][iFill]=Cbk0_all[ia1[ind_surv]]
                 tobs['Cbk t1'][iFill]=Cbk1_all[ib1[ind_surv]]
@@ -722,8 +755,7 @@ for iJur in range(len(jurL)):
 
                 tobs['Csw t0'][iFill]=Csw0_all[ia1[ind_surv]]
                 tobs['Csw t1'][iFill]=Csw1_all[ib1[ind_surv]]
-                Gsw=(Csw1_all[ib1[ind_surv]]-Csw0_all[ia1[ind_surv]])/dt
-                tobs['Csw G'][iFill]=Gsw
+                tobs['Csw G'][iFill]=(Csw1_all[ib1[ind_surv]]-Csw0_all[ia1[ind_surv]])/dt
 
                 # Competition indices
                 for i in range(iFill.size):
@@ -731,15 +763,9 @@ for iJur in range(len(jurL)):
                     tobs['Stand Cag L Larger t0'][iFill[i]]=np.sum(tobs['AEF'][iFill[iLarger]]*tobs['Cag t0'][iFill[iLarger]])*0.001
                     tobs['Stand BA L Larger t0'][iFill[i]]=np.sum(tobs['AEF'][iFill[iLarger]]*(np.pi*(tobs['DBH t0'][iFill[iLarger]]/200)**2))
 
-                # Rank
-                # DBH_ForRank=dbh0_all[ia]
-                # Lx=length(DBH_ForRank)
-                # rnk']=flipdim(sortrows([DBH_ForRank[1:Lx]']),1)
-                # rnk[:,2]=linspace(1,0,Lx)
-                # rnk2=zeros(Lx,1) rnk2(rnk[:,1])=rnk[:,2]
-                # tobs['Rank'][iFill]=rnk2(ind_surv)
-
-                # Populate stand-level biomass Litterfall due to natural mortality
+                #--------------------------------------------------------------
+                # Mortality
+                #--------------------------------------------------------------
 
                 if ind_mort.size==0:
 
@@ -752,44 +778,26 @@ for iJur in range(len(jurL)):
                     sobs['Cf Mort'][cnt]=0
                     sobs['Csw Mort'][cnt]=0
                     sobs['Ctot Mort'][cnt]=0
-                    for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
-                        nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
-                        sobs['Ctot Mort ' + nam][cnt]=np.round(0.0,decimals=2)
 
                 else:
 
                     # Demographic mortality (trees yr-1)
                     sobs['N Mort'][cnt]=np.round(np.nansum(aef0_all[ia1[ind_mort]])/dt/sobs['Num Plots'][cnt],decimals=1)
-                    # sobs['N Mort'][cnt]=np.round(sum(aef1_all[ib1[ind_mort]])/dt*100)/100
-
-                    # Demographic mortality of Recrited trees (that did not make it) (trees yr-1)
-                    #sobs['N Mr'][cnt]=np.sum(aef1_all[ib2[ind_mort_r]])/dt
-
-                    #Csw0_dying_NP=np.nansum(aef0_all[ia[ind_mort]]*0.001*Csw0_all[ia[ind_mort]])
-                    #ind_NotPine=spc1_all[ib1[ind_mort]]~=48
-                    #Csw1_dying_NotPine=np.nansum(aef1_all[ib1[ind_mort[ind_NotPine]]*0.001*Csw1_all[ib1[ind_mort[ind_NotPine]])
-                    #sobs['Csw_M_NotPine'][cnt]=Csw1_dying_NotPine/dt
-
-                    # Stemwood growth of trees that died
-                    # *** Not reliable ***
-                    #sobs['Csw_Gd'][cnt]=(Csw1_dying-Csw0_dying)/dt
 
                     # Aboveground carbon mortality (Mg C ha-1 yr-1)
                     Cag0_dying=np.nansum(aef0_all[ia1[ind_mort]]*0.001*Cag0_all[ia1[ind_mort]])
                     Cag1_dying=np.nansum(aef1_all[ib1[ind_mort]]*0.001*Cag1_all[ib1[ind_mort]])
                     sobs['Cag Mort'][cnt]=np.round(Cag1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
 
-                    #sobs['Cag_Gd'][cnt]=(Cag1_dying-Cag0_dying)/dt
+                    # Bark carbon mortality (Mg C ha-1 yr-1)
+                    Cbk0_dying=np.nansum(aef0_all[ia1[ind_mort]]*0.001*Cbk0_all[ia1[ind_mort]])
+                    Cbk1_dying=np.nansum(aef1_all[ib1[ind_mort]]*0.001*Cbk1_all[ib1[ind_mort]])
+                    sobs['Cbk Mort'][cnt]=np.round(Cbk1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
 
                     # Branch carbon mortality (Mg C ha-1 yr-1)
                     Cbr0_dying=np.nansum(aef0_all[ia1[ind_mort]]*0.001*Cbr0_all[ia1[ind_mort]])
                     Cbr1_dying=np.nansum(aef1_all[ib1[ind_mort]]*0.001*Cbr1_all[ib1[ind_mort]])
                     sobs['Cbr Mort'][cnt]=np.round(Cbr1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
-
-                    # Bark carbon mortality (Mg C ha-1 yr-1)
-                    Cbk0_dying=np.nansum(aef0_all[ia1[ind_mort]]*0.001*Cbk0_all[ia1[ind_mort]])
-                    Cbk1_dying=np.nansum(aef1_all[ib1[ind_mort]]*0.001*Cbk1_all[ib1[ind_mort]])
-                    sobs['Cbk Mort'][cnt]=np.round(Cbk1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
 
                     # Foliage carbon mortality (Mg C ha-1 yr-1)
                     Cf0_dying=np.nansum(aef0_all[ia1[ind_mort]]*0.001*Cf0_all[ia1[ind_mort]])
@@ -806,16 +814,21 @@ for iJur in range(len(jurL)):
                     Ctot1_dying=np.nansum(aef1_all[ib1[ind_mort]]*0.001*Ctot1_all[ib1[ind_mort]])
                     sobs['Ctot Mort'][cnt]=np.round(Ctot1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
 
-                    # Total mortality due to damage agents (Mg C ha-1 yr-1)
-                    for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
-                        ind_mort_da0=ind_mort_da[iDA]
-                        if ind_mort_da0.size>0:
-                            nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
-                            Ctot0_dying=np.nansum(aef0_all[ia1[ind_mort_da0]]*0.001*Ctot0_all[ia1[ind_mort_da0]])
-                            Ctot1_dying=np.nansum(aef1_all[ib1[ind_mort_da0]]*0.001*Ctot1_all[ib1[ind_mort_da0]])
-                            sobs['Ctot Mort ' + nam][cnt]=np.round(Ctot1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
+                # Total mortality due to damage agents (Mg C ha-1 yr-1)
+                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
 
-                # Populate tree-level natural mortality
+                    nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                    ind_mort_da0=ind_mort_da[iDA]
+
+                    if ind_mort_da0.size==0:
+                        sobs['Ctot Mort ' + nam][cnt]=np.round(0.0,decimals=2)
+                    else:
+                        nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                        Ctot0_dying=np.nansum(aef0_all[ia1[ind_mort_da0]]*0.001*Ctot0_all[ia1[ind_mort_da0]])
+                        Ctot1_dying=np.nansum(aef1_all[ib1[ind_mort_da0]]*0.001*Ctot1_all[ib1[ind_mort_da0]])
+                        sobs['Ctot Mort ' + nam][cnt]=np.round(Ctot1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
+
+                # Tree-level natural mortality
 
                 # Find where to add to tree-level data
                 iStart=np.where(np.isnan(tobs['ID Tree'])==True)[0]
@@ -831,9 +844,6 @@ for iJur in range(len(jurL)):
                 tobs['Lon'][iFillD]=sobs['Lon'][cnt]
                 tobs['X'][iFill]=sobs['X'][cnt]
                 tobs['Y'][iFill]=sobs['Y'][cnt]
-                #tobs['Elevation_Given'][iFillD]=sobs['Elevation_Given'][cnt]
-                #tobs['Aspect_Given'][iFillD]=sobs['Aspect_Given'][cnt]
-                #tobs['Slope_Given'][iFillD]=sobs['Slope_Given'][cnt]
 
                 tobs['Year t0'][iFillD]=sobs['Year t0'][cnt]
                 tobs['Year t1'][iFillD]=sobs['Year t1'][cnt]
@@ -884,8 +894,100 @@ for iJur in range(len(jurL)):
                 tobs['Csw t0'][iFillD]=Csw0_all[ia1[ind_mort]]
                 tobs['Csw t1'][iFillD]=Csw1_all[ib1[ind_mort]]
 
-                # Rank (rnk variable created above)
-                #tobs['Rank'][iFillD]=np.round(rnk2[ind_mort],decimals=3)
+                # Competition indices
+                for i in range(iFillD.size):
+                    iLarger=np.where(tobs['Cag t0'][iFill]>tobs['Cag t0'][iFillD[i]])[0]
+                    tobs['Stand Cag L Larger t0'][iFillD[i]]=np.sum(tobs['AEF'][iFill[iLarger]]*tobs['Cag t0'][iFill[iLarger]])*0.001
+                    tobs['Stand BA L Larger t0'][iFillD[i]]=np.sum(tobs['AEF'][iFill[iLarger]]*(np.pi*(tobs['DBH t0'][iFill[iLarger]]/200)**2))
+
+                #--------------------------------------------------------------
+                # Lost trees
+                #--------------------------------------------------------------
+
+                # Total carbon lost
+                sobs['Ctot L Lost'][cnt]=np.round(np.nansum(aef0_all[ind_live_lost1]*0.001*Ctot0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
+                sobs['Ctot D Lost'][cnt]=np.round(np.nansum(aef0_all[ind_dead_lost1]*0.001*Ctot0_all[ind_dead_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
+
+                # Total carbon lost by damage agent
+                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
+                    ind_lost_da0=ind_lost_da[iDA]
+                    if ind_lost_da0.size>0:
+                        nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                        sobs['Ctot L Lost ' + nam][cnt]=np.round(np.nansum(aef0_all[ind_lost_da0]*0.001*Ctot0_all[ind_lost_da0])/dt/sobs['Num Plots'][cnt],decimals=1)
+
+                # Add to mortality
+                sobs['Ctot Mort'][cnt]=np.round(sobs['Ctot Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*0.001*Ctot0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
+                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
+                    ind_lost_da0=ind_lost_da[iDA]
+                    if ind_lost_da0.size>0:
+                        nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                        sobs['Ctot Mort ' + nam][cnt]=np.round(sobs['Ctot Mort ' + nam][cnt]+np.nansum(aef0_all[ind_lost_da0]*0.001*Ctot0_all[ind_lost_da0])/dt/sobs['Num Plots'][cnt],decimals=1)
+
+                # Tree-level mortality (lost trees)
+
+                # Find where to add to tree-level data
+                iStart=np.where(np.isnan(tobs['ID Tree'])==True)[0]
+                iFillD=np.arange(iStart[0],iStart[0]+ind_live_lost1.size,1).astype(int)
+
+                tobs['ID Source'][iFillD]=sobs['ID Source'][cnt]
+                tobs['ID Plot'][iFillD]=pl['ID Plot'][iPlot_t0]
+                tobs['ID Visit'][iFillD]=sobs['ID Visit'][cnt]
+                tobs['ID Tree'][iFillD]=id0_all[ind_live_lost1]
+                tobs['ID Species'][iFillD]=spc0_all[ind_live_lost1]
+                tobs['ID PFT'][iFillD]=pft0_all[ind_live_lost1]
+                tobs['Lat'][iFillD]=sobs['Lat'][cnt]
+                tobs['Lon'][iFillD]=sobs['Lon'][cnt]
+                tobs['X'][iFill]=sobs['X'][cnt]
+                tobs['Y'][iFill]=sobs['Y'][cnt]
+
+                tobs['Year t0'][iFillD]=sobs['Year t0'][cnt]
+                tobs['Year t1'][iFillD]=sobs['Year t1'][cnt]
+                tobs['Delta t'][iFillD]=sobs['Delta t'][cnt]
+                tobs['Plot Type'][iFillD]=sobs['Plot Type'][cnt]
+                tobs['Ecozone BC L1'][iFillD]=sobs['Ecozone BC L1'][cnt]
+                tobs['Ecozone BC L2'][iFillD]=sobs['Ecozone BC L2'][cnt]
+
+                tobs['Stand Age t0'][iFillD]=sobs['Age t0'][cnt]
+                tobs['Stand Age t1'][iFillD]=sobs['Age t1'][cnt]
+                tobs['Stand Spc1 ID'][iFillD]=sobs['Spc1 ID'][cnt]
+                tobs['Stand Spc1 %BA'][iFillD]=sobs['Spc1 %BA'][cnt]
+                tobs['Stand Spc1 %N'][iFillD]=sobs['Spc1 %N'][cnt]
+                tobs['Stand N L t0'][iFillD]=sobs['N L t0'][cnt]
+                tobs['Stand N L t1'][iFillD]=sobs['N L t1'][cnt]
+                tobs['Stand Cag L t0'][iFillD]=sobs['Cag L t0'][cnt]
+                tobs['Stand Cag L t1'][iFillD]=sobs['Cag L t1'][cnt]
+                tobs['Stand Management'][iFillD]=sobs['Management'][cnt]
+
+                tobs['AEF'][iFillD]=aef0_all[ind_live_lost1]
+                tobs['Vital Status t0'][iFillD]=1*np.ones(ind_live_lost1.size)
+                tobs['Vital Status t1'][iFillD]=0*np.ones(ind_live_lost1.size)
+                tobs['Mortality'][iFillD]=np.ones(ind_live_lost1.size)
+                tobs['Recruitment'][iFillD]=0*np.ones(ind_live_lost1.size)
+                tobs['DA t0'][iFillD]=da0_all[ind_live_lost1]
+                tobs['DA t1'][iFillD]=np.nan
+
+                tobs['DBH t0'][iFillD]=dbh0_all[ind_live_lost1]
+                tobs['DBH t1'][iFillD]=np.nan
+                tobs['BA t0'][iFillD]=ba0_all[ind_live_lost1]
+                tobs['BA t1'][iFillD]=np.nan
+                tobs['H t0'][iFillD]=h0_all[ind_live_lost1]
+                tobs['H t1'][iFillD]=np.nan
+                tobs['H Obs t0'][iFillD]=h0_all[ind_live_lost1]
+                tobs['H Obs t1'][iFillD]=np.nan
+                tobs['Vws t0'][iFillD]=vws0_all[ind_live_lost1]
+                tobs['Vws t1'][iFillD]=np.nan
+                tobs['Cag t0'][iFillD]=Cag0_all[ind_live_lost1]
+                tobs['Cag t1'][iFillD]=np.nan
+                tobs['Cbk t0'][iFillD]=Cbk0_all[ind_live_lost1]
+                tobs['Cbk t1'][iFillD]=np.nan
+                tobs['Cbr t0'][iFillD]=Cbr0_all[ind_live_lost1]
+                tobs['Cbr t1'][iFillD]=np.nan
+                tobs['Cf t0'][iFillD]=Cf0_all[ind_live_lost1]
+                tobs['Cf t1'][iFillD]=np.nan
+                tobs['Cr t0'][iFillD]=Cr0_all[ind_live_lost1]
+                tobs['Cr t1'][iFillD]=np.nan
+                tobs['Csw t0'][iFillD]=Csw0_all[ind_live_lost1]
+                tobs['Csw t1'][iFillD]=np.nan
 
                 # Competition indices
                 for i in range(iFillD.size):
@@ -893,7 +995,11 @@ for iJur in range(len(jurL)):
                     tobs['Stand Cag L Larger t0'][iFillD[i]]=np.sum(tobs['AEF'][iFill[iLarger]]*tobs['Cag t0'][iFill[iLarger]])*0.001
                     tobs['Stand BA L Larger t0'][iFillD[i]]=np.sum(tobs['AEF'][iFill[iLarger]]*(np.pi*(tobs['DBH t0'][iFill[iLarger]]/200)**2))
 
-                # Populate stand-level Recruitment (ingrowth)
+                #------------------------------------------------------------------
+                # Recruitment (ingrowth)
+                #------------------------------------------------------------------
+
+                # Stand-level recruitment:
 
                 if (ib2.size==0) | (ind_rec.size==0):
 
@@ -902,7 +1008,6 @@ for iJur in range(len(jurL)):
                     sobs['Csw G Recr'][cnt]=0
                     sobs['Cag G Recr'][cnt]=0
                     sobs['Ctot G Recr'][cnt]=0
-                    #sobs['Ctot T Recr'][cnt]=0
                     sobs['N Recr'][cnt]=0
 
                 else:
@@ -959,11 +1064,11 @@ for iJur in range(len(jurL)):
                     Cr_Litterfall_Ave=(Cr_Litterfall_t0+Cr_Litterfall_t1)/2
                     Cr_Litterfall=np.nansum(Cr_Litterfall_Ave)
 
-                    # Total Litterfall of Recrits
+                    # Total Litterfall of recruits
                     Ctot_Litterfall=Cf_Litterfall+Cbk_Litterfall+Cbr_Litterfall+Cr_Litterfall
                     sobs['Ctot Litf'][cnt]=np.round((sobs['Ctot Litf'][cnt]+Ctot_Litterfall)/sobs['Num Plots'][cnt],decimals=2)
 
-                # Populate tree-level Recruitment
+                # Tree-level recruitment
 
                 # Find where to add to tree-level data
                 iStart=np.where(np.isnan(tobs['ID Tree'])==True)[0]
@@ -979,9 +1084,6 @@ for iJur in range(len(jurL)):
                 tobs['Lon'][iFill]=sobs['Lon'][cnt]
                 tobs['X'][iFill]=sobs['X'][cnt]
                 tobs['Y'][iFill]=sobs['Y'][cnt]
-                #tobs['Elevation_Given'][iFill]=sobs['Elevation_Given'][cnt]
-                #tobs['Aspect_Given'][iFill]=sobs['Aspect_Given'][cnt]
-                #tobs['Slope_Given'][iFill]=sobs['Slope_Given'][cnt]
                 tobs['Year t0'][iFill]=sobs['Year t0'][cnt]
                 tobs['Year t1'][iFill]=sobs['Year t1'][cnt]
                 tobs['Delta t'][iFill]=sobs['Delta t'][cnt]
@@ -996,16 +1098,12 @@ for iJur in range(len(jurL)):
                 tobs['Stand Spc1 %N'][iFill]=sobs['Spc1 %N'][cnt]
                 tobs['Stand N L t0'][iFill]=sobs['N L t0'][cnt]
                 tobs['Stand N L t1'][iFill]=sobs['N L t1'][cnt]
-                #tobs['Stand Dqm L t0'][iFill]=sobs['Dqm L t0'][cnt]
-                #tobs['Stand Csw L t0'][iFill]=sobs['Csw L t0'][cnt]
-                #tobs['Stand Csw L t1'][iFill]=sobs['Csw L t1'][cnt]
                 tobs['Stand Cag L t0'][iFill]=sobs['Cag L t0'][cnt]
                 tobs['Stand Cag L t1'][iFill]=sobs['Cag L t1'][cnt]
                 tobs['Stand Management'][iFill]=sobs['Management'][cnt]
 
                 tobs['AEF'][iFill]=aef1_all[ib2[ind_rec]]
                 tobs['Mortality'][iFill]=np.zeros(ind_rec.size)
-                #tobs['MortSampYN'][iFill]=np.ones(ind_rec.size]
                 tobs['Vital Status t0'][iFill]=np.ones(ind_rec.size)
                 tobs['Vital Status t1'][iFill]=np.ones(ind_rec.size)
                 tobs['Recruitment'][iFill]=np.ones(ind_rec.size)
@@ -1034,16 +1132,16 @@ for iJur in range(len(jurL)):
                 tobs['Csw t0'][iFill]=np.nan
                 tobs['Csw t1'][iFill]=Csw1_all[ib2[ind_rec]]
 
-                # Populate stand-level mortality due to harvesting (Removals)
+                # Stand-level harvest removals
 
                 if ind_harv.size==0:
 
                     # Ensure that an absence of harvested trees translates into a rate of 0 rather
                     # than NaN (which implies an absence of monitoring)
-                    sobs['N Harv'][cnt]=0
+                    #sobs['N Lost'][cnt]=0
                     sobs['Csw Harv'][cnt]=0
                     sobs['Cag Harv'][cnt]=0
-                    sobs['Ctot Harv'][cnt]=0
+                    #sobs['Ctot Harv'][cnt]=0
 
                 else:
 
@@ -1060,10 +1158,13 @@ for iJur in range(len(jurL)):
 
                     # Total carbon harvesting (Mg C ha-1 yr-1)
                     Ctot_h=np.nansum(aef0_all[ia1[ind_harv]]*0.001*Ctot0_all[ia1[ind_harv]])
-                    sobs['Ctot Harv'][cnt]=np.round(Ctot_h/dt/sobs['Num Plots'][cnt],decimals=2)
+                    #sobs['Ctot Harv'][cnt]=np.round(Ctot_h/dt/sobs['Num Plots'][cnt],decimals=2)
 
             # Update stand level counter
             cnt=cnt+1
+
+    # Summary variables
+    sobs['Ctot Net']=sobs['Ctot G Surv']+sobs['Ctot G Recr']-sobs['Ctot Mort']
 
     # Convert some variable data types
     vL=['ID Source','ID Plot','ID Visit','Jourisiction','Ecozone CA L1','Ecozone BC L1','Ecozone BC L2','Plot Type','Management']
@@ -1076,6 +1177,75 @@ for iJur in range(len(jurL)):
     gu.opickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_' + jurL[iJur] + '.pkl',d1)
 
     # Export to spreadsheet
-    df=pd.DataFrame(sobs)
-    df.to_excel(meta['Paths']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx')
+    flg=0
+    if flg==1:
+        df=pd.DataFrame(sobs)
+        df.to_excel(meta['Paths']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
 
+#%% Forest management info
+
+# Import reference crs
+gdf_bm=gpd.read_file(r'C:\Users\rhember\Documents\Data\Basemaps\Basemaps.gdb',layer='NRC_POLITICAL_BOUNDARIES_1M_SP')
+
+# Convert ground plot database to geodataframe
+points=[]
+for i in range(sobs['X'].size):
+    points.append( Point(sobs['X'][i],sobs['Y'][i]) )
+d={'geometry':points}
+for k in sobs.keys():
+    d[k]=sobs[k]
+gdf_sobs=gpd.GeoDataFrame(d)
+gdf_sobs.crs=gdf_bm.crs
+
+# Import opening layer
+flg=1
+if flg==1:
+    op={}
+    op['Path']=r'C:\Users\rhember\Documents\Data\ForestInventory\Results\20220422\Results.gdb'
+    op['Layer']='RSLT_OPENING_SVW'; # fiona.listlayers(op['Path'])
+    op['crs']=gdf_bm.crs
+    op['Keep Geom']='On'
+    op['Select Openings']=np.array([])
+    op['SBC']=np.array([])
+    op['FSC']=np.array([])
+    op['ROI']=[]
+    op['gdf']=qgdb.Query_Openings(op,[])
+    #op['gdf']['crs']=gdf_bm.crs
+
+# Overlay
+gdf_j=gpd.overlay(gdf_sobs,op['gdf'],how='intersection')
+
+# Get decimal date of harvest
+Year_Harv=np.nan*np.ones(sobs['ID Plot'].size)
+Mon_Harv=np.nan*np.ones(sobs['ID Plot'].size)
+for i in range(len(gdf_j)):
+    ind0=np.where((sobs['ID Plot']==gdf_j['ID Plot'][i]))[0]
+    if (gdf_j.loc[i,'DENUDATION_1_DISTURBANCE_CODE']=='L') | (gdf_j.loc[i,'DENUDATION_1_DISTURBANCE_CODE']=='S'):
+        if gdf_j.loc[i,'DENUDATION_1_COMPLETION_DATE'] is not None:
+            Year_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_1_COMPLETION_DATE'][0:4])
+            Mon_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_1_COMPLETION_DATE'][5:7])
+    if (gdf_j.loc[i,'DENUDATION_2_DISTURBANCE_CODE']=='L') | (gdf_j.loc[i,'DENUDATION_2_DISTURBANCE_CODE']=='S'):
+        if gdf_j.loc[i,'DENUDATION_2_COMPLETION_DATE'] is not None:
+            Year_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_2_COMPLETION_DATE'][0:4])
+            Mon_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_2_COMPLETION_DATE'][5:7])
+DY_Harv=Year_Harv+Mon_Harv/12
+sobs['Year Harvest']=DY_Harv
+
+DY_Plot_t0=sobs['Year t0']+sobs['Month t0']/12
+DY_Plot_t1=sobs['Year t1']+sobs['Month t1']/12
+
+sobs['Ctot Mort Harv']=np.nan*sobs['Ctot Mort']
+ind=np.where(sobs['Ctot Mort']>=0)[0]
+sobs['Ctot Mort Harv'][ind]=0
+
+flg_Harv=np.nan*np.ones(sobs['ID Plot'].size)
+ind_H=np.where( (DY_Harv>DY_Plot_t0) & (DY_Harv<=DY_Plot_t1) )[0]
+flg_Harv[ind_H]=1
+sobs['Ctot Mort Harv'][ind_H]=flg_Harv[ind_H]*(sobs['Ctot Mort'][ind_H]-np.nan_to_num(sobs['Ctot Mort Fire'][ind_H]))
+
+# Save
+df=pd.DataFrame(sobs)
+df.to_excel(meta['Paths']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
+
+d1={'tobs':tobs,'sobs':sobs}
+gu.opickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_' + jurL[iJur] + '.pkl',d1)
