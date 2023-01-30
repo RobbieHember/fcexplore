@@ -1,34 +1,22 @@
 
 """
-
-
+PSP - DESCRIPTIVE STATISTICS
 """
 
-#%% IMPORT MODULES
+#%% Import modules
 
-import sys
 import numpy as np
 import gc as garc
-from osgeo import gdal
-from osgeo import osr
 import time
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import pandas as pd
 import fiona
-import rasterio
-import pyproj
-from rasterio import features
-from shapely.geometry import Point, Polygon,box,shape
-from shapely import geometry
-from rasterio.transform import from_origin
-from osgeo import osr
-from scipy.interpolate import griddata
 import statsmodels.formula.api as smf
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
-from fcgadgets.macgyver import utilities_inventory as invu
-from fcexplore.psp.Processing import psp_utilities as utl_gp
+import fcgadgets.macgyver.utilities_inventory as invu
+import fcexplore.psp.Processing.psp_utilities as utl_gp
 
 #%% Set figure properties
 
@@ -36,32 +24,46 @@ gp=gu.SetGraphics('Manuscript')
 
 #%% Import data
 
+# Ground plots
 meta={}
 meta['Paths']={}
 meta['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
+meta['Paths']['Figs']=r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass'
 meta=utl_gp.ImportParameters(meta)
 d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
 sl=d['sobs'].copy()
 del d
 
-#%% Filter
+#%% Import Raster grids
 
-ind=np.where( (sl['Lat']>0) & (sl['Lon']!=0) )[0]
+becz=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
+lutBGC=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz_lut.xlsx')
+lc2=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\lc2.tif')
+
+#%% Remove plots with bad coordinates
+
+ind=np.where( (sl['Lat']>30) & (sl['Lon']!=0) )[0]
 for k in sl.keys():
     sl[k]=sl[k][ind]
 
-#%% Plot type fileter
+#%% Plot type filter (CMI, NFI, and VRI)
 
-sl['pt_ind']=np.zeros(sl['ID Plot'].size)
-ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (sl['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) | (sl['Plot Type']==meta['LUT']['Plot Type BC']['VRI']) )[0]
+sl['Flag Plot Types To Keep']=np.zeros(sl['ID Plot'].size)
+ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) |
+             (sl['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) |
+             (sl['Plot Type']==meta['LUT']['Plot Type BC']['VRI']) )[0]
 #ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (sl['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) )[0]
-sl['pt_ind'][ind]=1
-np.sum(sl['pt_ind'])
+sl['Flag Plot Types To Keep'][ind]=1
+np.sum(sl['Flag Plot Types To Keep'])
 
-#%%
+sl['Flag Keep CMI+NFI']=np.zeros(sl['ID Plot'].size)
+ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (sl['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) )[0]
+sl['Flag Keep CMI+NFI'][ind]=1
 
-# Just PSPs
-ind=np.where( (sl['pt_ind']==1) & (sl['N L t1']>=0) )[0]
+#%% Export tabular summary
+
+# Summary (Just PSPs)
+ind=np.where( (sl['Flag Keep CMI+NFI']==1) & (sl['N L t1']>=0) )[0]
 d={}
 for k in sl.keys():
     d[k]=np.round(np.nanmean(sl[k][ind]),decimals=2)
@@ -82,9 +84,30 @@ for k in sl.keys():
 df=pd.DataFrame(d,index=[0,1,2])
 df.to_excel(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\Processed\SummarySL_ByPlotType.xlsx')
 
-#%% Plot by BGC zone
+#%% Assess whether samples are representative of population crown closure
 
-vL=['Age t0','Cbk L t0','Cbr L t0','Cf L t0','Csw L t0','Cr L t0','Cag L t0','Ctot L t0']
+plt.close('all')
+
+ikp=np.where(sl['Flag Plot Types To Keep']==1)[0]
+kd=gu.ksdensity(sl['Crown Closure (VRI)'][ikp])
+plt.plot(kd,'b-')
+print(np.mean(sl['Crown Closure (VRI)'][ikp]))
+
+ikp=np.where(sl['Flag Keep CMI+NFI']==1)[0]
+kd=gu.ksdensity(sl['Crown Closure (VRI)'][ikp])
+plt.plot(kd,'g-')
+print(np.mean(sl['Crown Closure (VRI)'][ikp]))
+
+zLC2=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\lc2.tif')
+zCC=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\crownc.tif')
+ikp=np.where( (zLC2['Data'][0::10,0::10].flatten()==4) )[0]
+kd=gu.ksdensity(zCC['Data'][0::10,0::10].flatten()[ikp])
+plt.plot(kd,'c--')
+print(np.mean(zCC['Data'][0::10,0::10].flatten()[ikp]))
+
+#%% Plot Stocks by BGC zone
+
+vL=['Age t0','Cbk L t0','Cbr L t0','Cf L t0','Csw L t0','Cr L t0','Cag L t0','Ctot L t0','Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot Mort Harv','Ctot Net']
 
 u=np.unique(sl['Ecozone BC L1'])
 u=u[u>0]
@@ -102,7 +125,7 @@ for i in range(u.size):
     lab[i]=utl_gp.lut_id2cd(meta,'Ecozone BC L1',u[i])
     for v in vL:
         ind=np.where( (sl['Ecozone BC L1']==u[i]) &
-                     (sl['pt_ind']==1) &
+                     (sl['Flag Plot Types To Keep']==1) &
                      (sl['Cbk L t0']>=0) & (sl['Cbk L t0']<2000) &
                      (sl['Cbr L t0']>=0) & (sl['Cbr L t0']<2000) &
                      (sl['Cf L t0']>=0) & (sl['Cf L t0']<2000) &
@@ -113,7 +136,7 @@ for i in range(u.size):
         d[v]['mu'][i]=np.nanmean(sl[v][ind])
         d[v]['sd'][i]=np.nanstd(sl[v][ind])
         #d[v]['se'][i]=np.nanstd(sl[v][ind])/np.sqrt(ind[0].size)
-    ind=np.where( (sl['Ecozone BC L1']==u[i]) & (sl['pt_ind']==1) & (sl['Ctot L t0']>=0) & (sl['Ctot L t0']<10000))[0]
+    ind=np.where( (sl['Ecozone BC L1']==u[i]) & (sl['Flag Plot Types To Keep']==1) & (sl['Ctot L t0']>=0) & (sl['Ctot L t0']<10000))[0]
     data[i]=sl['Ctot L t0'][ind]
 
 # Put in order
@@ -137,8 +160,8 @@ ax.bar(np.arange(u.size),d['Cbk L t0']['mu'],bottom=d['Csw L t0']['mu'],facecolo
 ax.bar(np.arange(u.size),d['Cbr L t0']['mu'],bottom=d['Csw L t0']['mu']+d['Cbk L t0']['mu'],facecolor=cl[3,:],label='Branches')
 ax.bar(np.arange(u.size),d['Cf L t0']['mu'],bottom=d['Csw L t0']['mu']+d['Cbk L t0']['mu']+d['Cbr L t0']['mu'],facecolor=cl[4,:],label='Foliage')
 ax.bar(np.arange(u.size),d['Cr L t0']['mu'],bottom=d['Csw L t0']['mu']++d['Cbk L t0']['mu']+d['Cbr L t0']['mu']+d['Cf L t0']['mu'],facecolor=cl[1,:],label='Roots')
-ax.set(position=[0.08,0.065,0.9,0.92],xlim=[-0.5,u.size-0.5],ylim=[0,500],yticks=np.arange(0,550,50),xticks=np.arange(u.size),
-       xticklabels=lab,ylabel='Biomass (MgC ha$^{-1}$ yr$^{-1}$)')
+ax.set(position=[0.08,0.065,0.9,0.92],yticks=np.arange(0,550,20),xticks=np.arange(u.size),
+       xticklabels=lab,ylabel='Biomass (MgC ha$^{-1}$ yr$^{-1}$)',xlim=[-0.5,u.size-0.5],ylim=[0,200])
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 
@@ -167,12 +190,91 @@ if flg==1:
 for i in range(u.size):
     ax.text(i,6,str(d['Csw L t0']['N'][i].astype(int)),color='k',ha='center',fontsize=7,fontweight='normal')
 
-#gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\BiomassFromPlots_ByGBCZone','png',900)
+#gu.PrintFig(meta['Paths']['Figs'] + '\\BiomassFromPlots_ByGBCZone','png',900)
 
+#%% Plot fluxes by BGC zone
+
+vL=['Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot Mort Harv','Ctot Net']
+
+u=np.unique(sl['Ecozone BC L1'])
+u=u[u>0]
+lab=np.array(['' for _ in range(u.size)],dtype=object)
+
+d={}
+for v in vL:
+    d[v]={}
+    d[v]['N']=np.zeros(u.size)
+    d[v]['mu']=np.zeros(u.size)
+    d[v]['sd']=np.zeros(u.size)
+    d[v]['se']=np.zeros(u.size)
+
+for i in range(u.size):
+    lab[i]=utl_gp.lut_id2cd(meta,'Ecozone BC L1',u[i])
+    for v in vL:
+        ind=np.where( (sl['Ecozone BC L1']==u[i]) &
+                     (sl['Flag Keep CMI+NFI']==1) &
+                     (sl['Ctot Mort Harv']==0) &
+                     (sl['Ctot Net']>=-1000) & (sl['Ctot Net']<1000) )[0]
+        d[v]['N'][i]=ind.size
+        d[v]['mu'][i]=np.nanmean(sl[v][ind])
+        d[v]['sd'][i]=np.nanstd(sl[v][ind])
+        d[v]['se'][i]=np.nanstd(sl[v][ind])/np.sqrt(ind.size)
+
+# Remove classes with inadequate data
+ind=np.where(d['Ctot Net']['N']>=3)[0]
+for v in vL:
+    for k in d[v].keys():
+        d[v][k]=d[v][k][ind]
+u=u[ind]
+lab=lab[ind]
+
+# Put in order
+ord=np.argsort(d['Ctot Net']['mu'])
+uo=u[ord]
+lab=np.flip(lab[ord])
+for v in d:
+    for k in d[v].keys():
+        d[v][k]=np.flip(d[v][k][ord])
+
+# Area weighting
+d['Area']=np.zeros(lab.size)
+for i in range(lab.size):
+    ind1=np.where(lutBGC['ZONE']==lab[i])[0]
+    ind2=np.where( (becz['Data']==lutBGC['VALUE'][ind1[0]]) & (lc2['Data']==4) )
+    d['Area'][i]=ind2[0].size/1e6
+
+wa=np.sum(d['Ctot Net']['mu']*d['Area'])/np.sum(d['Area'])
+
+lab2=np.append(lab,'Area\nweighted')
+
+# Plot
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,9)); cl=np.array([[0.75,0.75,0.75],[0.5,0.5,0.5],[1,0.5,0],[0.45,0.75,1],[0.6,1,0]])
+ax.bar(np.arange(u.size),d['Ctot Net']['mu'],facecolor=cl[0,:],label='')
+for i in range(u.size):
+    ax.errorbar(i,d['Ctot Net']['mu'][i],yerr=d['Ctot Net']['se'][i],color=gp['cla'],fmt='none',capsize=2,lw=0.5)
+ax.bar(u.size,wa,facecolor=cl[1,:],label='Weighted average')
+ax.errorbar(u.size,wa,yerr=np.mean(d['Ctot Net']['se']),color=gp['cla'],fmt='none',capsize=2,lw=0.5)
+ax.plot([-1,20],[0,0],'-k',color=gp['cla'],lw=0.5)
+ax.set(position=[0.08,0.075,0.9,0.91],yticks=np.arange(-5,5,0.2),xticks=np.arange(u.size+1),xticklabels=lab2,
+       ylabel='Net biomass production (MgC ha$^{-1}$ yr$^{-1}$)',
+       xlim=[-0.5,u.size+1-0.5],ylim=[-1,1.8])
+#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+
+for i in range(u.size):
+    if d['Ctot Net']['mu'][i]>0:
+        adj=0.08
+    else:
+        adj=-0.08
+    ax.text(i+0.2,d['Ctot Net']['mu'][i]+adj,str(d['Ctot Net']['N'][i].astype(int)),color='k',ha='center',va='center',fontsize=7,fontweight='normal')
+
+gu.PrintFig(meta['Paths']['Figs'] + '\\NetBiomassProductionFromPlots_ByGBCZone','png',900)
 
 #%% Net Biomass Production
 
-gp=gu.SetGraphics('Manuscript')
+#gp=gu.SetGraphics('Manuscript')
 gp=gu.SetGraphics('Presentation Light')
 
 # Import ground plot data
@@ -184,12 +286,7 @@ d=gu.ipickle(metaGP['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
 sl=d['sobs']
 del d
 
-# Filter
-sl['flag_pt']=np.zeros(sl['ID Plot'].size)
-ind=np.where( (sl['Plot Type']==metaGP['LUT']['Plot Type BC']['CMI']) | (sl['Plot Type']==metaGP['LUT']['Plot Type BC']['NFI']) )[0]
-sl['flag_pt'][ind]=1
-
-ikp=np.where( (sl['flag_pt']==1) & (sl['Year t1']>0) & (sl['Lat']>0) & (sl['Lon']!=0) )[0]
+ikp=np.where( (sl['Flag Keep CMI+NFI']==1) & (sl['Year t1']>0) & (sl['Lat']>0) & (sl['Lon']!=0) )[0]
 
 A=57000000
 
@@ -225,6 +322,55 @@ ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,6),xticklabels=lab,ylab
 #plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\BC Tree Carbon Dynamics from Ground Plots','png',900)
+
+#%% Net Volume Production
+
+#gp=gu.SetGraphics('Manuscript')
+gp=gu.SetGraphics('Presentation Light')
+
+# Import ground plot data
+metaGP={}
+metaGP['Paths']={}
+metaGP['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
+metaGP=utl_gp.ImportParameters(metaGP)
+d=gu.ipickle(metaGP['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
+sl=d['sobs']
+del d
+
+ikp=np.where( (sl['Flag Keep CMI+NFI']==1) & (sl['Year t1']>0) & (sl['Lat']>0) & (sl['Lon']!=0) )[0]
+
+vL=['Year t0','Year t1','Vws G Surv','Vws G Recr','Vws Mort','Vws Mort Harv','Vws Net']
+sts={}
+for v in vL:
+    sts['mu ' + v]=np.nanmean(1000*sl[v][ikp])
+    sts['se ' + v]=np.nanstd(1000*sl[v][ikp])/np.sqrt(ikp.size)
+
+print( str(np.nanpercentile(sl['Year t0'],25)) + ' ' + str(np.nanpercentile(sl['Year t1'],75)) )
+print(sts['mu Vws Net'])
+print(sts['mu Vws Mort Harv'])
+
+cl=np.array([[0.24,0.49,0.77],[0.6,1,0]])
+cle=[0.05,0.2,0.45]
+barw=0.5
+lab=['Survivor\ngrowth','Recruitment\ngrowth','Natural\nmortality','Net\ngrowth'] # ,'Harvest\nmortality'
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,8))
+ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
+ax.bar(1,sts['mu Vws G Surv'],barw,facecolor=cl[0,:],label='Growth survivors')
+ax.bar(2,sts['mu Vws G Recr'],barw,facecolor=cl[0,:],label='Growth recruitment')
+ax.bar(3,-sts['mu Vws Mort'],barw,facecolor=cl[0,:],label='Mortality')
+#ax.bar(4,-sts['mu Vws Mort Harv'],barw,facecolor=cl[0,:],label='Mortality')
+ax.bar(4,sts['mu Vws Net'],barw,facecolor=cl[0,:],label='Mortality')
+ax.errorbar(1,sts['mu Vws G Surv'],yerr=sts['se Vws G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(2,sts['mu Vws G Recr'],yerr=sts['se Vws G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(3,-sts['mu Vws Mort'],yerr=sts['se Vws Mort'],color=cle,fmt='none',capsize=2,lw=0.5)
+#ax.errorbar(4,-sts['mu Vws Mort Harv'],yerr=sts['se Vws Mort Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(4,sts['mu Vws Net'],yerr=sts['se Vws Net'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,5),xticklabels=lab,ylabel='Whole stem volume chagne (m$^{3}$ ha$^{-1}$ yr$^{-1}$)',xlim=[0.5,4.5],ylim=[-3,3])
+#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\BC Tree Volume Dynamics from Ground Plots','png',900)
 
 
 #%% Compare plot AGB with VRI polygon estimates
@@ -291,7 +437,7 @@ d_vri2['AGB_VRI']=d_vri2['WHOLE_STEM_BIOMASS_PER_HA']+d_vri2['BRANCH_BIOMASS_PER
 #%% Plot comparison between ground plot AGB and VRI polygon AGB
 
 # Isolate a sample
-ind=np.where( (d_vri2['Ecozone BC L1']>0) & (d_vri2['pt_ind']==1) & (d_vri2['Age t0']>0) & (d_vri2['Cag L t0']>=0) & (d_vri2['Cag L t0']<2500) & (d_vri2['AGB_VRI']>0) )[0]
+ind=np.where( (d_vri2['Ecozone BC L1']>0) & (d_vri2['Flag Plot Types To Keep']==1) & (d_vri2['Age t0']>0) & (d_vri2['Cag L t0']>=0) & (d_vri2['Cag L t0']<2500) & (d_vri2['AGB_VRI']>0) )[0]
 
 x=np.real(d_vri2['Cag L t0'][ind])
 y=0.5*d_vri2['AGB_VRI'][ind]
@@ -327,7 +473,7 @@ for v in vL:
 for i in range(u.size):
     lab[i]=utl_gp.lut_id2cd(meta,'Ecozone BC L1',u[i])
     for v in vL:
-        ind=np.where( (d_vri2['Ecozone BC L1']==u[i]) & (d_vri2['pt_ind']==1) & (d_vri2[v]>=0) & (d_vri2[v]<2000) )[0]
+        ind=np.where( (d_vri2['Ecozone BC L1']==u[i]) & (d_vri2['Flag Plot Types To Keep']==1) & (d_vri2[v]>=0) & (d_vri2[v]<2000) )[0]
         d[v]['N'][i]=ind.size
         d[v]['mu'][i]=np.nanmean(d_vri2[v][ind])
         d[v]['sd'][i]=np.nanstd(d_vri2[v][ind])

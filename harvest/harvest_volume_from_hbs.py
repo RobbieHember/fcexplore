@@ -24,11 +24,7 @@ from fcgadgets.cbrunner import cbrun_utilities as cbu
 
 #%% Graphics parameters
 
-fs=7
-params={'font.sans-serif':'Arial','font.size':fs,'axes.edgecolor':'black','axes.labelsize':fs,'axes.labelcolor':'black','axes.titlesize':fs,'axes.linewidth':0.5,'lines.linewidth':0.5,
-        'text.color':'black','xtick.color':'black','xtick.labelsize':fs,'xtick.major.width':0.5,'xtick.major.size':3,'xtick.direction':'in','ytick.color':'black','ytick.labelsize':fs,
-        'ytick.major.width':0.5,'ytick.major.size':3,'ytick.direction':'in','legend.fontsize':fs,'savefig.dpi':300,'savefig.transparent':True}
-plt.rcParams.update(params)
+gp=gu.SetGraphics('Manuscript')
 
 #%% Import HBS and quantify annual totals
 
@@ -138,19 +134,19 @@ gu.opickle(r'C:\Users\rhember\Documents\Data\Harvest\HBS\HBS_AnnualSummary.pkl',
 df=pd.DataFrame(d)
 df.to_excel(r'C:\Users\rhember\Documents\Data\Harvest\HBS\HBS_AnnualSummary.xlsx',index=False)
 
-#%%
+#%% Plot
 
-# d=gu.ipickle(r'C:\Users\rhember\Documents\Data\Harvest\HBS\AnnualSum.pkl')
+d=gu.ipickle(r'C:\Users\rhember\Documents\Data\Harvest\HBS\HBS_AnnualSummary.pkl')
 
-plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(9,6));
-plt.plot(tv_hbs,d['V All (Mm3/yr)']/1e6,'-bo')
-plt.plot(tv_hbs,d['V All Abs (Mm3/yr)']/1e6,'-rs')
-plt.plot(tv_hbs,d['V NP (Mm3/yr)']/1e6,'-g^')
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(14,6));
+plt.plot(d['Year'],d['V All Abs (Mm3/yr)'],'-bo')
+#plt.plot(d['Year'],d['V All Abs (Mm3/yr)']/1e6,'-rs')
+#plt.plot(d['Year'],d['V NP (Mm3/yr)']/1e6,'-g^')
 ax.set(position=[0.085,0.125,0.88,0.84],xticks=np.arange(1800,2120,1), \
        yticks=np.arange(0,100,10),ylabel='Volume removed (Million m$^3$ yr$^-$$^1$)',xlabel='Time, years',xlim=[2006.5,2021.5])
 #ax.legend(loc='upper left',facecolor=[1,1,1],frameon=False)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=1.5)
-#gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Harvest\Harvest Volume HBS\VolumeRemoved_HBS','png',900)
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Harvest\Harvest Volume HBS\VolumeRemoved_HBS','png',900)
 
 
 #%%

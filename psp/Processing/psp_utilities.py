@@ -82,10 +82,12 @@ def ImportParameters(meta):
     meta['LUT']['Stature']['Standing']=1
     meta['LUT']['Stature']['Fallen']=2
 
+    meta['LUT']['ClimateClassCondensed']={}
+    labL=['Hyper humid','Humid','Subhumid','Semi arid','Arid','Outside Boundary']
+    for iLab in range(len(labL)):
+        meta['LUT']['ClimateClassCondensed'][labL[iLab]]=iLab+1
+
     # List of jurisdictions
-
-    #%% Jurisdiction lists
-
     meta['List of Jurisidictions']={}
     meta['List of Jurisidictions']['CA']=['BC','AB','SK','MB','ON','QC','NL','NS','NB']
     meta['List of Jurisidictions']['US']=['AK','AL','AR','AZ','CA','CO','CT','DE','FL','GA','IA','ID','IL',

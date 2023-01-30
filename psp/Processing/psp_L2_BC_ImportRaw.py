@@ -120,6 +120,7 @@ tl['DBH']=tl0['DBH']
 tl['H']=tl0['HEIGHT']
 tl['H Obs']=tl0['HEIGHT']
 tl['Vws']=tl0['VOL_WSV']
+tl['Vntwb']=tl0['VOL_NTWB']
 tl['AEF']=tl0['PHF_TREE']
 tl['Flag WithinPlot']=np.ones(N_tl,dtype=int)
 
@@ -176,6 +177,16 @@ for i in range(u.size):
     if ind1.size==0:
         continue
     tl['ID DA3'][ind0]=meta['LUT Tables']['DA BC']['Final'][ind1[0]]
+
+# Mountain pine beetle
+tl['Flag IBM']=np.zeros(N_tl,dtype=int)
+ind0=np.where( (tl0['DAM_AGNA']=='IBM') | (tl0['DAM_AGNB']=='IBM') | (tl0['DAM_AGNC']=='IBM') )[0]
+tl['Flag IBM'][ind0]=1
+
+# Western spruce budworm
+tl['Flag IDW']=np.zeros(N_tl,dtype=int)
+ind0=np.where( (tl0['DAM_AGNA']=='IDW') | (tl0['DAM_AGNB']=='IDW') | (tl0['DAM_AGNC']=='IDW') )[0]
+tl['Flag IDW'][ind0]=1
 
 tl['Age']=-999*np.ones(N_tl,dtype=float)
 ind=np.where(tl0['AGE_TOT']>0)[0]
