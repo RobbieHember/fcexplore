@@ -101,7 +101,7 @@ zHhat['Data']=(np.exp(zHhat['Data'])/(1+np.exp(zHhat['Data'])))/Ivl*100
 
 zHhat['Data'][zMask['Data']==0]=0
 
-#%%
+#%% Plot histogram
 
 plt.close('all')
 plt.hist(zHhat['Data'][0::ssi,0::ssi].flatten())
@@ -118,7 +118,37 @@ print(np.percentile(100*zHhat['Data'][0::ssi,0::ssi],99.9))
 
 #%% Save Annal probability of harvest (%/yr)
 
+sf=1000
+
 z1=zMask.copy()
-z1['Data']=zHhat['Data']*100
-z1['Data']=z1['Data'].astype('int16')
+z1['Data']=zHhat['Data']*sf
+z1['Data']=z1['Data'].astype('int32')
 gis.SaveGeoTiff(z1,r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\HarvestProbability.tif')
+
+#%% THLB at various threshold probabilities
+
+zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\BC_Land_Mask.tif')
+zLC2=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\lc2.tif')
+
+sf=1000
+zPh=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\HarvestProbability.tif')
+zPh['Data']=zPh['Data'].astype('float')/sf
+
+# Treed area
+ind0=np.where( (zLC2['Data']==4) )
+A_treed=ind0[0].size/1e6
+print(A_treed)
+
+# Profile of THLB vs. Ph threshold
+bin=np.arange(0.05,0.3,0.05)
+Abin=np.zeros(bin.size)
+for i in range(bin.size):
+    print(i)
+    ind1=np.where( (zLC2['Data']==4) & (zPh['Data']>bin[i]) )
+    Abin[i]=ind1[0].size/1e6
+
+plt.close('all')
+plt.plot(bin,Abin,'ob-')
+
+
+

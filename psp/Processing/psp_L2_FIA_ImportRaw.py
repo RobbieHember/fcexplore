@@ -21,7 +21,6 @@ import gc as garc
 import time
 import matplotlib.pyplot as plt
 from fcgadgets.macgyver import utilities_general as gu
-from fcgadgets.macgyver import utilities_gis as gis
 from fcexplore.psp.Processing import psp_utilities as utl
 from scipy.optimize import curve_fit
 
@@ -30,18 +29,15 @@ from scipy.optimize import curve_fit
 meta={}
 meta['Paths']={}
 meta['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
-meta['Paths']['Raw Data']=meta['Paths']['DB'] + '\\Given\BC\Received 2023-03-02'
+meta['Paths']['Raw Data']=meta['Paths']['DB'] + '\\Given\BC\Received 2022-10-13'
 
 meta=utl.ImportParameters(meta)
 
 #%% Import data
 
-hd0_unfuzzed=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\Given\BC\Received 2022-10-13\faib_header.xlsx')
 hd0=gu.ReadExcel(meta['Paths']['Raw Data'] + '\\faib_header.xlsx')
 pl0=gu.ReadExcel(meta['Paths']['Raw Data'] + '\\faib_sample_byvisit.xlsx')
 tl0=gu.ReadExcel(meta['Paths']['Raw Data'] + '\\faib_tree_detail.xlsx')
-
-srs=gis.ImportSRSs()
 
 #%% Processing of input variables
 
@@ -73,7 +69,7 @@ pl['Ecozone BC L2']=np.zeros(N,dtype=int)
 pl['Site Series']=np.zeros(N,dtype=int)
 pl['Plot Type']=np.zeros(N,dtype=int)
 pl['Num Plots']=np.zeros(N,dtype=int)
-pl['Age VRI']=np.zeros(N,dtype=float)
+pl['Age']=np.zeros(N,dtype=float)
 pl['SI']=np.zeros(N,dtype=float)
 pl['Elev']=np.zeros(N,dtype=float)
 pl['Slope']=np.zeros(N,dtype=float)
@@ -92,23 +88,12 @@ for i in range(N):
     ind0=np.where(hd0['site_identifier']==pl['ID Plot'][i])[0]
     if ind0.size==0:
         continue
+    pl['Lat'][i]=hd0['Latitude'][ind0]
+    pl['Lon'][i]=hd0['Longitude'][ind0]
     pl['X'][i]=hd0['BC_ALBERS_X'][ind0]
     pl['Y'][i]=hd0['BC_ALBERS_Y'][ind0]
-
     pl['Ecozone BC L1'][i]=meta['LUT']['Ecozone BC L1'][ hd0['BEC_ZONE'][ind0[0]] ]
     pl['Ecozone BC L2'][i]=meta['LUT']['Ecozone BC L2'][ hd0['BEC_ZONE'][ind0[0]] + hd0['BEC_SBZ'][ind0[0]]  ]
-
-# Get coordinates from unfuzzed version where possible
-for i in range(N):
-    ind0=np.where(hd0_unfuzzed['site_identifier']==pl['ID Plot'][i])[0]
-    if ind0.size==0:
-        print('Missing')
-        continue
-    pl['X'][i]=hd0_unfuzzed['BC_ALBERS_X'][ind0]
-    pl['Y'][i]=hd0_unfuzzed['BC_ALBERS_Y'][ind0]
-
-# Missing lat and long so back it out of ALBERS projected values
-pl['Lon'],pl['Lat']=gis.ReprojectCoordinates(srs['String']['BC1ha'],srs['String']['Geographic'],pl['X'],pl['Y'])
 
 u=np.unique(pl0['sampletype'])
 for i in range(u.size):
@@ -118,7 +103,7 @@ for i in range(u.size):
 
 for i in range(pl0['MEAS_DT'].size):
     pl['Num Plots'][i]=pl0['NO_PLOTS'][i]
-    pl['Age VRI'][i]=pl0['proj_age_adj'][i]
+    pl['Age'][i]=pl0['PROJ_AGE_1'][i]
 
 #%% Compile tree-level data
 
@@ -131,14 +116,12 @@ tl['ID Tree']=tl0['TREE_NO'].astype(int)
 tl['ID Tree Unique To Jurisdiction']=np.zeros(N_tl,dtype=int)
 tl['ID Species']=np.zeros(N_tl,dtype=int)
 tl['Vital Status']=np.zeros(N_tl,dtype=int)
-tl['Age']=tl0['AGE_TOT']
 tl['DBH']=tl0['DBH']
 tl['H']=tl0['HEIGHT']
 tl['H Obs']=tl0['HEIGHT']
 tl['Vws']=tl0['VOL_WSV']
 tl['Vntwb']=tl0['VOL_NTWB']
 tl['AEF']=tl0['PHF_TREE']
-tl['Resid']=np.zeros(N_tl,dtype=int)
 tl['Flag WithinPlot']=np.ones(N_tl,dtype=int)
 
 ind=np.where(tl0['MEAS_INTENSE']=='OUT_OF_PLOT')[0]
@@ -153,10 +136,6 @@ ind=np.where(tl0['LV_D']=='L')[0]
 tl['Vital Status'][ind]=meta['LUT']['Vital Status']['Live']
 ind=np.where(tl0['LV_D']=='D')[0]
 tl['Vital Status'][ind]=meta['LUT']['Vital Status']['Dead']
-
-#np.unique(tl0['RESIDUAL'])
-ind=np.where(tl0['RESIDUAL']=='Y')[0]
-tl['Resid'][ind]=1
 
 u=np.unique(tl0['SPECIES'])
 for i in range(u.size):
@@ -209,8 +188,8 @@ tl['Flag IDW']=np.zeros(N_tl,dtype=int)
 ind0=np.where( (tl0['DAM_AGNA']=='IDW') | (tl0['DAM_AGNB']=='IDW') | (tl0['DAM_AGNC']=='IDW') )[0]
 tl['Flag IDW'][ind0]=1
 
-tl['Age']=np.nan*np.ones(N_tl,dtype=float)
-ind=np.where(tl0['AGE_TOT']>=0)[0]
+tl['Age']=-999*np.ones(N_tl,dtype=float)
+ind=np.where(tl0['AGE_TOT']>0)[0]
 tl['Age'][ind]=tl0['AGE_TOT'][ind]
 
 tl['Stature']=np.zeros(N_tl,dtype=int)

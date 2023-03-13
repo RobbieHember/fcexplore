@@ -5,6 +5,27 @@ import numpy as np
 from scipy.io import loadmat
 from fcgadgets.macgyver import utilities_general as gu
 
+#%% Import data
+
+def ImportPSPs(**kwargs):
+    meta={}
+    meta['Paths']={}
+    meta['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
+    meta['Paths']['Figs']=r'C:\Users\rhember\OneDrive - Government of BC\Figures\Ground Plots'
+    meta=ImportParameters(meta)
+    d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
+    if kwargs['type']=='Stand':
+        data=d['sobs']
+    elif kwargs['type']=='Tree':
+        data=d['tobs']
+    elif kwargs['type']=='Just Parameters':
+        data=[]
+    else:
+        data=[]
+        print('Type not recognized')
+
+    return meta,data
+
 #%% Import LUTs
 
 def ImportParameters(meta):

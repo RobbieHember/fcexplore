@@ -28,28 +28,9 @@ del d
 
 #%% Filter
 
-ind=np.where( (sl['Lat']>0) & (sl['Lon']!=0) )[0]
-for k in sl.keys():
-    sl[k]=sl[k][ind]
-
-
-#%% Stem density age response
-
-bw=10; bin=np.arange(10,260,bw)
-
-plt.close('all')
-
-ikp=np.where(sl['ClimateClass']==1)[0]
-N,mu,med,sig,se=gu.discres(sl['Age t0'][ikp],sl['N L t0'][ikp],bw,bin)
-plt.plot(bin,med,'-bo')
-
-ikp=np.where(sl['ClimateClass']==2)[0]
-N,mu,med,sig,se=gu.discres(sl['Age t0'][ikp],sl['N L t0'][ikp],bw,bin)
-plt.plot(bin,med,'-go')
-
-ikp=np.where(sl['ClimateClass']==3)[0]
-N,mu,med,sig,se=gu.discres(sl['Age t0'][ikp],sl['N L t0'][ikp],bw,bin)
-plt.plot(bin,med,'-ro')
+sl['Flag Keep CMI+NFI']=np.zeros(sl['ID Plot'].size)
+ind=np.where( (sl['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (sl['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) )[0]
+sl['Flag Keep CMI+NFI'][ind]=1
 
 #%% Plot by BGC zone
 
@@ -70,7 +51,7 @@ for v in vL:
 for i in range(u.size):
     lab[i]=utl_gp.lut_id2cd(meta,'Ecozone BC L1',u[i])
     for v in vL:
-        ind=np.where( (sl['Ecozone BC L1']==u[i]) & (sl['Age t0']>30) & (sl['Age t0']<60) )[0]
+        ind=np.where( (sl['Ecozone BC L1']==u[i]) & (sl['Flag Keep CMI+NFI']==1) & (sl['Age t0']>30) & (sl['Age t0']<60) )[0]
         d[v]['N'][i]=ind.size
         d[v]['mu'][i]=np.nanmean(sl[v][ind])
         d[v]['sd'][i]=np.nanstd(sl[v][ind])
@@ -101,6 +82,23 @@ ax.set(position=[0.09,0.15,0.9,0.8],xlim=[-0.5,u.size-0.5],ylim=[0,2600],yticks=
        xticklabels=lab,ylabel='Tree density (stems ha$^{-1}$)',xlabel='Biogeoclimatic zone')
 #plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\InitialTreeDensity_ByGBCZone','png',900)
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Tree Density\Initial Tree Density By GBC Zone','png',900)
 
 
+#%% Stem density age response
+
+bw=10; bin=np.arange(10,260,bw)
+
+plt.close('all')
+
+ikp=np.where(sl['Climate Class']==1)[0]
+N,mu,med,sig,se=gu.discres(sl['Age t0'][ikp],sl['N L t0'][ikp],bw,bin)
+plt.plot(bin,med,'-bo')
+
+ikp=np.where(sl['ClimateClass']==2)[0]
+N,mu,med,sig,se=gu.discres(sl['Age t0'][ikp],sl['N L t0'][ikp],bw,bin)
+plt.plot(bin,med,'-go')
+
+ikp=np.where(sl['ClimateClass']==3)[0]
+N,mu,med,sig,se=gu.discres(sl['Age t0'][ikp],sl['N L t0'][ikp],bw,bin)
+plt.plot(bin,med,'-ro')

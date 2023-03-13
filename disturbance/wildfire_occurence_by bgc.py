@@ -17,14 +17,14 @@ import gc as garc
 import scipy.stats as stats
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-from fcgadgets.macgyver import utilities_general as gu
-from fcgadgets.macgyver import utilities_gis as gis
-from fcgadgets.macgyver import utilities_inventory as invu
-from fcgadgets.taz import aspatial_stat_models as asm
+import fcgadgets.macgyver.utilities_general as gu
+import fcgadgets.macgyver.utilities_gis as gis
+import fcgadgets.macgyver.utilities_inventory as invu
+import fcgadgets.taz.aspatial_stat_models as asm
 
 #%% Set figure properties
 
-plt.rcParams.update( gu.Import_GraphicsParameters('spyder_fs6') )
+gp=gu.SetGraphics('Manuscript')
 
 #%% Path of file to store stats and scenarios
 
@@ -50,7 +50,7 @@ dBECZ=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz_lut.xlsx')
 
 flg=0
 if flg==1:
-    
+
     wfss={}
     for iZ in range(dBECZ['ZONE'].size):
         nam=dBECZ['ZONE'][iZ]
@@ -60,7 +60,7 @@ if flg==1:
         wfss[nam]['Occurrence']=np.zeros( (tv_obs.size,ind.size) )
         ind=np.where( (zBECZf==dBECZ['VALUE'][iZ]) )[0]
         wfss[nam]['Azone']=ind.size
-    
+
     for iT in range(tv_obs.size):
         print(tv_obs[iT])
         zFire=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PROT_HISTORICAL_FIRE_POLYS_SP_' + str(tv_obs[iT]) + '.tif')
@@ -74,17 +74,17 @@ if flg==1:
             wfss[nam]['Occurrence'][iT,:]=zFires[ind]
         del zFire,zFiref,zFires
         garc.collect()
-    
-    # Save 
+
+    # Save
     # gu.opickle(r'C:\Users\rhember\Documents\Data\Wildfire\Taz Calibration\wfss.pkl',wfss)
 
 else:
     wfss=gu.ipickle(r'C:\Users\rhember\Documents\Data\Wildfire\Taz Calibration\wfss.pkl')
-    
 
-#%% Calculate annual probability of occurrence 
 
-for zone in wfss.keys():    
+#%% Calculate annual probability of occurrence
+
+for zone in wfss.keys():
     wfss[zone]['Po_obs']=np.sum(wfss[zone]['Occurrence'])/wfss[zone]['Occurrence'].size
 
 #%% Calculate annual probability of occurrence with logistic regression
@@ -99,22 +99,34 @@ if flg==1:
         df=pd.DataFrame(d)
         log_reg=smf.logit("Occurrence ~ Random", data=df).fit()
         log_reg.summary()
-        
+
         log_reg.params=log_reg.params+2*log_reg.bse
         d2={'Random':np.array([0.0])}
         wfss[zone]['Po_obs2']=log_reg.predict(d2)
-        
-    
+
+
     plt.close('all')
-    for zone in wfss.keys():  
-        plt.plot(wfss[zone]['Po_obs'],wfss[zone]['Po_obs2'],'ko')    
-    
+    for zone in wfss.keys():
+        plt.plot(wfss[zone]['Po_obs'],wfss[zone]['Po_obs2'],'ko')
+
+#%% Adjustments based on model evaluation
+# *** Last run turned off. Not effective at improving accuracy of age (implying
+# underestimation of disturbance during observation period.) ***
+flg=0
+if flg==1:
+    zone='BWBS'; wfss[zone]['Po_obs']=1.3*wfss[zone]['Po_obs']
+    zone='PP'; wfss[zone]['Po_obs']=1.24*wfss[zone]['Po_obs']
+    zone='SBPS'; wfss[zone]['Po_obs']=1.18*wfss[zone]['Po_obs']
+
+    zone='CMA'; wfss[zone]['Po_obs']=0.74*wfss[zone]['Po_obs']
+    zone='MH'; wfss[zone]['Po_obs']=0.7*wfss[zone]['Po_obs']
+
 #%% Bar chart of mean annual probability of occurrence
 
 Po_obs_mu=np.zeros(len(wfss.keys())); cnt=0
 for k in wfss.keys():
     Po_obs_mu[cnt]=wfss[k]['Po_obs']; cnt=cnt+1
-    
+
 plt.close('all')
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(12,5))
 ax.bar(np.arange(1,Po_obs_mu.size+1),Po_obs_mu*100,facecolor=[0.8,0.8,0.8])
@@ -129,7 +141,7 @@ ax.tick_params(length=2)
 A_Burned=np.zeros(tv_obs.size); cnt=0
 for zone in wfss.keys():
     A_Burned=A_Burned+wfss[zone]['Area Wildfire']
-    
+
 plt.close('all')
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(12,5.5))
 ax.bar(tv_obs,A_Burned/1000,facecolor=[0.85,0,0])
@@ -201,7 +213,7 @@ for zone in wfss.keys():
 zone='SBS'
 
 print(wfss[zone]['Beta_Pareto'])
-#shape=Shape0; loc=-0.0085; scale=-loc; 
+#shape=Shape0; loc=-0.0085; scale=-loc;
 #shape=wfss[zone]['Beta_Pareto'][0]; scale=-1*wfss[zone]['Beta_Pareto'][1]; loc=-wfss[zone]['Beta_Pareto'][2]
 shape=wfss[zone]['Beta_Pareto_Cal'][0]; loc=wfss[zone]['Beta_Pareto_Cal'][1]; scale=wfss[zone]['Beta_Pareto_Cal'][2]
 
@@ -231,7 +243,7 @@ gu.axletters(ax,plt,0.01,0.85,FontColor=[0,0,0],LetterStyle='Caps',FontWeight='B
 n=10000
 #Po=stats.pareto.rvs(3.8,-0.009,0.009,n)
 Po=stats.pareto.rvs(shape,loc,scale,n)
-plt.close('all'); 
+plt.close('all');
 plt.hist(Po*100,np.arange(0,10,0.2))
 print(np.median(Po*100))
 print(np.mean(Po*100))
@@ -250,7 +262,7 @@ plt.close('all')
 fig,ax=plt.subplots(1)
 ax.plot(x,y,'o',linewidth=2)
 ax.set(xscale='linear',yscale='linear',xlabel='Annual probability of occurrence (%/yr)',ylabel='Pareto scale parameter')
-    
+
 # Fit model of prob occ vs
 x1=sm.tools.tools.add_constant(x)
 y1=y
@@ -263,7 +275,7 @@ plt.plot(xhat,beta[1]*xhat+beta[0],'r--')
 # Add model coefficients
 for k in wfss.keys():
     wfss[k]['Pareto_scale_to_match_Po_mu']=beta
-    
+
 #%% Scenario development (deterministic component)
 
 # Adjust historical period with variation from Marlon 2012
@@ -278,10 +290,10 @@ yChar=np.interp(tvChar,dChar['Time'],dChar['Charcoal influx zscore'])
 #plt.plot(tvChar,yChar,'.')
 
 for zone in wfss.keys():
-    
+
     # Observed Po
     Po_obs=wfss[zone]['Po_obs']*100
-    
+
     # Indices
     iCharPre=np.where( (tvChar>=tv_scn[0]) & (tvChar<=1919) )[0]
     iCharCal=np.where( (tvChar>=1919) )[0]
@@ -289,48 +301,48 @@ for zone in wfss.keys():
     ind1=np.where( (tv_scn>=tvChar[0])  & (tv_scn<=1919) )[0]
     indF=np.where(tv_scn>=1920)[0]
     indF2=np.where(tv_scn>2020)[0]
-    
+
     #--------------------------------------------------------------------------
     # Scenario 1 - constant Po from observations
     #--------------------------------------------------------------------------
-    
+
     ind=np.where( (tv_scn>=500)  & (tv_scn<=1919) )[0]
     wfss[zone]['Po_Det_WF_Scn1']=1.0*Po_obs*np.ones(tv_scn.size)
-    
+
     #--------------------------------------------------------------------------
     # Scenario 2 - history informed by fire scars, 2 x observation mean by 2100
     #--------------------------------------------------------------------------
-    
+
     # Historical
-    
+
     yCharL=0.15*yChar
     d=Po_obs-np.mean(yCharL[iCharCal])
-    yCharL=yCharL+d    
-    y1=np.mean(yCharL)*np.ones(tv_scn.size)    
-    y1[ind1]=yCharL[ind0]    
+    yCharL=yCharL+d
+    y1=np.mean(yCharL)*np.ones(tv_scn.size)
+    y1[ind1]=yCharL[ind0]
     y1[indF]=Po_obs
     y1=np.maximum(0,y1)
-    
+
     yCharL=0.4*yChar
     d=Po_obs-np.mean(yCharL[iCharCal])
-    yCharL=yCharL+d    
-    y2=np.mean(yCharL)*np.ones(tv_scn.size)    
-    y2[ind1]=yCharL[ind0]    
+    yCharL=yCharL+d
+    y2=np.mean(yCharL)*np.ones(tv_scn.size)
+    y2[ind1]=yCharL[ind0]
     y2[indF]=Po_obs
     y2=np.maximum(0,y2)
-    
+
     yCharL=0.45*yChar
     d=Po_obs-np.mean(yCharL[iCharCal])
-    yCharL=yCharL+d    
-    y3=np.mean(yCharL)*np.ones(tv_scn.size)    
-    y3[ind1]=yCharL[ind0]    
+    yCharL=yCharL+d
+    y3=np.mean(yCharL)*np.ones(tv_scn.size)
+    y3[ind1]=yCharL[ind0]
     y3[indF]=Po_obs
     y3=np.maximum(0,y3)
-    
+
     yMin=np.min(np.column_stack((y1,y3)),axis=1)
     yMax=np.max(np.column_stack((y1,y3)),axis=1)
     yMu=y2
-    
+
     flg=0
     if flg==1:
         plt.close('all')
@@ -338,39 +350,39 @@ for zone in wfss.keys():
         plt.plot(tv_scn,yMin,'r--')
         plt.plot(tv_scn,yMu,'k-')
         plt.plot(tv_scn,yMax,'r--')
-    
+
     wfss[zone]['Po_Det_WF_Scn2']=yMu
     #wfss[zone]['Po_Det_WF_Scn2_Min']=yMin
     #wfss[zone]['Po_Det_WF_Scn2_Max']=yMax
-    
+
     # Future
-    
+
     flg=0
     if flg==1:
         # Figure out what factor to use to get a specific increase by 2100
         np.interp(2100,np.array([2020,2200]),np.array([Po_obs,25.75*Po_obs]))/Po_obs
-    
+
     # Assume 2.0 x increase by 2100
     wfss[zone]['Po_Det_WF_Scn2'][indF2]=np.interp(tv_scn[indF2],np.array([2020,2200]),np.array([Po_obs,3.25*Po_obs]))
-    
+
     #--------------------------------------------------------------------------
     # Scenario 3 - history informed by fire scars, 4 x observation mean by 2100
     #--------------------------------------------------------------------------
-    
+
     wfss[zone]['Po_Det_WF_Scn3']=yMu.copy()
     wfss[zone]['Po_Det_WF_Scn3'][indF2]=np.interp(tv_scn[indF2],np.array([2020,2200]),np.array([Po_obs,7.75*Po_obs]))
-    
+
     #--------------------------------------------------------------------------
     # Scenario 4 - history informed by fire scars, 4 x observation mean by 2100
     #--------------------------------------------------------------------------
-    
+
     wfss[zone]['Po_Det_WF_Scn4']=yMu.copy()
     wfss[zone]['Po_Det_WF_Scn4'][indF2]=np.interp(tv_scn[indF2],np.array([2020,2200]),np.array([Po_obs,16.75*Po_obs]))
-    
+
     #--------------------------------------------------------------------------
     # Scenario 5 - history informed by fire scars, 4 x observation mean by 2100
     #--------------------------------------------------------------------------
-    
+
     wfss[zone]['Po_Det_WF_Scn5']=yMu.copy()
     wfss[zone]['Po_Det_WF_Scn5'][indF2]=np.interp(tv_scn[indF2],np.array([2020,2200]),np.array([Po_obs,25.75*Po_obs]))
 
@@ -439,8 +451,8 @@ gu.opickle(PathData,wfss)
 #    wfss[zone]['Po_Det_WF_Scn2']=Po_obs*np.ones(tv_scn.size)
 #    wfss[zone]['Po_Det_WF_Scn3']=Po_obs*np.ones(tv_scn.size)
 #    wfss[zone]['Po_Det_WF_Scn4']=Po_obs*np.ones(tv_scn.size)
-#    
-#    ind=np.where( (tv_scn<1920-50) )[0]; 
+#
+#    ind=np.where( (tv_scn<1920-50) )[0];
 #    wfss[zone]['Po_Det_WF_Scn2'][ind]=1.5*Po_obs
 #    wfss[zone]['Po_Det_WF_Scn3'][ind]=1.5*Po_obs
 #    wfss[zone]['Po_Det_WF_Scn4'][ind]=1.5*Po_obs
@@ -449,9 +461,9 @@ gu.opickle(PathData,wfss)
 #    wfss[zone]['Po_Det_WF_Scn2'][ind]=np.interp(tv_scn[ind],np.array([1920-50,1920]),np.array([1.5*Po_obs,Po_obs]))
 #    wfss[zone]['Po_Det_WF_Scn3'][ind]=np.interp(tv_scn[ind],np.array([1920-50,1920]),np.array([1.5*Po_obs,Po_obs]))
 #    wfss[zone]['Po_Det_WF_Scn4'][ind]=np.interp(tv_scn[ind],np.array([1920-50,1920]),np.array([1.5*Po_obs,Po_obs]))
-#    
+#
 #    # Assume 1.5 and 2.0 x increase by 2100 for Scn3 and 4
-#    ind=np.where( (tv_scn>2020) )[0]; 
+#    ind=np.where( (tv_scn>2020) )[0];
 #    wfss[zone]['Po_Det_WF_Scn2'][ind]=np.interp(tv_scn[ind],np.array([2020,2200]),np.array([Po_obs,1.0*Po_obs]))
 #    wfss[zone]['Po_Det_WF_Scn3'][ind]=np.interp(tv_scn[ind],np.array([2020,2200]),np.array([Po_obs,2.125*Po_obs]))
 #    wfss[zone]['Po_Det_WF_Scn4'][ind]=np.interp(tv_scn[ind],np.array([2020,2200]),np.array([Po_obs,3.25*Po_obs]))
@@ -467,7 +479,7 @@ gu.opickle(PathData,wfss)
 #%% Plot deterministic component of scenarios with other observations
 
 def LookAtCariboo():
-    
+
     # Cariboo reconstruction from dendro scars
     dTR=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Wildfire\Cariboo Dendro Wildfire Occurrence\Harvey et al 2017 fig 2.xlsx')
     dTR['Year']=np.round(dTR['Year'])
@@ -479,13 +491,13 @@ def LookAtCariboo():
         ind=np.where(dTR['Site']==uTR[i])[0]
         ic,ia,ib=np.intersect1d(tvTR,dTR['Year'][ind],return_indices=True)
         vTR[ia,i]=1
-    
+
     yTR=np.sum(vTR,axis=1)/vTR.shape[1]
     yTR_ma=gu.movingave(yTR,30,'Historical')
     muTR=np.mean(yTR_ma)
     sigTR=np.std(yTR_ma)
     yTR_ma_z=(yTR_ma-muTR)/sigTR
-    
+
     plt.close('all')
     fig,ax=plt.subplots(1)
     ax.plot(tvTR,yTR_ma_z,lw=1)
@@ -502,34 +514,34 @@ def LookAtCariboo():
 #
 #    # Initialize annual probability of occurrence (final with deterministic and
 #    # random components)
-#    Po=np.zeros((tv_scn.size,n_stand))    
+#    Po=np.zeros((tv_scn.size,n_stand))
 #    for iT in range(tv_scn.size):
-#        # Adjust scale parameter to match specified annual probability of 
+#        # Adjust scale parameter to match specified annual probability of
 #        # occurrence from the deterministic component
 #        b0=wfss[zone]['Beta_Pareto_Cal'].copy()
 #        Scale=wfss[zone]['Pareto_scale_to_match_Po_mu'][1]*wfss[zone]['Po_Det_WF_Scn1'][iT]+wfss[zone]['Pareto_scale_to_match_Po_mu'][0]
 #        b0[1]=-Scale
 #        b0[2]=Scale
-#        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(1,n_stand,b0)    
+#        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(1,n_stand,b0)
 #    # Convert to percent area of occurrence
 #    wfss[zone]['PctOcc_DetPlusRand_WF_Scn1']=np.sum(Po,axis=1)/n_stand*100
-#    
+#
 #    Po=np.zeros((tv_scn.size,n_stand))
 #    for iT in range(tv_scn.size):
-#        # Adjust shape parameter to match specified annual probability of 
+#        # Adjust shape parameter to match specified annual probability of
 #        # occurrence from the deterministic component
 #        b0=wfss[zone]['Beta_Pareto_Cal'].copy()
 #        Scale=wfss[zone]['Pareto_scale_to_match_Po_mu'][1]*wfss[zone]['Po_Det_WF_Scn4'][iT]+wfss[zone]['Pareto_scale_to_match_Po_mu'][0]
 #        b0[1]=-Scale
 #        b0[2]=Scale
-#        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(1,n_stand,b0)  
+#        Po[iT,:]=gensm.GenerateDisturbancesFromPareto(1,n_stand,b0)
 #    # Convert to percent area of occurrence
 #    wfss[zone]['PctOcc_DetPlusRand_WF_Scn4']=np.sum(Po,axis=1)/n_stand*100
 #
 ## Plot annual percent occurrence
 #zone='IDF'
 #t0=1000
-#plt.close('all'); 
+#plt.close('all');
 #plt.bar(tv_scn[t0:],wfss[zone]['PctOcc_DetPlusRand_WF_Scn1'][t0:],1)
 #plt.plot(tv_scn[t0:],gu.movingave(wfss[zone]['PctOcc_DetPlusRand_WF_Scn1'][t0:],50,'historical'),linewidth=3)
 #plt.bar(tv_scn[t0:],wfss[zone]['PctOcc_DetPlusRand_WF_Scn4'][t0:],1)

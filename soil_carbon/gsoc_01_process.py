@@ -25,7 +25,6 @@ from osgeo import osr
 from scipy.interpolate import griddata
 import statsmodels.formula.api as smf
 
-
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
 from fcgadgets.macgyver import utilities_inventory as invu
@@ -75,6 +74,11 @@ zTSA['Data']=z['Data']
 pth4=r'C:\Users\rhember\Documents\Data\BC1ha\Soil\gsoc2010_bc1ha.tif'
 gis.SaveGeoTiff(zTSA,pth4)
 
+#%%
+
+z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\gsoc2010_bc1ha.tif')
+
+plt.matshow(z['Data'],clim=[0,200])
 
 #%% Query by BGC zone
 

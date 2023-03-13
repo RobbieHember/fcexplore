@@ -65,6 +65,10 @@ jurL=['BC']
 
 QA_Flag1=[]
 
+#%% Import raster data
+
+zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\BC_Land_Mask.tif')
+
 #%% Loop through each source database
 
 for iJur in range(len(jurL)):
@@ -160,22 +164,24 @@ for iJur in range(len(jurL)):
     slvL=['ID Source','ID Plot','ID Visit','Lat','Lon','X','Y','Elev','Aspect','Slope','Area',
          'Jourisiction','Ecozone CA L1','Ecozone BC L1','Ecozone BC L2','Plot Type','Num Plots',
          'Utilization Level','Management','SI','Year t0','Year t1','Month t0','Month t1',
-         'Delta t','Age t0','Age t1','Spc1 L ID t0','Spc1 L %BA t0','Spc1 L %N t0','Spc2 L ID t0','Spc2 L %BA t0',
+         'Delta t','Age VRI t0','Age VRI t1','Age Mean t0','Age Med t0','Age Min t0','Age Max t0','Spc1 L ID t0','Spc1 L %BA t0','Spc1 L %N t0','Spc2 L ID t0','Spc2 L %BA t0',
          'Spc2 L %N t0','Spc3 L ID t0','Spc3 L %BA t0','Spc3 L %N t0','Spc4 L ID t0','Spc4 L %BA t0','Spc4 L %N t0',
          'Conifer L %BA t0','Conifer L %N t0','Deciduous L %BA t0','Deciduous L %N t0',
-         'N L t0','N L t1','N D t0','N D t1','N Recr','N Mort','N L Lost','N D Lost','N Net','N L PL t0','N D PL t0','N L PL t1','N D PL t1',
+         'N L t0','N L t1','N D t0','N D t1','N Recr','N Mort','N L Lost','N Net','N L PL t0',
+         'N Recr (%)','N Mort (%)','N L Lost (%)','N Mort+Lost (%)','N Net (%)',
+         'N D Lost','N D PL t0','N L PL t1','N D PL t1',
          'Dam L t0','Dam L t1','Dam G Surv',
          'Dqm L t0','Dqm L t1',
          'BA L t0','BA L t1','BA G Surv','BA Mort',
          'H L t0','H L t1','H G Surv',
          'H L max t0','H L max t1',
-         'Vws L t0','Vws L t1','Vws G Surv','Vws G Recr','Vws Mort','Vws L Lost','Vws Net','Vws Harv',
+         'Vws L t0','Vws L t1','Vws G Surv','Vws G Recr','Vws Mort','Vws L Lost','Vws Mort+Lost','Vws Net','Vws Harv',
          'Vntwb L t0','Vntwb D t0',
-         'Ctot L t0','Ctot L t1','Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot L Lost','Ctot Net',
-         'Ctot Mort None','Ctot Mort Insect','Ctot Mort Disease','Ctot Mort Plant Competition','Ctot Mort Animal Browsing','Ctot Mort Fire','Ctot Mort Frost',
-         'Ctot Mort Drought','Ctot Mort Snow and Ice','Ctot Mort Wind','Ctot Mort Silviculture','Ctot Mort Other','Ctot Mort Unknown','Ctot Mort Harv',
-         'Ctot L Lost None','Ctot L Lost Insect','Ctot L Lost Disease','Ctot L Lost Plant Competition','Ctot L Lost Animal Browsing','Ctot L Lost Fire','Ctot L Lost Frost',
-         'Ctot L Lost Drought','Ctot L Lost Snow and Ice','Ctot L Lost Wind','Ctot L Lost Silviculture','Ctot L Lost Other','Ctot L Lost Unknown',
+         'Ctot L t0','Ctot L t1',
+         'Ctot L Resid t0',
+         'Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot L Lost','Ctot Mort+Lost','Ctot Net',
+         'Ctot Mort+Lost None','Ctot Mort+Lost Insect','Ctot Mort+Lost Disease','Ctot Mort+Lost Plant Competition','Ctot Mort+Lost Animal Browsing','Ctot Mort+Lost Fire','Ctot Mort+Lost Frost',
+         'Ctot Mort+Lost Drought','Ctot Mort+Lost Snow and Ice','Ctot Mort+Lost Wind','Ctot Mort+Lost Silviculture','Ctot Mort+Lost Other','Ctot Mort+Lost Unknown','Ctot Mort+Lost Harv',
          'Ctot D t0','Ctot D t1','Ctot D Fallen t0','Ctot D Lost','Ctot Litf',
          'Ctot L PL t0','Ctot D PL t0','Ctot L PL t1','Ctot D PL t1',
          'Ctot L FD t0','Ctot D FD t0',
@@ -188,8 +194,9 @@ for iJur in range(len(jurL)):
          'Cbr L t0','Cbr L t1','Cbr G Surv','Cbr G Recr','Cbr Mort',
          'Cf L t0','Cf L t1','Cf G Surv','Cf G Recr','Cf Mort',
          'Cr L t0','Cr L t1','Cr G Surv','Cr G Recr','Cr Mort',
-         'Csw L t0','Csw L t1','Csw G Surv','Csw G Recr','Csw Mort',
+         'Csw L t0','Csw L t1','Csw G Surv','Csw G Recr','Csw Mort','Csw L Lost','Csw Mort+Lost','Csw Net',
          'Csw Harv','Csw D t0','Csw D t1','Csw125 L t0','Csw125 L t1',
+         'Csw Indiv Med t0','Csw Indiv Mean t0','Csw Indiv Max t0',
          'Cdw t0']
 
     sobs={}
@@ -199,13 +206,13 @@ for iJur in range(len(jurL)):
     # Initialize fields in the Level 2 tree-level structure TOBS
     tlvL=['ID Source','ID Plot','ID Visit','ID Tree','ID Species','ID PFT','Lat','Lon','X','Y','Elev','Aspect','Slope',
          'Ecozone BC L1','Ecozone BC L2','Ecozone CA L1','Plot Type','Stand Management',
-         'Year t0','Year t1','Delta t','Stand Spc1 ID','Stand Spc1 %BA','Stand Spc1 %N','Stand Age t0','Stand Age t1',
+         'Year t0','Year t1','Delta t','Stand Spc1 ID','Stand Spc1 %BA','Stand Spc1 %N','Stand Age VRI t0','Stand Age VRI t1',
          'Stand N L t0','Stand N L t1','Stand Cag L t0','Stand Cag L t1','Stand Cag L Larger t0','Stand BA L Larger t0',
          'Stand DA Insect t0','Stand DA Instect t1','Stand DA Disease t0','Stand DA Disease t1',
          'Stand DA Fire t0','Stand DA Fire t1','Stand DA Animal t0','Stand DA Animal t1','Stand DA Weather t0','Stand DA WEather t1',
          'Stand DA Silviculture t0','Stand DA Silviculture t1','Stand DA Mechanical t0','Stand DA Mechanical t1',
          'Stand DA SnowAndIce t0','Stand DA SnowAndIce t1','Stand DA Unknown t0','Stand DA Unknown t1',
-         'Vital Status t0','Vital Status t1','Stature t0','Stature t1','AEF','DA t0','DA t1','DAI t0','DAI t1','DAP t0','DAP t1','DA IDW t0','DA IDW t1',
+         'Vital Status t0','Vital Status t1','Stature t0','Stature t1','AEF','Age t0','Resid','DA t0','DA t1','DAI t0','DAI t1','DAP t0','DAP t1','DA IDW t0','DA IDW t1',
          'Mortality','Recruitment','DBH t0','DBH t1','DBH G','BA t0','BA t1','BA G',
          'H t0','H t1','H G','H Obs t0','H Obs t1','Vws t0','Vws t1',
          'Cag t0','Cag t1','Cag G',
@@ -220,7 +227,7 @@ for iJur in range(len(jurL)):
         tobs[v]=np.nan*np.ones(tl['ID Plot'].size)
 
     # Initialize counter
-    cnt=1
+    cnt=0
 
     # Loop through plots
     for iP in range(uP.size):
@@ -297,7 +304,7 @@ for iJur in range(len(jurL)):
             sobs['Y'][cnt]=np.round(pl['Y'][iPlot_t0],decimals=2)
             sobs['Year t0'][cnt]=pl['Year'][iPlot_t0]
             sobs['Month t0'][cnt]=pl['Month'][iPlot_t0]
-            sobs['Age t0'][cnt]=pl['Age'][iPlot_t0]
+            sobs['Age VRI t0'][cnt]=pl['Age VRI'][iPlot_t0]
             sobs['Plot Type'][cnt]=pl['Plot Type'][iPlot_t0]
             sobs['Num Plots'][cnt]=pl['Num Plots'][iPlot_t0]
             sobs['Ecozone BC L1'][cnt]=pl['Ecozone BC L1'][iPlot_t0]
@@ -313,12 +320,16 @@ for iJur in range(len(jurL)):
                 sobs['Month t1'][cnt]=pl['Month'][iPlot_t1]
                 dt=sobs['Year t1'][cnt]-sobs['Year t0'][cnt]
                 sobs['Delta t'][cnt]=dt
-                sobs['Age t1'][cnt]=pl['Age'][iPlot_t1]
+                sobs['Age VRI t1'][cnt]=pl['Age VRI'][iPlot_t1]
+            else:
+                dt=0
 
             # Extract trees
 
             # All trees at t0
             id0_all=tl['ID Tree'][ind_all0]
+            resid0_all=tl['Resid'][ind_all0]
+            age0_all=tl['Age'][ind_all0]
             dbh0_all=tl['DBH'][ind_all0]
             ba0_all=np.pi*(tl['DBH'][ind_all0]/2)**2
             h0_all=tl['H'][ind_all0]
@@ -349,6 +360,7 @@ for iJur in range(len(jurL)):
             # All trees at t1
             if flg_PSP==1:
                 id1_all=tl['ID Tree'][ind_all1]
+                age1_all=tl['Age'][ind_all1]
                 dbh1_all=tl['DBH'][ind_all1]
                 ba1_all=np.pi*(tl['DBH'][ind_all1]/2)**2
                 h1_all=tl['H'][ind_all1]
@@ -380,6 +392,7 @@ for iJur in range(len(jurL)):
 
             # Index to trees that were alive in t0 (including those that died)
             ind_live0=np.where(vital_status0_all==meta['LUT']['Vital Status']['Live'])[0]
+            ind_live_resid0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (resid0_all==1) )[0]
             ind_live_fallen0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (stature0_all==meta['LUT']['Stature']['Fallen']) )[0]
             ind_live_conifer0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (pft0_all==meta['LUT']['PFT']['Coniferous']) )[0]
             ind_live_decid0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (pft0_all==meta['LUT']['PFT']['Deciduous']) )[0]
@@ -462,6 +475,7 @@ for iJur in range(len(jurL)):
                 iBadD=np.where( (dbh0_all[ia1[ind_mort]]>0) & (dbh1_all[ib1[ind_mort]]<=0) | (dbh0_all[ia1[ind_mort]]>0) & (np.isnan(dbh1_all[ib1[ind_mort]])==1) )[0]
                 if iBadD.size!=0:
                     aef1_all[ib1[ind_mort[iBadD]]]=aef0_all[ia1[ind_mort[iBadD]]]
+                    age1_all[ib1[ind_mort[iBadD]]]=age0_all[ia1[ind_mort[iBadD]]]
                     dbh1_all[ib1[ind_mort[iBadD]]]=dbh0_all[ia1[ind_mort[iBadD]]]
                     ba1_all[ib1[ind_mort[iBadD]]]=ba0_all[ia1[ind_mort[iBadD]]]
                     h1_all[ib1[ind_mort[iBadD]]]=h0_all[ia1[ind_mort[iBadD]]]
@@ -475,6 +489,7 @@ for iJur in range(len(jurL)):
                 iBadD=np.where( (dbh0_all[ia1[ind_harv]]>0) & (dbh1_all[ib1[ind_harv]]<=0) | (dbh0_all[ia1[ind_harv]]>0) & (np.isnan(dbh1_all[ib1[ind_harv]])==1) )[0]
                 if iBadD.size!=0:
                     aef1_all[ib1[ind_harv[iBadD]]]=aef0_all[ia1[ind_harv[iBadD]]]
+                    age1_all[ib1[ind_harv[iBadD]]]=age0_all[ia1[ind_harv[iBadD]]]
                     spc1_all[ib1[ind_harv[iBadD]]]=spc0_all[ia1[ind_harv[iBadD]]]
                     dbh1_all[ib1[ind_harv[iBadD]]]=dbh0_all[ia1[ind_harv[iBadD]]]
                     ba1_all[ib1[ind_harv[iBadD]]]=ba0_all[ia1[ind_harv[iBadD]]]
@@ -526,6 +541,13 @@ for iJur in range(len(jurL)):
             sobs['Conifer L %N t0'][cnt]=np.round(N_pft/N_tot*100,decimals=0)
             sobs['Deciduous L %N t0'][cnt]=np.round(100-sobs['Conifer L %N t0'][cnt],decimals=0)
 
+            # Age
+            sobs['Age Mean t0'][cnt]=np.round(np.nanmean(age0_all[ind_live0]),decimals=0)
+            sobs['Age Med t0'][cnt]=np.round(np.nanmedian(age0_all[ind_live0]),decimals=0)
+            if ind_live0.size>0:
+                sobs['Age Min t0'][cnt]=np.round(np.nanmin(age0_all[ind_live0]),decimals=0)
+                sobs['Age Max t0'][cnt]=np.round(np.nanmax(age0_all[ind_live0]),decimals=0)
+
             #------------------------------------------------------------------
             # Populate state variables
             #------------------------------------------------------------------
@@ -548,7 +570,7 @@ for iJur in range(len(jurL)):
             sobs['BA L t0'][cnt]=np.round(np.nansum((np.pi*(dbh0_all[ind_live0]/200)**2)*aef0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=1)
 
             # Height (m)
-            sobs['H L t0'][cnt]=np.round(np.nanmean(h0_all[ind_live0]*aef0_all[ind_live0])/np.nansum(aef0_all[ind_live0]),decimals=1)
+            sobs['H L t0'][cnt]=np.round(np.nansum(h0_all[ind_live0]*aef0_all[ind_live0])/np.nansum(aef0_all[ind_live0]),decimals=1)
 
             # Volume whole stem (m3/ha)
             sobs['Vws L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*vws0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
@@ -579,6 +601,13 @@ for iJur in range(len(jurL)):
             sobs['Csw L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*0.001*Csw0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
             sobs['Csw D t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead0]*0.001*Csw0_all[ind_dead0])/sobs['Num Plots'][cnt],decimals=0)
 
+            sobs['Csw Indiv Med t0'][cnt]=np.round(np.nanmedian(Csw0_all[ind_live0]),decimals=0)
+            sobs['Csw Indiv Mean t0'][cnt]=np.round(np.nanmean(Csw0_all[ind_live0]),decimals=0)
+            try:
+                sobs['Csw Indiv Max t0'][cnt]=np.round(np.nanmax(Csw0_all[ind_live0]),decimals=0)
+            except:
+                pass
+
             # Stemwood carbon, live (Mg C ha-1)
             sobs['Csw125 L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*0.001*Csw125_0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
 
@@ -589,6 +618,7 @@ for iJur in range(len(jurL)):
             sobs['Ctot L t0'][cnt]=np.round(np.nansum(aef0_all[ind_live0]*0.001*Ctot0_all[ind_live0])/sobs['Num Plots'][cnt],decimals=0)
             sobs['Ctot D t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead0]*0.001*Ctot0_all[ind_dead0])/sobs['Num Plots'][cnt],decimals=0)
             sobs['Ctot D Fallen t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead_fallen0]*0.001*Ctot0_all[ind_dead_fallen0])/sobs['Num Plots'][cnt],decimals=0)
+            sobs['Ctot L Resid t0'][cnt]=np.round(np.nansum(aef0_all[ind_live_resid0]*0.001*Ctot0_all[ind_live_resid0])/sobs['Num Plots'][cnt],decimals=0)
 
             sobs['Ctot L PL t0'][cnt]=np.round(np.nansum(aef0_all[ind_live_pine0]*0.001*Ctot0_all[ind_live_pine0])/sobs['Num Plots'][cnt],decimals=0)
             sobs['Ctot D PL t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead_pine0]*0.001*Ctot0_all[ind_dead_pine0])/sobs['Num Plots'][cnt],decimals=0)
@@ -608,7 +638,7 @@ for iJur in range(len(jurL)):
             sobs['Ctot L SE t0'][cnt]=np.round(np.nansum(aef0_all[ind_live_se0]*0.001*Ctot0_all[ind_live_se0])/sobs['Num Plots'][cnt],decimals=0)
             sobs['Ctot D SE t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead_se0]*0.001*Ctot0_all[ind_dead_se0])/sobs['Num Plots'][cnt],decimals=0)
 
-            if (flg_PSP==1) & (sobs['Plot Type'][cnt]!=meta['LUT']['Plot Type BC']['VRI']):
+            if (flg_PSP==1) & (sobs['Plot Type'][cnt]!=meta['LUT']['Plot Type BC']['VRI']) & (dt>0):
 
                 # Stand density (stems ha-1)
                 sobs['N L t1'][cnt]=np.round(np.nansum(aef1_all[ind_live1])/sobs['Num Plots'][cnt],decimals=0)
@@ -787,8 +817,8 @@ for iJur in range(len(jurL)):
                 tobs['Ecozone BC L1'][iFill]=sobs['Ecozone BC L1'][cnt]
                 tobs['Ecozone BC L2'][iFill]=sobs['Ecozone BC L2'][cnt]
 
-                tobs['Stand Age t0'][iFill]=sobs['Age t0'][cnt]
-                tobs['Stand Age t1'][iFill]=sobs['Age t1'][cnt]
+                tobs['Stand Age VRI t0'][iFill]=sobs['Age VRI t0'][cnt]
+                tobs['Stand Age VRI t1'][iFill]=sobs['Age VRI t1'][cnt]
                 tobs['Stand Spc1 ID'][iFill]=sobs['Spc1 L ID t0'][cnt]
                 tobs['Stand Spc1 %BA'][iFill]=sobs['Spc1 L %BA t0'][cnt]
                 tobs['Stand Spc1 %N'][iFill]=sobs['Spc1 L %N t0'][cnt]
@@ -800,6 +830,8 @@ for iJur in range(len(jurL)):
                 tobs['AEF'][iFill]=aef0_all[ia1[ind_surv]]
                 tobs['Vital Status t0'][iFill]=1*np.ones(ind_surv.size)
                 tobs['Vital Status t1'][iFill]=1*np.ones(ind_surv.size)
+                tobs['Age t0'][iFill]=age0_all[ia1[ind_surv]]
+                tobs['Resid'][iFill]=resid0_all[ia1[ind_surv]]
                 tobs['Mortality'][iFill]=0*np.ones(ind_surv.size)
                 tobs['Recruitment'][iFill]=0*np.ones(ind_surv.size)
                 tobs['DA t0'][iFill]=da0_all[ia1[ind_surv]]
@@ -916,15 +948,12 @@ for iJur in range(len(jurL)):
                     ind_mort_da0=ind_mort_da[iDA]
 
                     if ind_mort_da0.size==0:
-                        sobs['Ctot Mort ' + nam][cnt]=np.round(0.0,decimals=2)
+                        sobs['Ctot Mort+Lost ' + nam][cnt]=np.round(0.0,decimals=2)
                     else:
                         nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
                         Ctot0_dying=np.nansum(aef0_all[ia1[ind_mort_da0]]*0.001*Ctot0_all[ia1[ind_mort_da0]])
                         Ctot1_dying=np.nansum(aef1_all[ib1[ind_mort_da0]]*0.001*Ctot1_all[ib1[ind_mort_da0]])
-                        sobs['Ctot Mort ' + nam][cnt]=np.round(Ctot1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
-
-
-
+                        sobs['Ctot Mort+Lost ' + nam][cnt]=np.round(Ctot1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
 
                 # Tree-level natural mortality
 
@@ -950,8 +979,8 @@ for iJur in range(len(jurL)):
                 tobs['Ecozone BC L1'][iFillD]=sobs['Ecozone BC L1'][cnt]
                 tobs['Ecozone BC L2'][iFillD]=sobs['Ecozone BC L2'][cnt]
 
-                tobs['Stand Age t0'][iFillD]=sobs['Age t0'][cnt]
-                tobs['Stand Age t1'][iFillD]=sobs['Age t1'][cnt]
+                tobs['Stand Age VRI t0'][iFillD]=sobs['Age VRI t0'][cnt]
+                tobs['Stand Age VRI t1'][iFillD]=sobs['Age VRI t1'][cnt]
                 tobs['Stand Spc1 ID'][iFillD]=sobs['Spc1 L ID t0'][cnt]
                 tobs['Stand Spc1 %BA'][iFillD]=sobs['Spc1 L %BA t0'][cnt]
                 tobs['Stand Spc1 %N'][iFillD]=sobs['Spc1 L %N t0'][cnt]
@@ -964,6 +993,8 @@ for iJur in range(len(jurL)):
                 tobs['AEF'][iFillD]=aef0_all[ia1[ind_mort]]
                 tobs['Vital Status t0'][iFillD]=1*np.ones(ind_mort.size)
                 tobs['Vital Status t1'][iFillD]=0*np.ones(ind_mort.size)
+                tobs['Age t0'][iFillD]=age0_all[ia1[ind_mort]]
+                tobs['Resid'][iFillD]=resid0_all[ia1[ind_mort]]
                 tobs['Mortality'][iFillD]=np.ones(ind_mort.size)
                 tobs['Recruitment'][iFillD]=0*np.ones(ind_mort.size)
                 tobs['DA t0'][iFillD]=da0_all[ia1[ind_mort]]
@@ -1009,30 +1040,19 @@ for iJur in range(len(jurL)):
                 sobs['Ctot L Lost'][cnt]=np.round(np.nansum(aef0_all[ind_live_lost1]*0.001*Ctot0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
                 sobs['Ctot D Lost'][cnt]=np.round(np.nansum(aef0_all[ind_dead_lost1]*0.001*Ctot0_all[ind_dead_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
 
+                sobs['Csw L Lost'][cnt]=np.round(np.nansum(aef0_all[ind_live_lost1]*0.001*Csw0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
+
                 nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
                 ind_mort_da0=ind_mort_da[iDA]
 
-                # Total carbon lost by damage agent
-                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
-                    ind_lost_da0=ind_lost_da[iDA]
-                    if ind_lost_da0.size==0:
-                        sobs['Ctot L Lost ' + nam][cnt]=np.round(0.0,decimals=2)
-                    else:
-                        nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
-                        sobs['Ctot L Lost ' + nam][cnt]=np.round(np.nansum(aef0_all[ind_lost_da0]*0.001*Ctot0_all[ind_lost_da0])/dt/sobs['Num Plots'][cnt],decimals=1)
-
                 # Add lost carbon to mortality
-                # *** THIS IS IMPORTANT ***
-
-                sobs['Ctot Mort'][cnt]=np.round(sobs['Ctot Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*0.001*Ctot0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
-
-                sobs['Vws Mort'][cnt]=np.round(sobs['Vws Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*vws0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
-
+                sobs['Ctot Mort+Lost'][cnt]=np.round(sobs['Ctot Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*0.001*Ctot0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
                 for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
                     ind_lost_da0=ind_lost_da[iDA]
-                    if ind_lost_da0.size>0:
-                        nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
-                        sobs['Ctot Mort ' + nam][cnt]=np.round(sobs['Ctot Mort ' + nam][cnt]+np.nansum(aef0_all[ind_lost_da0]*0.001*Ctot0_all[ind_lost_da0])/dt/sobs['Num Plots'][cnt],decimals=1)
+                    nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                    sobs['Ctot Mort+Lost ' + nam][cnt]=np.round(sobs['Ctot Mort+Lost ' + nam][cnt]+np.nansum(aef0_all[ind_lost_da0]*0.001*Ctot0_all[ind_lost_da0])/dt/sobs['Num Plots'][cnt],decimals=1)
+                sobs['Csw Mort+Lost'][cnt]=np.round(sobs['Csw Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*0.001*Csw0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
+                sobs['Vws Mort+Lost'][cnt]=np.round(sobs['Vws Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*vws0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
 
                 # Tree-level mortality (lost trees)
 
@@ -1058,8 +1078,8 @@ for iJur in range(len(jurL)):
                 tobs['Ecozone BC L1'][iFillD]=sobs['Ecozone BC L1'][cnt]
                 tobs['Ecozone BC L2'][iFillD]=sobs['Ecozone BC L2'][cnt]
 
-                tobs['Stand Age t0'][iFillD]=sobs['Age t0'][cnt]
-                tobs['Stand Age t1'][iFillD]=sobs['Age t1'][cnt]
+                tobs['Stand Age VRI t0'][iFillD]=sobs['Age VRI t0'][cnt]
+                tobs['Stand Age VRI t1'][iFillD]=sobs['Age VRI t1'][cnt]
                 tobs['Stand Spc1 ID'][iFillD]=sobs['Spc1 L ID t0'][cnt]
                 tobs['Stand Spc1 %BA'][iFillD]=sobs['Spc1 L %BA t0'][cnt]
                 tobs['Stand Spc1 %N'][iFillD]=sobs['Spc1 L %N t0'][cnt]
@@ -1072,6 +1092,7 @@ for iJur in range(len(jurL)):
                 tobs['AEF'][iFillD]=aef0_all[ind_live_lost1]
                 tobs['Vital Status t0'][iFillD]=1*np.ones(ind_live_lost1.size)
                 tobs['Vital Status t1'][iFillD]=0*np.ones(ind_live_lost1.size)
+                tobs['Age t0'][iFillD]=age0_all[ind_live_lost1]
                 tobs['Mortality'][iFillD]=np.ones(ind_live_lost1.size)
                 tobs['Recruitment'][iFillD]=0*np.ones(ind_live_lost1.size)
                 tobs['DA t0'][iFillD]=da0_all[ind_live_lost1]
@@ -1208,8 +1229,8 @@ for iJur in range(len(jurL)):
                 tobs['Ecozone BC L1'][iFill]=sobs['Ecozone BC L1'][cnt]
                 tobs['Ecozone BC L2'][iFill]=sobs['Ecozone BC L2'][cnt]
 
-                tobs['Stand Age t0'][iFill]=sobs['Age t0'][cnt]
-                tobs['Stand Age t1'][iFill]=sobs['Age t1'][cnt]
+                tobs['Stand Age VRI t0'][iFill]=sobs['Age VRI t0'][cnt]
+                tobs['Stand Age VRI t1'][iFill]=sobs['Age VRI t1'][cnt]
                 tobs['Stand Spc1 ID'][iFill]=sobs['Spc1 L ID t0'][cnt]
                 tobs['Stand Spc1 %BA'][iFill]=sobs['Spc1 L %BA t0'][cnt]
                 tobs['Stand Spc1 %N'][iFill]=sobs['Spc1 L %N t0'][cnt]
@@ -1220,6 +1241,7 @@ for iJur in range(len(jurL)):
                 tobs['Stand Management'][iFill]=sobs['Management'][cnt]
 
                 tobs['AEF'][iFill]=aef1_all[ib2[ind_rec]]
+                tobs['Age t0'][iFill]=age1_all[ib2[ind_rec]]
                 tobs['Mortality'][iFill]=np.zeros(ind_rec.size)
                 tobs['Vital Status t0'][iFill]=np.ones(ind_rec.size)
                 tobs['Vital Status t1'][iFill]=np.ones(ind_rec.size)
@@ -1286,9 +1308,18 @@ for iJur in range(len(jurL)):
             cnt=cnt+1
 
     # Summary variables
-    # *** Exclude lost because it has already been added to mortality ***
-    sobs['Ctot Net']=sobs['Ctot G Surv']+sobs['Ctot G Recr']-sobs['Ctot Mort']
-    sobs['Vws Net']=sobs['Vws G Surv']+sobs['Vws G Recr']-sobs['Vws Mort']
+    sobs['Ctot Net']=sobs['Ctot G Surv']+sobs['Ctot G Recr']-sobs['Ctot Mort']-sobs['Ctot L Lost']
+    sobs['Csw Net']=sobs['Csw G Surv']+sobs['Csw G Recr']-sobs['Csw Mort']-sobs['Csw L Lost']
+    sobs['Vws Net']=sobs['Vws G Surv']+sobs['Vws G Recr']-sobs['Vws Mort']-sobs['Vws L Lost']
+
+    sobs['N Net']=sobs['N Recr']-sobs['N Mort']-sobs['N L Lost']
+
+    ind=np.where(sobs['N L t0']>0)[0]
+    sobs['N Recr (%)'][ind]=sobs['N Recr'][ind]/sobs['N L t0'][ind]*100
+    sobs['N Mort (%)'][ind]=sobs['N Mort'][ind]/sobs['N L t0'][ind]*100
+    sobs['N L Lost (%)'][ind]=sobs['N L Lost'][ind]/sobs['N L t0'][ind]*100
+    sobs['N Mort+Lost (%)'][ind]=(sobs['N Mort'][ind]+sobs['N L Lost'][ind])/sobs['N L t0'][ind]*100
+    sobs['N Net (%)'][ind]=sobs['N Net'][ind]/sobs['N L t0'][ind]*100
 
     # Convert some variable data types
     vL=['ID Source','ID Plot','ID Visit','Jourisiction','Ecozone CA L1','Ecozone BC L1','Ecozone BC L2','Plot Type','Management']
@@ -1306,7 +1337,45 @@ for iJur in range(len(jurL)):
         df=pd.DataFrame(sobs)
         df.to_excel(meta['Paths']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
 
-#%% Indicator of harvest
+#%% Plot type filter (CMI, NFI, and VRI)
+
+# Stand level
+
+sobs['PTF CNV']=np.zeros(sobs['ID Plot'].size)
+ind=np.where( (sobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) |
+             (sobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) |
+             (sobs['Plot Type']==meta['LUT']['Plot Type BC']['VRI']) )[0]
+sobs['PTF CNV'][ind]=1
+np.sum(sobs['PTF CNV'])
+
+sobs['PTF CN']=np.zeros(sobs['ID Plot'].size)
+ind=np.where( (sobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (sobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) )[0]
+sobs['PTF CN'][ind]=1
+
+sobs['PTF CNY']=np.zeros(sobs['ID Plot'].size)
+ind=np.where( (sobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) |
+             (sobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) |
+             (sobs['Plot Type']==meta['LUT']['Plot Type BC']['YSM']) )[0]
+sobs['PTF CNY'][ind]=1
+
+sobs['PTF YSM']=np.zeros(sobs['ID Plot'].size)
+ind=np.where( (sobs['Plot Type']==meta['LUT']['Plot Type BC']['YSM']) )[0]
+sobs['PTF YSM'][ind]=1
+
+# Tree level
+
+tobs['PTF CNV']=np.zeros(tobs['ID Plot'].size)
+ind=np.where( (tobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) |
+             (tobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) |
+             (tobs['Plot Type']==meta['LUT']['Plot Type BC']['VRI']) )[0]
+tobs['PTF CNV'][ind]=1
+np.sum(tobs['PTF CNV'])
+
+tobs['PTF CN']=np.zeros(tobs['ID Plot'].size)
+ind=np.where( (tobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (tobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) )[0]
+tobs['PTF CN'][ind]=1
+
+#%% Harvest indicator
 
 flg=1
 if flg==1:
@@ -1372,12 +1441,12 @@ if flg==1:
     sobs['Harv Occurrence']=np.zeros(sobs['Year t0'].size)
     ind_H=np.where( (DY_Harv>DY_Plot_t0) & (DY_Harv<=DY_Plot_t1) )[0]
     sobs['Harv Occurrence'][ind_H]=1
-    #sobs['Ctot Mort Harv'][ind_H]=flg_Harv[ind_H]*(sobs['Ctot Mort'][ind_H]-np.nan_to_num(sobs['Ctot Mort Fire'][ind_H]))
-    #sobs['Vws Mort Harv'][ind_H]=flg_Harv[ind_H]*(sobs['Vws Mort'][ind_H]-np.nan_to_num(sobs['Vws Mort Fire'][ind_H]))
 
-#%% Indicator of forest health
+    sobs['Ctot Mort+Lost Harv'][ind_H]=sobs['Harv Occurrence'][ind_H]*(sobs['Ctot Mort+Lost Harv'][ind_H]-np.nan_to_num(sobs['Ctot Mort+Lost Fire'][ind_H]))
+    #sobs['Vws Mort+Lost Harv'][ind_H]=sobs['Harv Occurrence'][ind_H]*(sobs['Vws Mort+Lost'][ind_H]-np.nan_to_num(sobs['Vws Mort+Lost Fire'][ind_H]))
 
-zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\tsa.tif')
+#%% Forest health indicator
+
 ind=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
 tv=np.arange(1990,2022,1)
 
@@ -1397,9 +1466,8 @@ for v in vL:
         #sobs[v + ' Severity Max'][i]=np.max(aos[ind,i])
         sobs[v + ' Occurrence'][i]=1
 
-#%% Indicator of wildfire
+#%% Wildfire indicator
 
-zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\tsa.tif')
 ind=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
 tv=np.arange(1990,2022,1)
 
@@ -1417,11 +1485,17 @@ for i in range(sobs['Year t0'].size):
 
 #%% Add VRI variables
 
-# Thornthwaite's climate classification
+# Crown closure
 z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\crownc.tif')
 ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
 z0=z['Data'][ind]
 sobs['Crown Closure (VRI)']=z0
+
+# Tree Density Class
+z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\ForestDensityClass.tif')
+ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+z0=z['Data'][ind]
+sobs['Tree Density Class (VRI)']=z0
 
 #%% Add climate data
 
@@ -1430,6 +1504,36 @@ z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_Thornthw
 ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
 z0=z['Data'][ind]
 sobs['Climate Class']=z0
+
+# Temperature
+z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\BC1ha_mat_norm_1971to2000_si_hist_v1.tif')
+ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+z0=z['Data'][ind]
+sobs['ta_ann_n']=z0
+
+# Climatic water deficit
+z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_cwd_gs_norm_1971to2000.tif')
+ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+z0=z['Data'][ind]
+sobs['cwd_gs_n']=z0
+
+# Potential evapotranspiration
+z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_etp_gs_norm_1971to2000.tif')
+ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+z0=z['Data'][ind]
+sobs['etp_gs_n']=z0
+
+# Soil water content
+z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_ws_gs_norm_1971to2000.tif')
+ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+z0=z['Data'][ind]
+sobs['ws_gs_n']=z0
+
+#%% Remove plots with bad coordinates
+
+#ind=np.where( (sobs['Lat']>30) & (sobs['Lon']!=0) & (sobs['Lat']!=0) )[0]
+#for k in sobs.keys():
+#    sobs[k]=sobs[k][ind]
 
 #%% Save
 
