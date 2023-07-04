@@ -23,11 +23,11 @@ from scipy.io import loadmat
 
 #%% Save figures?
 
-flag_savefigs='On'
+flag_savefigs='Off'
 
 #%% Import data
 
-# Run import script
+# *** Run import script ***
 
 # Import EP703 tree-level data
 dEPTL=gu.ipickle(r'C:\Users\rhember\Documents\Data\EP703\Processed\EP703_TL.pkl')
@@ -170,11 +170,11 @@ ax.plot([-1,11],[0,0],'k-')
 ax.bar(np.arange(uInst.size),dBM[var]['R'][stat],0.75,fc=[0.65,0.65,0.65])
 ax.bar(uInst.size,np.mean(dBM[var]['R'][stat]),0.75,fc=[0,0,0])
 ax.set(position=[0.155,0.15,0.82,0.8],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'), \
-       yticks=np.arange(-0.6,0.6,0.1),ylabel='$\Delta$$\itw$$_{t1-10}$ (mm yr$^{-1}$)',xlabel='Installation',ylim=[-0.5,0.5])
+       yticks=np.arange(-0.6,0.6,0.1),ylabel='$\Delta$$\it{w}$$_{t1-10}$ (mm yr$^{-1}$)',xlabel='Installation',ylim=[-0.5,0.5])
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=1.5)
 if flag_savefigs=='On':
-    gu.PrintFig(meta['Paths']['Figures'] + '\\Response_BM84' + var,'png',900)
-    fig.savefig(meta['Paths']['Figures'] + '\\Response_BM84_' + var + '.svg',format='svg',dpi=1200)
+    gu.PrintFig(meta['Paths']['Figures'] + '\\Fig3 Response_BM84' + var,'png',900)
+    fig.savefig(meta['Paths']['Figures'] + '\\Fig3 Response_BM84_' + var + '.svg',format='svg',dpi=1200)
 
 #%% Calculate response ratio
 
@@ -306,34 +306,56 @@ for vd in varL:
         dTS[vd]['SS5']['Median'][iT]=np.nanmedian(dTL[vd][ind])
         dTS[vd]['SS5']['SE'][iT]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
 
-## Initialize dictionary of results
-#dTSgf={}
-#for v in varL:
-#    dTSgf[v]={}
-#    for treat in treatL:
-#        dTSgf[v][treat]={}
-#        for s in statL:
-#            dTSgf[v][treat][s]=np.zeros(binT.size)
-#
-#for vd in varL:
-#    for iT in range(binT.size):
-#        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['Treatment']=='C') & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['QA Summary']==1) )[0]
-#        dTSgf[vd]['C']['Mean'][iT]=np.nanmean(dGF[vd][ind])
-#        dTSgf[vd]['C']['Median'][iT]=np.nanmedian(dGF[vd][ind])
-#        dTSgf[vd]['C']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
-#        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['Treatment']=='F1') & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['QA Summary']==1) )[0]
-#        dTSgf[vd]['F']['Mean'][iT]=np.nanmean(dGF[vd][ind])
-#        dTSgf[vd]['F']['Median'][iT]=np.nanmedian(dGF[vd][ind])
-#        dTSgf[vd]['F']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
-#        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS']==3) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
-#        dTSgf[vd]['SS3']['Mean'][iT]=np.nanmean(dGF[vd][ind])
-#        dTSgf[vd]['SS3']['Median'][iT]=np.nanmean(dGF[vd][ind])
-#        dTSgf[vd]['SS3']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
-#        ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS']==5) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
-#        #ind=np.where( (dGF['Year']==binT[iT]) & (dGF['BGC SS Comb']==99) & (dGF[vd]>0) & (dGF[vd]<2000) & (dGF['Treatment']!='C') & (dGF['Treatment']!='F1') & (dGF['QA Summary']==1) )[0]
-#        dTSgf[vd]['SS5']['Mean'][iT]=np.nanmean(dGF[vd][ind])
-#        dTSgf[vd]['SS5']['Median'][iT]=np.nanmedian(dGF[vd][ind])
-#        dTSgf[vd]['SS5']['SE'][iT]=np.nanstd(dGF[vd][ind])/np.sqrt(ind.size)
+# #%% Calculate time series of response ratio (new)
+
+# #varL=['TRW RR','TRW S NE DPLR RR','BAI RR','Gsw RR','RGR RR']
+# varL=['TRW RR','BAI RR','Gsw RR','RGR RR','Gsw','BAI','RGR','TRW S NE DPLR RR']
+# treatL=['C','F','SS3','SS5']
+# statL=['Mean','Median','SE']
+
+# # Time period of analysis
+# binT=np.arange(1950,2022,1)
+
+# # Initialize dictionary of results
+# dTS={}
+# for v in varL:
+#     dTS[v]={}
+#     for treat in treatL:
+#         dTS[v][treat]={}
+#         for s in statL:
+#             dTS[v][treat][s]=np.zeros((binT.size,uInst.size))
+
+
+# # Populate dictionary of results
+# for vd in varL:
+#     for iT in range(binT.size):
+#         for iI in range(uInst.size):
+#             ind=np.where( (dTL['ID_Inst']==uInst[iI]) & (dTL['Year']==binT[iT]) & (dTL['Treatment']=='C') & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['QA Summary']==1) )[0]
+#             dTS[vd]['C']['Mean'][iT,iI]=np.nanmean(dTL[vd][ind])
+#             dTS[vd]['C']['Median'][iT,iI]=np.nanmedian(dTL[vd][ind])
+#             dTS[vd]['C']['SE'][iT,iI]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+#             ind=np.where( (dTL['ID_Inst']==uInst[iI]) & (dTL['Year']==binT[iT]) & (dTL['Treatment']=='F1') & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['QA Summary']==1) )[0]
+#             dTS[vd]['F']['Mean'][iT,iI]=np.nanmean(dTL[vd][ind])
+#             dTS[vd]['F']['Median'][iT,iI]=np.nanmedian(dTL[vd][ind])
+#             dTS[vd]['F']['SE'][iT,iI]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+#             ind=np.where( (dTL['ID_Inst']==uInst[iI]) & (dTL['Year']==binT[iT]) & (dTL['BGC SS']==3) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+#             dTS[vd]['SS3']['Mean'][iT,iI]=np.nanmean(dTL[vd][ind])
+#             dTS[vd]['SS3']['Median'][iT,iI]=np.nanmean(dTL[vd][ind])
+#             dTS[vd]['SS3']['SE'][iT,iI]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+#             ind=np.where( (dTL['ID_Inst']==uInst[iI]) & (dTL['Year']==binT[iT]) & (dTL['BGC SS']==5) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+#             #ind=np.where( (dTL['Year']==binT[iT]) & (dTL['BGC SS Comb']==99) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+#             dTS[vd]['SS5']['Mean'][iT,iI]=np.nanmean(dTL[vd][ind])
+#             dTS[vd]['SS5']['Median'][iT,iI]=np.nanmedian(dTL[vd][ind])
+#             dTS[vd]['SS5']['SE'][iT,iI]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+#     dTS[vd]['C']['Mean']=np.nanmean(dTS[vd]['C']['Mean'],axis=1)
+#     dTS[vd]['F']['Mean']=np.nanmean(dTS[vd]['F']['Mean'],axis=1)
+#     dTS[vd]['SS3']['Mean']=np.nanmean(dTS[vd]['SS3']['Mean'],axis=1)
+#     dTS[vd]['SS5']['Mean']=np.nanmean(dTS[vd]['SS5']['Mean'],axis=1)
+
+#     dTS[vd]['C']['SE']=np.nanmean(dTS[vd]['C']['SE'],axis=1)
+#     dTS[vd]['F']['SE']=np.nanmean(dTS[vd]['F']['SE'],axis=1)
+#     dTS[vd]['SS3']['SE']=np.nanmean(dTS[vd]['SS3']['SE'],axis=1)
+#     dTS[vd]['SS5']['SE']=np.nanmean(dTS[vd]['SS5']['SE'],axis=1)
 
 #%% Bar charts of change in C and F1 plots (between pre- and post-application reference periods)
 
@@ -355,11 +377,11 @@ ax[0].bar(np.arange(uInst.size)+0.15,dBM[var]['F1'][stat],0.3,fc=cl2,label='Fert
 ax[0].bar(uInst.size-0.15,np.mean(dBM[var]['C'][stat]),0.3,fc='w',ec='k',lw=0.5);
 ax[0].bar(uInst.size+0.15,np.mean(dBM[var]['F1'][stat]),0.3,fc=cl2);
 
-ax[0].errorbar(np.arange(uInst.size)-0.15,dBM[var]['C'][stat],yerr=[ dBM[var]['C'][stat]-dBM[var]['C']['CI Lo'], dBM[var]['C']['CI Hi']-dBM[var]['C'][stat] ],color='k',ls='',capsize=2)
-ax[0].errorbar(np.arange(uInst.size)+0.15,dBM[var]['F1'][stat],yerr=[ dBM[var]['F1'][stat]-dBM[var]['F1']['CI Lo'], dBM[var]['F1']['CI Hi']-dBM[var]['C'][stat] ],color='k',ls='',capsize=2)
+ax[0].errorbar(np.arange(uInst.size)-0.15,dBM[var]['C'][stat],yerr=[ dBM[var]['C'][stat]-dBM[var]['C']['CI Lo'], dBM[var]['C']['CI Hi']-dBM[var]['C'][stat] ],color='k',ls='',capsize=2,lw=gp['lw1'])
+ax[0].errorbar(np.arange(uInst.size)+0.15,dBM[var]['F1'][stat],yerr=[ dBM[var]['F1'][stat]-dBM[var]['F1']['CI Lo'], dBM[var]['F1']['CI Hi']-dBM[var]['C'][stat] ],color='k',ls='',capsize=2,lw=gp['lw1'])
 #ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both')
 ax[0].set(position=[0.16,0.545,0.8,0.425],xlim=[-0.5,uInst.size+1-0.5],xticks=np.arange(uInst.size),xticklabels='', \
-  yticks=np.arange(0,2,0.2),ylabel='$\itr_f$ and $\itr_u$',ylim=[0,1.4]) # '$\itw$ (mm yr$^-$$^1$)')
+  yticks=np.arange(0,2,0.2),ylabel='$\it{r}$($\it{f}$) and $\it{r}$($\it{u}$)',ylim=[0,1.4]) # '$\itw$ (mm yr$^-$$^1$)')
 ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both'); ax[0].tick_params(length=1.5)
 ax[0].legend(loc='upper left',frameon=False,fontsize=6,bbox_to_anchor=(0.52,0.47,0.5,0.5))
 
@@ -375,15 +397,15 @@ dr_hi=np.append(dr_hi,dr_be_mu+dr_be_se)
 #plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,5));
 ax[1].plot([-1,20],[0,0],'k-')
 ax[1].bar(np.arange(uInst.size+1),dr_be,0.5,fc=cl3)
-ax[1].errorbar(np.arange(uInst.size+1),dr_be,yerr=[ dr_be-dr_lo, dr_hi-dr_be ],color='k',ls='',capsize=2)
+ax[1].errorbar(np.arange(uInst.size+1),dr_be,yerr=[ dr_be-dr_lo, dr_hi-dr_be ],color='k',ls='',capsize=2,lw=gp['lw1'])
 #ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
 ax[1].set(position=[0.16,0.09,0.8,0.425],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'), \
-  yticks=np.arange(-10,50,10),ylabel='$\itI$$_{r,t1-10}$ (%)',xlabel='Installation',ylim=[-15,45])
+  yticks=np.arange(-10,50,10),ylabel='$\it{I}$$_{r,t1-10}$ (%)',xlabel='Installation',ylim=[-15,45])
 ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
-gu.axletters(ax,plt,0.0185,0.885,FontWeight='Bold') # ,LetterStyle='Caps'
+gu.axletters(ax,plt,0.0185,0.91,FontWeight='Bold') # ,LetterStyle='Caps'
 if flag_savefigs=='On':
-    gu.PrintFig(meta['Paths']['Figures'] + '\\Response_' + var,'png',900)
-    fig.savefig(meta['Paths']['Figures'] + '\\Response_' + var + '.svg',format='svg',dpi=1200)
+    gu.PrintFig(meta['Paths']['Figures'] + '\\Fig4 Response_' + var,'png',900)
+    fig.savefig(meta['Paths']['Figures'] + '\\Fig4 Response_' + var + '.svg',format='svg',dpi=1200)
 
 #%% Plot time series
 
@@ -392,10 +414,10 @@ stat='Mean'
 #stat='Median'
 
 # Variable
-#vd='TRW RR'
+vd='TRW RR'
 #vd='BAI RR'
 #vd='TRW S NE DPLR RR'
-vd='RGR RR'
+#vd='RGR RR'
 #vd='Gsw RR'
 
 # Relative response (%)
@@ -421,16 +443,16 @@ ax.add_patch(Rectangle([1971.5,-100],10,250,fc=[0.92,0.92,0.92],ec="none"))
 ax.plot(binT[it],np.zeros(it.size),'k-',lw=1,color='k')
 ax.errorbar(binT[it],be[it],yerr=[ be[it]-lo[it], hi[it]-be[it] ],color=[0.86,0.8,0.8],ls='',capsize=0.5,elinewidth=2)
 ax.plot(binT[it],be[it],'-ko',ms=3.5,mfc='w',mec=[0.75,0,0],lw=1,color=[0.75,0,0])
-ax.text(1977,32,'$\itI$$_{r,t1-10}$ = ' + str(mu) + '%',fontsize=10,color='k')
+ax.text(1977,32,'$\it{I}$$_{r,t1-10}$ = ' + str(mu) + '%',fontsize=10,color='k')
 ax.text(1965.25,-14,'Before',fontsize=9,style='italic',color=[0,0,0]) # $\itt$$_{ref}$
 ax.text(1974.5,-14,'After',fontsize=9,style='italic',color=[0,0,0]) # $\itt$$_{1-10}$
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=1.5)
-ax.set(position=[0.14,0.11,0.83,0.86],xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],xticks=np.arange(1970,2025,10),xlabel='Time, years', \
-       ylim=[-20,45],yticks=np.arange(-20,60,5),ylabel='Relative response (%)')
+ax.set(position=[0.14,0.11,0.83,0.86],xticks=np.arange(1970,2025,10),xlabel='Time, years', \
+       yticks=np.arange(-20,60,5),ylabel='Relative response (%)',xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],ylim=[-17,42])
 
 if flag_savefigs=='On':
-    gu.PrintFig(meta['Paths']['Figures'] + '\\' + vd + '_vs_Time','png',900)
-    fig.savefig(meta['Paths']['Figures'] + '\\' + vd + '_vs_Time.svg',format='svg',dpi=1200)
+    gu.PrintFig(meta['Paths']['Figures'] + '\\Fig2 ' + vd + '_vs_Time','png',900)
+    fig.savefig(meta['Paths']['Figures'] + '\\Fig2 ' + vd + '_vs_Time.svg',format='svg',dpi=1200)
 
 def FittingCurves():
 
@@ -485,36 +507,37 @@ v='TRW RR' #v='RGR RR'
 be=(dTS[v]['F'][stat][it]-dTS[v]['C'][stat][it])/dTS[v]['C'][stat][it]*100
 
 ax[0].add_patch(Rectangle([binT[it[0]]-10,-1*np.std(be)],100,2*np.std(be),fc=[0.875,0.875,0.875],ec="none"))
-ax[0].plot(binT[it],np.zeros(it.size),'k-',lw=lw,color='k')
+ax[0].plot(binT[it],np.zeros(it.size),'k-',lw=gp['lw1'],color='k')
 be=(dTS[v]['F'][stat][it]-dTS[v]['C'][stat][it])/dTS[v]['C'][stat][it]*100
-ax[0].plot(binT[it],be,'-ko',ms=3.5,mfc='w',mec=cl1,lw=lw,color=cl1,label='Original control')
+ax[0].plot(binT[it],be,'-ko',ms=3.5,mfc='w',mec=cl1,lw=gp['lw1'],color=cl1,label='Experimental control')
 be=(dTS[v]['F'][stat][it]-dTS[v]['SS3'][stat][it])/dTS[v]['SS3'][stat][it]*100
-ax[0].plot(binT[it],be,'-rs',ms=3.25,mfc='w',mec=cl2,lw=lw,color=cl2,label='Dry control')
+ax[0].plot(binT[it],be,'-rs',ms=3.25,mfc='w',mec=cl2,lw=gp['lw1'],color=cl2,label='Dry control')
 be=(dTS[v]['F'][stat][it]-dTS[v]['SS5'][stat][it])/dTS[v]['SS5'][stat][it]*100
-ax[0].plot(binT[it],be,'-bd',ms=3.5,mfc='w',mec=cl3,lw=lw,color=cl3,label='Wet control')
+ax[0].plot(binT[it],be,'-bd',ms=3.5,mfc='w',mec=cl3,lw=gp['lw1'],color=cl3,label='Wet control')
 ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both'); ax[0].tick_params(length=1.5)
 ax[0].set(position=[0.11,0.54,0.87,0.44],xticks=np.arange(1965,2025,5), \
-  yticks=np.arange(-50,100,10),xticklabels='',ylabel='$\itI_{r,t}$ (%)',xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],ylim=[-35,45])
+  yticks=np.arange(-50,100,10),xticklabels='',ylabel='$\it{I}_{r,t}$ (%)',xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],ylim=[-35,45])
 ax[0].legend(loc='upper right',frameon=False,ncol=3,fontsize=6)
 
 v='TRW S NE DPLR RR'
 be=(dTS[v]['F'][stat][it]-dTS[v]['C'][stat][it])/dTS[v]['C'][stat][it]*100
 ax[1].add_patch(Rectangle([binT[it[0]]-10,-1*np.std(be)],100,2*np.std(be),fc=[0.875,0.875,0.875],ec="none"))
-ax[1].plot(binT[it],np.zeros(it.size),'k-',lw=lw,color='k')
+ax[1].plot(binT[it],np.zeros(it.size),'k-',lw=gp['lw1'],color='k')
 
-ax[1].plot(binT[it],be,'-ko',ms=3.5,mfc='w',mec=cl1,lw=lw,color=cl1)
+ax[1].plot(binT[it],be,'-ko',ms=3.5,mfc='w',mec=cl1,lw=gp['lw1'],color=cl1)
 be=(dTS[v]['F'][stat][it]-dTS[v]['SS3'][stat][it])/dTS[v]['SS3'][stat][it]*100
-ax[1].plot(binT[it],be,'-rs',ms=3.25,mfc='w',mec=cl2,lw=lw,color=cl2)
+ax[1].plot(binT[it],be,'-rs',ms=3.25,mfc='w',mec=cl2,lw=gp['lw1'],color=cl2)
 be=(dTS[v]['F'][stat][it]-dTS[v]['SS5'][stat][it])/dTS[v]['SS5'][stat][it]*100
-ax[1].plot(binT[it],be,'-bd',ms=3.5,mfc='w',mec=cl3,lw=lw,color=cl3)
+ax[1].plot(binT[it],be,'-bd',ms=3.5,mfc='w',mec=cl3,lw=gp['lw1'],color=cl3)
 ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
 ax[1].set(position=[0.11,0.08,0.87,0.44],xticks=np.arange(1965,2025,5), \
-  yticks=np.arange(-50,100,10),ylabel='Residuals of $\itI_{r,t}$ (%)',xlabel='Time, years',xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],ylim=[-35,45])
+  yticks=np.arange(-50,100,10),ylabel='Residuals of $\it{I}_{r,t}$ (%)',xlabel='Time, years',xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],ylim=[-35,45])
 
-gu.axletters(ax,plt,0.024,0.9,FontWeight='Bold',Labels=['Without detrending','With detrending'],LabelSpacer=0.04) # ,LetterStyle='Caps'
+gu.axletters(ax,plt,0.024,0.9,FontWeight='Bold',Labels=['Without detrending','With detrending'],LabelSpacer=0.035) # ,LetterStyle='Caps'
 
 if flag_savefigs=='On':
-    gu.PrintFig(meta['Paths']['Figures'] + '\\GrowthIndex_vs_Time2','png',900)
+    gu.PrintFig(meta['Paths']['Figures'] + '\\Fig5 GrowthIndex_vs_Time2','png',900)
+    fig.savefig(meta['Paths']['Figures'] + '\\Fig5 GrowthIndex_vs_Time2.svg',format='svg',dpi=1200)
 
 #%% Bar chart comparison of response using original and post facto controls
 
@@ -547,7 +570,7 @@ rs[var]['SE'][2]=sig_mult*np.nanstd((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])
 ax[0].plot([0,5],[0,0],'k-')
 ax[0].bar([1,2,3],rs[var]['Mean'],0.75,fc=[0.7,0.7,0.7])
 ax[0].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
-ax[0].set(position=[0.12,0.56,0.84,0.42],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
+ax[0].set(position=[0.12,0.56,0.84,0.42],yticks=np.arange(-5,40,5),ylabel='$\it{I}_{r,t1-10}$ (%)', \
   xticks=np.arange(1,4,1),xticklabels='',ylim=[-5,25],xlim=[0.5,3.5])
 ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both'); ax[0].tick_params(length=1.5)
 
@@ -567,16 +590,16 @@ rs[var]['SE'][2]=sig_mult*np.nanstd((dBM[var]['F1'][stat]-dBM[var]['SS5'][stat])
 
 ax[1].plot([0,5],[0,0],'k-')
 ax[1].bar([1,2,3],rs[var]['Mean'],0.75,fc=[0.7,0.7,0.7])
-ax[1].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1)
-ax[1].set(position=[0.12,0.09,0.84,0.42],yticks=np.arange(-5,40,5),ylabel='$\itI_{r,t1-10}$ (%)', \
-  xticks=np.arange(1,4,1),xticklabels=['Original\ncontrol','Dry\ncontrol','Wet\ncontrol'],xlim=[0.5,3.5],ylim=[-5,25])
+ax[1].errorbar([1,2,3],rs[var]['Mean'],yerr=[ rs[var]['SE'], rs[var]['SE'] ],color=[0,0,0],ls='',capsize=3,elinewidth=1,lw=gp['lw1'])
+ax[1].set(position=[0.12,0.09,0.84,0.42],yticks=np.arange(-5,40,5),ylabel='$\it{I}_{r,t1-10}$ (%)', \
+  xticks=np.arange(1,4,1),xticklabels=['Experimental\ncontrol','Dry\ncontrol','Wet\ncontrol'],xlim=[0.5,3.5],ylim=[-5,25])
 ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
 
 gu.axletters(ax,plt,0.025,0.87,FontWeight='Bold',Labels=['Without detrending','With detrending'],LabelSpacer=0.06) # ,LetterStyle='Caps'
 
 if flag_savefigs=='On':
-    gu.PrintFig(meta['Paths']['Figures'] + '\\Evaluation of Detrending Bar Chart','png',900)
-    #fig.savefig(meta['Paths']['Figures'] + '\\Pseudocontrols test.svg',format='svg',dpi=1200)
+    gu.PrintFig(meta['Paths']['Figures'] + '\\Fig6 Evaluation of Detrending Bar Chart','png',900)
+    fig.savefig(meta['Paths']['Figures'] + '\\Fig6 Evaluation of Detrending Bar Chart.svg',format='svg',dpi=1200)
 
 #%% Plot time series (short detrending period)
 
@@ -774,6 +797,95 @@ if flag_savefigs=='On':
 #    gu.PrintFig(meta['Paths']['Figures'] + '\\Evaluation of Detrending Bar Chart','png',900)
 #    #fig.savefig(meta['Paths']['Figures'] + '\\Pseudocontrols test.svg',format='svg',dpi=1200)
 
+
+#%% Calculate time series of response ratio (AT EACH INSTILATION)
+
+#varL=['TRW RR','TRW S NE DPLR RR','BAI RR','Gsw RR','RGR RR']
+varL=['TRW RR','BAI RR','Gsw RR','RGR RR','Gsw','BAI','RGR','TRW S NE DPLR RR']
+treatL=['C','F','SS3','SS5']
+statL=['Mean','Median','SE']
+uInst=np.unique(dTL['ID_Inst'])
+
+# Time period of analysis
+binT=np.arange(1950,2022,1)
+
+# Initialize dictionary of results
+dTS={}
+for v in varL:
+    dTS[v]={}
+    for treat in treatL:
+        dTS[v][treat]={}
+        for s in statL:
+            dTS[v][treat][s]=np.zeros( (binT.size,uInst.size) )
+
+# Populate dictionary of results
+for vd in varL:
+    for iI in range(uInst.size):
+        for iT in range(binT.size):
+            ind=np.where( (dTL['Year']==binT[iT]) & (dTL['ID_Inst']==uInst[iI]) & (dTL['Treatment']=='C') & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['QA Summary']==1) )[0]
+            dTS[vd]['C']['Mean'][iT,iI]=np.nanmean(dTL[vd][ind])
+            dTS[vd]['C']['Median'][iT,iI]=np.nanmedian(dTL[vd][ind])
+            dTS[vd]['C']['SE'][iT,iI]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+            ind=np.where( (dTL['Year']==binT[iT]) & (dTL['ID_Inst']==uInst[iI]) & (dTL['Treatment']=='F1') & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['QA Summary']==1) )[0]
+            dTS[vd]['F']['Mean'][iT,iI]=np.nanmean(dTL[vd][ind])
+            dTS[vd]['F']['Median'][iT,iI]=np.nanmedian(dTL[vd][ind])
+            dTS[vd]['F']['SE'][iT,iI]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+            ind=np.where( (dTL['Year']==binT[iT]) & (dTL['ID_Inst']==uInst[iI]) & (dTL['BGC SS']==3) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+            dTS[vd]['SS3']['Mean'][iT,iI]=np.nanmean(dTL[vd][ind])
+            dTS[vd]['SS3']['Median'][iT,iI]=np.nanmean(dTL[vd][ind])
+            dTS[vd]['SS3']['SE'][iT,iI]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+            ind=np.where( (dTL['Year']==binT[iT]) & (dTL['ID_Inst']==uInst[iI]) & (dTL['BGC SS']==5) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+            #ind=np.where( (dTL['Year']==binT[iT]) & (dTL['ID_Inst']==uInst[iI]) & (dTL['BGC SS Comb']==99) & (dTL[vd]>0) & (dTL[vd]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) )[0]
+            dTS[vd]['SS5']['Mean'][iT,iI]=np.nanmean(dTL[vd][ind])
+            dTS[vd]['SS5']['Median'][iT,iI]=np.nanmedian(dTL[vd][ind])
+            dTS[vd]['SS5']['SE'][iT,iI]=np.nanstd(dTL[vd][ind])/np.sqrt(ind.size)
+
+#%% Plot time series
+
+# Central tendancy
+stat='Mean'
+#stat='Median'
+
+# Variable
+#vd='TRW RR'
+#vd='BAI RR'
+#vd='TRW S NE DPLR RR'
+vd='RGR RR'
+#vd='Gsw RR'
+
+# Relative response (%)
+#be=(dTS[vd]['F'][stat]-dTS[vd]['C'][stat])/dTS[vd]['C'][stat]*100
+#lo,hi=GetCIsForDR(dTS[vd]['C'][stat]-dTS[vd]['C']['SE'],dTS[vd]['C'][stat]+dTS[vd]['C']['SE'],dTS[vd]['F'][stat]-dTS[vd]['F']['SE'],dTS[vd]['F'][stat]+dTS[vd]['F']['SE'])
+
+# Absolute respones (mm)
+be=dTS[vd]['F'][stat]-dTS[vd]['C'][stat]
+
+# Mean ten-year response
+ind=np.where( (binT>=t_ref1[0]) & (binT<=t_ref1[1]) )[0]
+mu=np.round(np.mean(be[ind]),decimals=1)
+
+# Time period
+it=np.where( (binT>=1965) & (binT<=1990) )[0]
+
+# Plot
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(12,8)); cl=[0.27,0.49,0.79]
+#ax.add_patch(Rectangle([1970.5-5,-100],5,250,fc=[0.92,0.92,0.92],ec="none"))
+#ax.add_patch(Rectangle([1971.5,-100],10,250,fc=[0.92,0.92,0.92],ec="none"))
+ax.plot([0,4000],[0,0],'k-',lw=1,color='k')
+ax.plot([0,4000],np.max(cmu)*np.ones(2),'-k',ms=3.5,mfc='w',mec=[0.8,0.8,0.8],lw=2.5,color=[0.8,0.8,0.8])
+cmu=np.mean(np.cumsum(be[it,:],axis=0),axis=1)
+ax.plot(binT[it],cmu,'-ko',ms=3.5,mfc='w',mec=cl,lw=gp['lw2'],color=cl)
+ax.annotate('Time of\napplication',xy=(1971.9,0),xytext=(1971.9,0.5),arrowprops={'color':'black','arrowstyle':'->'},ha='center',color='k');
+ax.plot(1981.9*np.ones(2),[-2,2],'k--')
+ax.text(1970,0.64,'Maximum',fontsize=10,color='k')
+ax.text(1981.9+0.5,0.44,'Time of application\nplus 10 years',fontsize=6,color='k')
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=1.5)
+ax.set(position=[0.14,0.11,0.83,0.86],xticks=np.arange(1960,2025,2),xlabel='Time, years', \
+       yticks=np.arange(-20,60,0.1),ylabel='Cumulative response in relative growth rate',xlim=[binT[it][0]-0.5,binT[it][-1]+0.5],ylim=[-0.1,0.7])
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Fertilization\DurationResponse_FromDendroEP703','png',900)
+
+
+
 #%% Compare core responses with responses from the original trial
 
 dEP={}
@@ -904,7 +1016,7 @@ np.std(dI['G_DA_C'][ikp])/np.mean(dI['G_DA_C'][ikp])*100
 # Time period of analysis
 bin=np.arange(1,101,1)
 
-vL=['TRW','Dib','Bsw','Gsw','BAI','RGR','BAI RR']
+vL=['TRW','Dib','Bsw','Gsw','BAI','RGR','BAI RR','TRW S NE DPLR']
 treatL=['C','F','SS3','SS5','SS6']
 stL=['Mean','Median','SE']
 
@@ -964,16 +1076,44 @@ for v in vL:
         ind=np.where( (dTL['Age']==bin[i]) & (dTL['BGC SS']==6) & (dTL[v]>0) & (dTL[v]<2000) & (dTL['Treatment']!='C') & (dTL['Treatment']!='F1') & (dTL['QA Summary']==1) & (dTL['Year Last']==2020) )[0]
         dAgf[v]['SS6']['Mean'][i]=np.nanmean(dTL[v][ind])
 
-#%%
+#%% Plot age response
 
 plt.close('all')
-plt.plot(bin,dA['TRW']['C']['Mean'],'b-')
-plt.plot(bin,dA['TRW']['F']['Mean'],'g-')
-plt.plot(bin,dA['TRW']['SS3']['Mean'],'r--')
-plt.plot(bin,dA['TRW']['SS5']['Mean'],'c--')
+fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(14.5,8)); ms=4; lw1=1.75; lw2=0.5; cl=np.array([[0.8,0.9,1],[0.27,0.49,0.79],[0.75,0.25,0.05]])
 
+ax[0,0].plot(bin,dA['TRW']['C']['Mean'],'b-',color=cl[0,:],lw=lw1,label='Observed')
+ax[0,0].plot(bin,dA['TRW']['C']['Mean']/dA['TRW S NE DPLR']['C']['Mean'],'g--',color=cl[2,:],lw=lw2,label='Fitted')
+ax[0,0].set(ylim=[0,9],ylabel='Ring width (mm yr$^-$$^1$)',xlabel='Age, years',xticks=np.arange(0,110,10))
+ax[0,0].legend(loc='upper right',frameon=False,facecolor='w',edgecolor='w')
+ax[0,0].yaxis.set_ticks_position('both'); ax[0,0].xaxis.set_ticks_position('both'); ax[0,0].tick_params(length=gp['tickl'])
 
+ax[0,1].plot(bin,dA['TRW']['C']['Mean'],'b-',color=cl[0,:],lw=lw1,label='Observed (experimental control)')
+ax[0,1].plot(bin,dA['TRW']['F']['Mean'],'b-',color=cl[1,:],lw=lw2,label='Observed')
+ax[0,1].plot(bin,dA['TRW']['F']['Mean']/dA['TRW S NE DPLR']['F']['Mean'],'g--',color=cl[2,:],lw=lw2,label='Fitted')
+ax[0,1].set(ylim=[0,9],ylabel='Ring width (mm yr$^-$$^1$)',xlabel='Age, years',xticks=np.arange(0,110,10))
+ax[0,1].legend(loc='center right',frameon=False,facecolor='w',edgecolor='w')
+ax[0,1].yaxis.set_ticks_position('both'); ax[0,1].xaxis.set_ticks_position('both'); ax[0,1].tick_params(length=gp['tickl'])
 
+ax[1,0].plot(bin,dA['TRW']['C']['Mean'],'b-',color=cl[0,:],lw=lw1,label='Observed (experimental control)')
+ax[1,0].plot(bin,dA['TRW']['SS3']['Mean'],'b-',color=cl[1,:],lw=lw2,label='Observed')
+ax[1,0].plot(bin,dA['TRW']['SS3']['Mean']/dA['TRW S NE DPLR']['SS3']['Mean'],'g--',color=cl[2,:],lw=lw2,label='Fitted')
+ax[1,0].set(ylim=[0,9],ylabel='Ring width (mm yr$^-$$^1$)',xlabel='Age, years',xticks=np.arange(0,110,10))
+ax[1,0].legend(loc='upper right',frameon=False,facecolor='w',edgecolor='w')
+ax[1,0].yaxis.set_ticks_position('both'); ax[1,0].xaxis.set_ticks_position('both'); ax[1,0].tick_params(length=gp['tickl'])
+
+ax[1,1].plot(bin,dA['TRW']['C']['Mean'],'b-',color=cl[0,:],lw=lw1,label='Observed (experimental control)')
+ax[1,1].plot(bin,dA['TRW']['SS5']['Mean'],'b-',color=cl[1,:],lw=lw2,label='Observed')
+ax[1,1].plot(bin,dA['TRW']['SS5']['Mean']/dA['TRW S NE DPLR']['SS5']['Mean'],'g--',color=cl[2,:],lw=lw2,label='Fitted')
+ax[1,1].set(ylim=[0,9],ylabel='Ring width (mm yr$^-$$^1$)',xlabel='Age, years',xticks=np.arange(0,110,10))
+ax[1,1].legend(loc='upper right',frameon=False,facecolor='w',edgecolor='w')
+ax[1,1].yaxis.set_ticks_position('both'); ax[1,1].xaxis.set_ticks_position('both'); ax[1,1].tick_params(length=gp['tickl'])
+
+gu.axletters(ax,plt,0.04,0.88,FontColor=gp['cla'],FontWeight='Bold',Labels=['Experimental control','Experimental treatment','SC Dry','SC Wet'],LabelSpacer=0.055)
+plt.tight_layout()
+#gu.PrintFig(meta['Paths']['Figures'] + '\\QA_IBM_Profiles','png',900)
+if flag_savefigs=='On':
+    gu.PrintFig(meta['Paths']['Figures'] + '\\Fig2 AgeResponses','png',900)
+    fig.savefig(meta['Paths']['Figures'] + '\\Fig2 AgeResponses.svg',format='svg',dpi=1200)
 
 #%%
 

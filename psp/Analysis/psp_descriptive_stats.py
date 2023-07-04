@@ -11,7 +11,7 @@ import time
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import pandas as pd
-import fiona
+from scipy import stats
 import statsmodels.formula.api as smf
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
@@ -26,30 +26,17 @@ gp=gu.SetGraphics('Manuscript')
 
 metaGP,gplt=ugp.ImportPSPs(type='Stand')
 
-#%%
-
-ind=np.where( (gplt['PTF CN']==1) )[0]
-plt.plot(gplt['Age VRI t0'][ind],gplt['Age Max t0'][ind],'b.')
-plt.plot(gplt['Age VRI t0'][ind],gplt['Age Med t0'][ind],'r.')
-
-#%%
-
-ind=np.where( (gplt['PTF CNY']==1) )[0]
-plt.plot(gplt['Age Med t0'][ind],gplt['Csw Indiv Med t0'][ind],'b.')
-plt.plot(gplt['Age Med t0'][ind],gplt['Csw Indiv Max t0'][ind],'r.')
-
-#%%
-
-ind=np.where( (gplt['PTF CNY']==1) )[0]
-plt.plot(gplt['Csw Indiv Med t0'][ind],gplt['Csw Indiv Max t0'][ind],'r.')
-
-#%% Import Raster grids
-
+# Import Raster grids
 lut_1ha=u1ha.Import_BC1ha_LUTs()
-
 zBGCZ=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
-
 zLCC1=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\LandCoverClass1.tif')
+zAge=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\age1.tif')
+
+#%%
+
+ind=np.where( (gplt['Plot Type']==metaGP['LUT']['Plot Type BC']['LID']) )[0]
+
+plt.plot(gplt['X'],gplt['Y'],'.')
 
 #%% Export summary by Plot Type
 
@@ -65,6 +52,20 @@ for k in gplt.keys():
     d[k]=np.append(d[k],np.round(np.nanmean(gplt[k][ind]),decimals=2))
 df=pd.DataFrame(d,index=[0,1,2])
 df.to_excel(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\Processed\SummarySL_ByPlotType.xlsx')
+
+#%% QA - compare standing biomass with standing volume whole stem
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,7.2))
+ind=np.where( (gplt['PTF CN']==1) & (gplt['Vws L t0']>0) & (gplt['Ctot L t0']>0) )[0]
+ax.plot(gplt['Vws L t0'][ind],gplt['Ctot L t0'][ind],'b.',ms=4,mec='w',mfc=[0.27,0.44,0.79],markeredgewidth=0.25)
+rs,txt=gu.GetRegStats(gplt['Vws L t0'][ind],gplt['Ctot L t0'][ind])
+ax.plot(rs['xhat'],rs['yhat'],'-k')
+ax.set(ylabel='Tree biomass (MgC ha$^{-1}$)',xlabel='Whole-stem volume (m$^{3}$ ha$^{-1}$)',xlim=[0,1800],ylim=[0,600])
+ax.text(900,100,txt,fontsize=8)
+plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+gu.PrintFig(metaGP['Paths']['Figs'] + '\\QA_BiomassVsVolume','png',900)
 
 #%% Plot Stocks by BGC zone
 
@@ -113,16 +114,16 @@ for i in range(len(data)):
     data2[i]=data[np.flip(ord)[i]]
 
 # Plot
-cl=np.array([[1,0.75,0.55],[0.25,0.14,0.05],[1,0.5,0],[0.45,0.75,1],[0.6,1,0]])
+cl=np.array([[1,0.8,0.5],[0.5,0.25,0.80],[0.45,0.75,1],[0.6,1,0],[0.5,0.25,0]])
 plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,9))
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,8))
 ax.bar(np.arange(u.size),d['Csw L t0']['mu'],facecolor=cl[0,:],label='Stemwood')
-ax.bar(np.arange(u.size),d['Cbk L t0']['mu'],bottom=d['Csw L t0']['mu'],facecolor=cl[2,:],label='Bark')
-ax.bar(np.arange(u.size),d['Cbr L t0']['mu'],bottom=d['Csw L t0']['mu']+d['Cbk L t0']['mu'],facecolor=cl[3,:],label='Branches')
-ax.bar(np.arange(u.size),d['Cf L t0']['mu'],bottom=d['Csw L t0']['mu']+d['Cbk L t0']['mu']+d['Cbr L t0']['mu'],facecolor=cl[4,:],label='Foliage')
-ax.bar(np.arange(u.size),d['Cr L t0']['mu'],bottom=d['Csw L t0']['mu']++d['Cbk L t0']['mu']+d['Cbr L t0']['mu']+d['Cf L t0']['mu'],facecolor=cl[1,:],label='Roots')
+ax.bar(np.arange(u.size),d['Cbk L t0']['mu'],bottom=d['Csw L t0']['mu'],facecolor=cl[1,:],label='Bark')
+ax.bar(np.arange(u.size),d['Cbr L t0']['mu'],bottom=d['Csw L t0']['mu']+d['Cbk L t0']['mu'],facecolor=cl[2,:],label='Branches')
+ax.bar(np.arange(u.size),d['Cf L t0']['mu'],bottom=d['Csw L t0']['mu']+d['Cbk L t0']['mu']+d['Cbr L t0']['mu'],facecolor=cl[3,:],label='Foliage')
+ax.bar(np.arange(u.size),d['Cr L t0']['mu'],bottom=d['Csw L t0']['mu']++d['Cbk L t0']['mu']+d['Cbr L t0']['mu']+d['Cf L t0']['mu'],facecolor=cl[4,:],label='Roots')
 ax.set(position=[0.08,0.065,0.9,0.92],yticks=np.arange(0,550,20),xticks=np.arange(u.size),
-       xticklabels=lab,ylabel='Biomass (MgC ha$^{-1}$ yr$^{-1}$)',xlim=[-0.5,u.size-0.5],ylim=[0,180])
+       xticklabels=lab,ylabel='Biomass (MgC ha$^{-1}$)',xlim=[-0.5,u.size-0.5],ylim=[0,180])
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 
@@ -201,14 +202,12 @@ for v in d:
 # Area weighting
 d['Area']=np.zeros(lab.size)
 for i in range(lab.size):
-    ind2=np.where( (zBGCZ['Data']==lut_1ha['bgcz'][lab[i]]) & (zLCC1['Data']==lut_1ha['lcc1']['Forest Land']) )
+    ind2=np.where( (zBGCZ['Data']==lut_1ha['bgcz'][lab[i]]) & (zLCC1['Data']==lut_1ha['lcc1']['Forest']) )
     d['Area'][i]=ind2[0].size/1e6
 
 wa=np.sum(d['Ctot Net']['mu']*d['Area'])/np.sum(d['Area'])
 
 lab2=np.append(lab,'Area\nweighted')
-
-# Plot
 
 plt.close('all')
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,9)); cl=np.array([[0.75,0.75,0.75],[0.5,0.5,0.5],[1,0.5,0],[0.45,0.75,1],[0.6,1,0]])
@@ -421,3 +420,44 @@ ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,5),xticklabels=lab,ylab
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\Volume Dynamics from Ground Plots','png',900)
 
+
+#%% Age distributions
+
+x=np.arange(0,401,1)
+y=zAge['Data'][0::5,0::5].flatten()
+y=y[y>=0]
+kde=stats.gaussian_kde(y)
+p1=kde(x)
+
+plt.close('all'); lw=1.25
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,7))
+#plt.plot(x,p1/np.sum(p1)*100,'b-',lw=lw,color=[0.27,0.49,0.77],label='VRI R1 Comp Polygons')
+
+ind=np.where( (gplt['Plot Type']==metaGP['LUT']['Plot Type BC']['VRI']) & (gplt['Age Mean t0']>=0) )[0]
+kde=stats.gaussian_kde(gplt['Age Mean t0'][ind])
+p=kde(x)
+plt.plot(x,p/np.sum(p)*100,'r-',lw=lw,color=[0.27,0.49,0.77],label='VRI ground plots')
+
+ind=np.where( (gplt['PTF CN']==1) & (gplt['Age Mean t0']>=0) )[0]
+kde=stats.gaussian_kde(gplt['Age Mean t0'][ind])
+p=kde(x)
+plt.plot(x,p/np.sum(p)*100,'r--',lw=lw,color=[1,0.5,0],label='CMI + NFI cores (mean)')
+
+kde=stats.gaussian_kde(gplt['Age Min t0'][ind])
+p=kde(x)
+plt.plot(x,p/np.sum(p)*100,'r-.',lw=lw,color=[0.5,1,0],label='CMI + NFI cores (min)')
+
+kde=stats.gaussian_kde(gplt['Age Max t0'][ind])
+p=kde(x)
+plt.plot(x,p/np.sum(p)*100,'r:',lw=lw,color=[0,0.4,0],label='CMI + NFI cores (max)')
+
+# ind=np.where( (gplt['PTF YSM']==1) & (gplt['Age Mean t0']>=0) )[0]
+# kde=stats.gaussian_kde(gplt['Age Mean t0'][ind])
+# p=kde(x)
+# plt.plot(x,p,'g--')
+
+ax.set(ylabel='Frequency (%)',xlabel='Stand age, years',xlim=[0,400],ylim=[0,0.85])
+plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+plt.tight_layout()
+gu.PrintFig(metaGP['Paths']['Figs'] + '\\AgeDistribution','png',900)

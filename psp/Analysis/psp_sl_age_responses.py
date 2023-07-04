@@ -30,125 +30,106 @@ zBGCZ=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
 
 zLCC1=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\LandCoverClass1.tif')
 
-
 #%%
 
 plt.plot(gplt['Age VRI t0'],gplt['Age Max t0'],'b.')
 
-
 #%% Age responses
 
-ind=np.where( (gplt['PTF CN']==1) )[0]
-
+# All
+#ind=np.where( (gplt['PTF CN']==1) )[0]
 #ind=np.where( (gplt['PTF YSM']==1) )[0]
 
 # Coast
 #ind=np.where( (gplt['PTF CN']==1) & (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1']['CWH']) | (gplt['PTF CN']==1) & (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1']['MH']) )[0]
-
-#ind=np.where( (gplt['PTF CN']==1) & (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1']['ICH']) )[0]
-
+ind=np.where( (gplt['PTF CN']==1) & (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1']['ICH']) )[0]
 #ind=np.where( (gplt['PTF CN']==1) & (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1']['ESSF']) )[0]
 
 # Interior
 #ind=np.where( (gplt['PTF CN']==1) & (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['CWH']) & (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['MH']) & (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['ICH']) )[0]
 
-#plt.plot(gplt['Age VRI t0'][ind],gplt['Ctot L t0'][ind],'b.')
-#plt.close('all')
-#plt.plot(gplt['Age VRI t0'][ind],gplt['Age Max t0'][ind],'b.')
-#plt.plot(gplt['Age VRI t0'][ind],gplt['Age Min t0'][ind],'r.')
-
-#plt.close('all')
-#plt.plot(gplt['Age Med t0'][ind],gplt['Age Max t0'][ind],'b.')
-
 x=gplt['Age Med t0'][ind]
 bw=25; bin=np.arange(bw,300,bw)
 xhat=np.arange(1,301,1)
 
-lw=1; ms=5; mec='b'; mfc='w'; cl='b';
-plt.close('all'); fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(15.5,11))
-y=gplt['Ctot G Surv'][ind]
+lw=0.75; ms=4; mec=[0.27,0.49,0.77]; mfc='w'; cl=[0.27,0.49,0.77];
+plt.close('all'); fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(15.5,10))
+y=gplt['Ctot G Surv'][ind]+gplt['Ctot G Recr'][ind]
 N,mu,med,sig,se=gu.discres(x,y,bw,bin)
-ax[0,0].plot(bin,mu,'ko',ms=ms,lw=lw,color=cl,mfc=mfc,mec=mec)
 yhat=np.interp(xhat,bin,mu)
-ax[0,0].plot(xhat,yhat,'b-',lw=0.5)
-ax[0,0].set(ylabel='Survivor growth (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,300])
+#ax[0,0].plot(xhat,yhat,'b-',lw=0.5)
+ax[0,0].plot(bin,mu,'ko',ms=ms,lw=lw,color=cl,mfc=mfc,mec=mec)
+ax[0,0].set(ylabel='Survivor growth (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,300],ylim=[0,5])
 ax[0,0].yaxis.set_ticks_position('both'); ax[0,0].xaxis.set_ticks_position('both'); ax[0,0].tick_params(length=gp['tickl'])
-
-# #ind2=np.where( (gplt['PTF YSM']==1) & (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['CWH']) & (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['MH']) & (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['ICH']) )[0]
-# ind2=np.where( (gplt['PTF YSM']==1) & (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1']['CWH']) | (gplt['PTF YSM']==1) & \
-#     (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1']['MH']) )[0]
-# x=gplt['Age Med t0'][ind2]
-# y=gplt['Ctot G Surv'][ind2]
-# N,mu,med,sig,se=gu.discres(x,y,bw,bin)
-# ax[0,0].plot(bin,mu,'ks',ms=ms,lw=lw,color='k',mfc='w',mec='r')
 
 y=gplt['Ctot G Recr'][ind]
 N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+yhat=np.interp(xhat,bin,mu)
+#ax[0,1].plot(xhat,yhat,'b-',lw=0.5)
 ax[0,1].plot(bin,mu,'ko',ms=ms,lw=lw,color=cl,mfc=mfc,mec=mec)
-ax[0,1].set(ylabel='Recruitment growth (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,300])
+ax[0,1].set(ylabel='Ingrowth (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,300],ylim=[0,5])
 ax[0,1].yaxis.set_ticks_position('both'); ax[0,1].xaxis.set_ticks_position('both'); ax[0,1].tick_params(length=gp['tickl'])
 
 y=gplt['Ctot Mort+Lost'][ind]
 N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+yhat=np.interp(xhat,bin,mu)
+#ax[1,0].plot(xhat,yhat,'b-',lw=0.5)
 ax[1,0].plot(bin,mu,'ko',ms=ms,lw=lw,color=cl,mfc=mfc,mec=mec,label='Total')
+
 y=gplt['Ctot Mort+Lost'][ind]-gplt['Ctot Mort+Lost Fire'][ind]-gplt['Ctot Mort+Lost Insect'][ind]
 N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+yhat=np.interp(xhat,bin,mu)
+#ax[1,0].plot(xhat,yhat,'g--',lw=0.5)
 ax[1,0].plot(bin,mu,'ks',ms=ms,lw=lw,color='g',mfc=mfc,mec='g',label='W/O fire and insects')
-ax[1,0].set(ylabel='Mortality (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,300])
+ax[1,0].set(ylabel='Mortality (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,300],ylim=[0,5])
 ax[1,0].yaxis.set_ticks_position('both'); ax[1,0].xaxis.set_ticks_position('both'); ax[1,0].tick_params(length=gp['tickl'])
-leg=ax[1,0].legend(loc='lower center',frameon=False,facecolor=None,edgecolor='w')
+leg=ax[1,0].legend(loc='upper left',frameon=False,facecolor=None,edgecolor='w')
 
+ax[1,1].plot(xhat,0*xhat,'k-',lw=1.5,color=[0.8,0.8,0.8])
 y=gplt['Ctot Net'][ind]
 N,mu,med,sig,se=gu.discres(x,y,bw,bin)
-ax[1,1].plot(bin,mu,'ks',ms=ms,lw=lw,color=cl,mfc=mfc,mec=mec,label='Total')
 yhat_tot=np.interp(xhat,bin[np.isnan(mu)==False],mu[np.isnan(mu)==False])
-ax[1,1].plot(xhat,yhat_tot,'b-',lw=0.5)
+#ax[1,1].plot(xhat,yhat_tot,'b-',lw=0.5)
+ax[1,1].plot(bin,mu,'ks',ms=ms,lw=lw,color=cl,mfc=mfc,mec=mec,label='Total')
 
 y=gplt['Ctot Net'][ind]+gplt['Ctot Mort+Lost Fire'][ind]+gplt['Ctot Mort+Lost Insect'][ind]
 N,mu,med,sig,se=gu.discres(x,y,bw,bin)
-ax[1,1].plot(bin,mu,'ko',ms=ms,lw=lw,color='g',mfc=mfc,mec='g',label='W/O fire and insects')
 yhat_wofi=np.interp(xhat,bin[np.isnan(mu)==False],mu[np.isnan(mu)==False])
-ax[1,1].plot(xhat,yhat_wofi,'g--',lw=0.5)
+#ax[1,1].plot(xhat,yhat_wofi,'g--',lw=0.5)
+ax[1,1].plot(bin,mu,'ko',ms=ms,lw=lw,color='g',mfc=mfc,mec='g',label='W/O fire and insects')
 
-ax[1,1].set(ylabel='Net growth (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,300])
+ax[1,1].set(ylabel='Net growth (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,300],ylim=[-2,5])
 ax[1,1].yaxis.set_ticks_position('both'); ax[1,1].xaxis.set_ticks_position('both'); ax[1,1].tick_params(length=gp['tickl'])
 leg=ax[1,1].legend(loc='upper right',frameon=False,facecolor=None,edgecolor='w')
 gu.axletters(ax,plt,0.03,0.9,FontColor=gp['cla'],LetterStyle='Caps',FontWeight='Bold')
+gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Ground Plots\AgeResponse_ICH','png',900)
 
 # Plot biomass
-
-#ind=np.where( (gplt['PTF YSM']==1) )[0]
-
-#ind=np.where( (gplt['PTF CN']==1) )[0]
-
-#ind=np.where( (gplt['PTF CN']==1) & (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1']['ESSF']) )[0]
-
-#ind=np.where( (gplt['PTF CNY']==1) & (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['CWH']) & (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['MH']) & \
-#             (gplt['Ecozone BC L1']!=metaGP['LUT']['Ecozone BC L1']['ICH']) )[0]
 
 x=gplt['Age Med t0'][ind]
 y=gplt['Ctot L t0'][ind]
 bw=10; bin=np.arange(bw,300,bw)
 
 lw=1; ms=5; mec='b'; mfc='w'; cl='b';
-fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(15.5,11))
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15.5,11))
 N,mu,med,sig,se=gu.discres(x,y,bw,bin)
-ax[0,0].plot(bin,mu,'ko',ms=ms,lw=lw,color='k',mfc='w',mec='k')
-ax[0,0].plot(xhat,np.cumsum(yhat_wofi),'g-',ms=ms,lw=lw,color='g',mfc=mfc,mec=mec)
-ax[0,0].plot(xhat,np.cumsum(yhat_tot),'b--',ms=ms,lw=lw,color='b',mfc=mfc,mec=mec)
-ax[0,0].set(ylabel='Biomass (MgC ha$^-$$^1$)',xlabel='Age, years',xlim=[0,300])
-ax[0,0].yaxis.set_ticks_position('both'); ax[0,0].xaxis.set_ticks_position('both'); ax[0,0].tick_params(length=gp['tickl'])
+ax.plot(bin,mu,'ko',ms=ms,lw=lw,color='k',mfc='w',mec='k')
+ax.plot(xhat,np.cumsum(yhat_wofi),'g-',ms=ms,lw=lw,color='g',mfc=mfc,mec=mec)
+ax.plot(xhat,np.cumsum(yhat_tot),'b--',ms=ms,lw=lw,color='b',mfc=mfc,mec=mec)
+ax.set(ylabel='Biomass (MgC ha$^-$$^1$)',xlabel='Age, years',xlim=[0,300])
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 
-ind=np.where( (gplt['PTF YSM']==1) )[0]
-x=gplt['Age Med t0'][ind]
-y=gplt['Ctot L t0'][ind]
-N,mu,med,sig,se=gu.discres(x,y,bw,bin)
-ax[0,0].plot(bin,mu,'ks',ms=ms,lw=lw,color='k',mfc='w',mec='r')
+#ind2=np.where( (gplt['PTF YSM']==1) )[0]
+#x=gplt['Age Med t0'][ind2]
+#y=gplt['Ctot L t0'][ind2]
+#N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+#ax.plot(bin,mu,'ks',ms=ms,lw=lw,color='k',mfc='w',mec='r')
+
 
 #%% Biomass age response in areas with no history of major disturbance
 
 zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\BC_Land_Mask.tif')
-zH=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\VEG_CONSOLIDATED_CUT_BLOCKS_SP_All.tif')
+zH=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\VEG_CONSOLIDATED_CUT_BLOCKS_SP_MaskAll.tif')
 zF=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PROT_HISTORICAL_FIRE_POLYS_SP_All.tif')
 zI=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\IBM_Mask_ExcTrace.tif')
 
@@ -184,6 +165,34 @@ ax[0,0].plot(bin,mu,'rd',ms=ms,lw=lw,color='k',mfc='c',mec='c')
 
 
 
+
+#%% Age responses
+
+zone='IDF'
+bw=25; bin=np.arange(bw,350+bw,bw)
+xhat=np.arange(1,351,1)
+
+lw=1; ms=5; mec='b'; mfc='w'; cl='b';
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(15.5,10))
+
+ind=np.where( (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1'][zone]) )[0]
+x=gplt['Age Med t0'][ind]
+y=gplt['Ctot L t0'][ind]
+N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+yhat=np.interp(xhat,bin,mu)
+#ax.plot(xhat,yhat,'b-',lw=0.5)
+ax.plot(bin,mu,'bo',ms=ms,lw=lw,color='b',mfc=mfc,mec='b')
+
+ind=np.where( (gplt['PTF CNY']==1) & (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1'][zone]) )[0]
+x=gplt['Age Med t0'][ind]
+y=gplt['Ctot L t0'][ind]
+N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+yhat=np.interp(xhat,bin,mu)
+#ax.plot(xhat,yhat,'r-',lw=0.5)
+ax.plot(bin,mu,'rs',ms=ms,lw=lw,color='r',mfc=mfc,mec='r')
+
+ax.set(ylabel='Survivor growth (MgC ha$^-$$^1$ yr$^-$$^1$)',xlabel='Age, years',xlim=[0,360])
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 
 
 

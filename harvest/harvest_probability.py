@@ -21,28 +21,30 @@ from sklearn import metrics
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
 
-#%% Graphics parameters
+#%% Import paths and look-up-tables
 
+meta=u1ha.Init()
+meta=u1ha.ImportLUTs(meta)
 gp=gu.SetGraphics('Manuscript')
 
 #%% Import raster datasets
 
 # Land mask
-zMask=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\BC_Land_Mask.tif')
+zRef=gis.OpenGeoTiff(meta['Paths']['bc1ha Ref Grid'])
 
-zSlope=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Terrain\slope.tif')
-#zElev=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Terrain\elevation.tif')
-zDTF=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Management\DistanceFromForestryFacility.tif')
-zDTR=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Terrain\DistanceFromRoads.tif')
+zSlope=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\Terrain\\slope.tif')
+#zElev=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\Terrain\elevation.tif')
+zDTF=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\Management\\DistanceFromForestryFacility.tif')
+zDTR=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\Terrain\\DistanceFromRoads.tif')
 
 # Harvest mask
-zH=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\VEG_CONSOLIDATED_CUT_BLOCKS_SP_All.tif')
+zH=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\Disturbances\\VEG_CONSOLIDATED_CUT_BLOCKS_SP_All.tif')
 
 #%% Filters and sampling
 
 ssi=50
 
-xMask=zMask['Data'][0::ssi,0::ssi].flatten()
+xMask=zRef['Data'][0::ssi,0::ssi].flatten()
 xSlope=zSlope['Data'][0::ssi,0::ssi].flatten().astype(float)
 #xElev=zElev['Data'][0::ssi,0::ssi].flatten().astype(float)
 xDTR=zDTR['Data'][0::ssi,0::ssi].flatten().astype(float)
@@ -90,7 +92,7 @@ Ivl=2021-1954
 
 zSlope['Data']=np.maximum(0,zSlope['Data'])
 
-zHhat=zMask.copy()
+zHhat=zRef.copy()
 zHhat['Data']=zHhat['Data'].astype('float32')
 zHhat['Data']=intercept + \
     (beta[0]*((zSlope['Data'].astype(float)-mu[0])/sig[0])) + \
@@ -99,7 +101,7 @@ zHhat['Data']=intercept + \
 
 zHhat['Data']=(np.exp(zHhat['Data'])/(1+np.exp(zHhat['Data'])))/Ivl*100
 
-zHhat['Data'][zMask['Data']==0]=0
+zHhat['Data'][zRef['Data']==0]=0
 
 #%% Plot histogram
 
@@ -120,18 +122,17 @@ print(np.percentile(100*zHhat['Data'][0::ssi,0::ssi],99.9))
 
 sf=1000
 
-z1=zMask.copy()
+z1=zRef.copy()
 z1['Data']=zHhat['Data']*sf
 z1['Data']=z1['Data'].astype('int32')
-gis.SaveGeoTiff(z1,r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\HarvestProbability.tif')
+gis.SaveGeoTiff(z1,meta['Paths']['bc1ha'] + '\\Disturbances\\HarvestProbability.tif')
 
 #%% THLB at various threshold probabilities
 
-zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\BC_Land_Mask.tif')
-zLC2=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\lc2.tif')
+zLC2=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\\VRI\lc2.tif')
 
 sf=1000
-zPh=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\HarvestProbability.tif')
+zPh=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\Disturbances\\HarvestProbability.tif')
 zPh['Data']=zPh['Data'].astype('float')/sf
 
 # Treed area

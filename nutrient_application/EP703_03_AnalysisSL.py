@@ -1,9 +1,9 @@
 
 '''============================================================================
 
-ANALYSIS OF EP703 IN SUPPORT OF ESTIMATING THE GHG BENEFIT FROM COASTAL 
+ANALYSIS OF EP703 IN SUPPORT OF ESTIMATING THE GHG BENEFIT FROM COASTAL
 FERTILIZATION
-    
+
 ============================================================================'''
 
 #%% Import modules
@@ -23,30 +23,31 @@ from fcgadgets.macgyver import utilities_general as gu
 
 #%% Set figure properties
 
-fs=7
-params={'font.sans-serif':'Calibri',
-        'font.size':fs,
-        'axes.edgecolor':'black',
-        'axes.labelsize':fs,
-        'axes.labelcolor':'black',
-        'axes.titlesize':fs,
-        'axes.linewidth':0.5,        
-        'lines.linewidth':0.5,
-        'text.color':'black',
-        'xtick.color':'black',        
-        'xtick.labelsize':fs,
-        'xtick.major.width':0.5,
-        'xtick.major.size':3,
-        'xtick.direction':'in',
-        'ytick.color':'black',
-        'ytick.labelsize':fs,
-        'ytick.major.width':0.5,
-        'ytick.major.size':3,
-        'ytick.direction':'in',
-        'legend.fontsize':fs,        
-        'savefig.dpi':300,
-        'savefig.transparent':True}
-plt.rcParams.update(params)
+# fs=7
+# params={'font.sans-serif':'Calibri',
+#         'font.size':fs,
+#         'axes.edgecolor':'black',
+#         'axes.labelsize':fs,
+#         'axes.labelcolor':'black',
+#         'axes.titlesize':fs,
+#         'axes.linewidth':0.5,
+#         'lines.linewidth':0.5,
+#         'text.color':'black',
+#         'xtick.color':'black',
+#         'xtick.labelsize':fs,
+#         'xtick.major.width':0.5,
+#         'xtick.major.size':3,
+#         'xtick.direction':'in',
+#         'ytick.color':'black',
+#         'ytick.labelsize':fs,
+#         'ytick.major.width':0.5,
+#         'ytick.major.size':3,
+#         'ytick.direction':'in',
+#         'legend.fontsize':fs,
+#         'savefig.dpi':300,
+#         'savefig.transparent':True}
+# plt.rcParams.update(params)
+gp=gu.SetGraphics('Manuscript')
 
 #%% Import paths
 
@@ -226,27 +227,27 @@ for iSpc in range(len(uSpc)):
         rsT[uSpc[iSpc]][uVar[iVar]]={}
         for iDose in range(uDose.size):
             print(iSpc,iVar,iDose)
-            rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]={}            
+            rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]={}
             Y_C_mu=np.nan*np.ones((tsf.size,uSite.size))
             Y_F_mu=np.nan*np.ones((tsf.size,uSite.size))
             for iSite in range(uSite.size):
                 for iTSF in range(uTSF.shape[0]):
                     iC=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==uSpc[iSpc]) & (sobs['TSF_t0_adj']>=uTSF[iTSF,0]) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==0) )[0]
                     iF=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==uSpc[iSpc]) & (sobs['TSF_t0_adj']>=uTSF[iTSF,0]) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==uDose[iDose]) )[0]
-                    if (iC.size==0) | (iF.size==0): continue    
+                    if (iC.size==0) | (iF.size==0): continue
                     it=np.where( (tsf>=uTSF[iTSF,0]) & (tsf<=uTSF[iTSF,1]) )[0]
                     Y_C_mu[it,iSite]=np.nanmean(sobs[uVar[iVar]][iC])
                     Y_F_mu[it,iSite]=np.nanmean(sobs[uVar[iVar]][iF])
-            
+
             # Exclude plots if they have no site-paired control/treatment
             ind=np.where((np.isnan(Y_C_mu+Y_F_mu)==True))
             Y_C_mu[ind]=np.nan
             Y_F_mu[ind]=np.nan
-            
+
             # Calculate differences
             DA=Y_F_mu-Y_C_mu
             DR=DA/Y_C_mu*100
-            
+
             # Summarize
             SampleSize=np.zeros(Y_C_mu.shape[0])
             for i in range(SampleSize.size):
@@ -263,11 +264,11 @@ for iSpc in range(len(uSpc)):
             rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]['DR_FromMeans']=(np.nanmean(Y_F_mu,axis=1)-np.nanmean(Y_C_mu,axis=1))/np.nanmean(Y_C_mu,axis=1)*100
 
 #plt.plot(rsT['FD']['Bsw_Net'][225]['DA_mu'],'ob-')
-  
+
 #------------------------------------------------------------------------------
 # Plot
 #------------------------------------------------------------------------------
-            
+
 spc='FD'
 
 plt.close('all'); ms=2; Alpha=0.14
@@ -275,7 +276,7 @@ fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(15.5,10.5))
 ax[0,0].plot([-5,42],[0,0],'k-')
 ax[0,0].fill_between(tsf,rsT[spc]['Bsw_G'][225]['DA_mu']-rsT[spc]['Bsw_G'][225]['DA_se'],
   rsT[spc]['Bsw_G'][225]['DA_mu']+rsT[spc]['Bsw_G'][225]['DA_se'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[0,0].plot(tsf,rsT[spc]['Bsw_G'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms,label='225 kg N ha$^-$$^1$') 
+ax[0,0].plot(tsf,rsT[spc]['Bsw_G'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms,label='225 kg N ha$^-$$^1$')
 ax[0,0].fill_between(tsf,rsT[spc]['Bsw_G'][450]['DA_mu']-rsT[spc]['Bsw_G'][450]['DA_se'],
   rsT[spc]['Bsw_G'][450]['DA_mu']+rsT[spc]['Bsw_G'][450]['DA_se'],color=[0,0.7,0],alpha=Alpha,linewidth=0)
 ax[0,0].plot(tsf,rsT[spc]['Bsw_G'][450]['DA_mu'],'-s',color=[0,0.7,0],markersize=ms,label='450 kg N ha$^-$$^1$')
@@ -287,7 +288,7 @@ ax[0,0].legend(loc='lower left')
 ax[1,0].plot([-5,42],[0,0],'k-')
 ax[1,0].fill_between(tsf,np.cumsum(rsT[spc]['Bsw_G'][225]['DA_mu']-rsT[spc]['Bsw_G'][225]['DA_se']),
   np.cumsum(rsT[spc]['Bsw_G'][225]['DA_mu']+rsT[spc]['Bsw_G'][225]['DA_se']),color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[1,0].plot(tsf,np.cumsum(rsT[spc]['Bsw_G'][225]['DA_mu']),'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[1,0].plot(tsf,np.cumsum(rsT[spc]['Bsw_G'][225]['DA_mu']),'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[1,0].fill_between(tsf,np.cumsum(rsT[spc]['Bsw_G'][450]['DA_mu']-rsT[spc]['Bsw_G'][450]['DA_se']),
   np.cumsum(rsT[spc]['Bsw_G'][450]['DA_mu']+rsT[spc]['Bsw_G'][450]['DA_se']),color=[0,0.7,0],alpha=Alpha,linewidth=0)
 ax[1,0].plot(tsf,np.cumsum(rsT[spc]['Bsw_G'][450]['DA_mu']),'-s',color=[0,0.7,0],markersize=ms)
@@ -298,7 +299,7 @@ ax[1,0].set(position=[0.07,0.07,0.42,0.41],xlim=[-1,41],xlabel='Time since N add
 ax[0,1].plot([-5,42],[0,0],'k-')
 ax[0,1].fill_between(tsf,rsT[spc]['Bsw_M'][225]['DA_mu']-rsT[spc]['Bsw_M'][225]['DA_se'],
   rsT[spc]['Bsw_M'][225]['DA_mu']+rsT[spc]['Bsw_M'][225]['DA_se'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[0,1].fill_between(tsf,rsT[spc]['Bsw_M'][450]['DA_mu']-rsT[spc]['Bsw_M'][450]['DA_se'],
   rsT[spc]['Bsw_M'][450]['DA_mu']+rsT[spc]['Bsw_M'][450]['DA_se'],color=[0,0.7,0],alpha=Alpha,linewidth=0)
 ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][450]['DA_mu'],'-s',color=[0,0.7,0],markersize=ms)
@@ -309,7 +310,7 @@ ax[0,1].set(position=[0.57,0.57,0.42,0.41],xlim=[-1,41],xlabel='Time since N add
 ax[1,1].plot([-5,42],[0,0],'k-')
 ax[1,1].fill_between(tsf,np.cumsum(rsT[spc]['Bsw_M'][225]['DA_mu']-rsT[spc]['Bsw_M'][225]['DA_se']),
   np.cumsum(rsT[spc]['Bsw_M'][225]['DA_mu']+rsT[spc]['Bsw_M'][225]['DA_se']),color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[1,1].plot(tsf,np.cumsum(rsT[spc]['Bsw_M'][225]['DA_mu']),'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[1,1].plot(tsf,np.cumsum(rsT[spc]['Bsw_M'][225]['DA_mu']),'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[1,1].fill_between(tsf,np.cumsum(rsT[spc]['Bsw_M'][450]['DA_mu']-rsT[spc]['Bsw_M'][450]['DA_se']),
   np.cumsum(rsT[spc]['Bsw_M'][450]['DA_mu']+rsT[spc]['Bsw_M'][450]['DA_se']),color=[0,0.7,0],alpha=Alpha,linewidth=0)
 ax[1,1].plot(tsf,np.cumsum(rsT[spc]['Bsw_M'][450]['DA_mu']),'-s',color=[0,0.7,0],markersize=ms)
@@ -364,27 +365,27 @@ for iSpc in range(len(uSpc)):
         rsT[uSpc[iSpc]][uVar[iVar]]={}
         for iDose in range(uDose.size):
             print(iSpc,iVar,iDose)
-            rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]={}            
+            rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]={}
             Y_C_mu=np.nan*np.ones((tsf.size,uSite.size))
             Y_F_mu=np.nan*np.ones((tsf.size,uSite.size))
             for iSite in range(uSite.size):
                 for iTSF in range(uTSF.shape[0]):
                     iC=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==uSpc[iSpc]) & (sobs['Year_t0']>=uTSF[iTSF,0]) & (sobs['Year_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==0) )[0]
                     iF=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==uSpc[iSpc]) & (sobs['Year_t0']>=uTSF[iTSF,0]) & (sobs['Year_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==uDose[iDose]) )[0]
-                    if (iC.size==0) | (iF.size==0): continue    
+                    if (iC.size==0) | (iF.size==0): continue
                     it=np.where( (tsf>=uTSF[iTSF,0]) & (tsf<=uTSF[iTSF,1]) )[0]
                     Y_C_mu[it,iSite]=np.nanmean(sobs[uVar[iVar]][iC])
                     Y_F_mu[it,iSite]=np.nanmean(sobs[uVar[iVar]][iF])
-            
+
             # Exclude plots if they have no site-paired control/treatment
             ind=np.where((np.isnan(Y_C_mu+Y_F_mu)==True))
             Y_C_mu[ind]=np.nan
             Y_F_mu[ind]=np.nan
-            
+
             # Calculate differences
             DA=Y_F_mu-Y_C_mu
             DR=DA/Y_C_mu*100
-            
+
             # Summarize
             SampleSize=np.zeros(Y_C_mu.shape[0])
             for i in range(SampleSize.size):
@@ -401,11 +402,11 @@ for iSpc in range(len(uSpc)):
             rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]['DR_FromMeans']=(np.nanmean(Y_F_mu,axis=1)-np.nanmean(Y_C_mu,axis=1))/np.nanmean(Y_C_mu,axis=1)*100
 
 #plt.plot(rsT['FD']['Bsw_Net'][225]['DA_mu'],'ob-')
-  
+
 #------------------------------------------------------------------------------
 # Plot
 #------------------------------------------------------------------------------
-            
+
 spc='HW'
 
 plt.close('all'); ms=2; Alpha=0.14
@@ -413,7 +414,7 @@ fig,ax=plt.subplots(2,2,figsize=gu.cm2inch(15.5,10.5))
 ax[0,0].plot([1965,2015],[0,0],'k-')
 ax[0,0].fill_between(tsf,rsT[spc]['Bsw_G'][225]['DA_mu']-rsT[spc]['Bsw_G'][225]['DA_se'],
   rsT[spc]['Bsw_G'][225]['DA_mu']+rsT[spc]['Bsw_G'][225]['DA_se'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[0,0].plot(tsf,rsT[spc]['Bsw_G'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms,label='225 kg N ha$^-$$^1$') 
+ax[0,0].plot(tsf,rsT[spc]['Bsw_G'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms,label='225 kg N ha$^-$$^1$')
 ax[0,0].fill_between(tsf,rsT[spc]['Bsw_G'][450]['DA_mu']-rsT[spc]['Bsw_G'][450]['DA_se'],
   rsT[spc]['Bsw_G'][450]['DA_mu']+rsT[spc]['Bsw_G'][450]['DA_se'],color=[0,0.7,0],alpha=Alpha,linewidth=0)
 ax[0,0].plot(tsf,rsT[spc]['Bsw_G'][450]['DA_mu'],'-s',color=[0,0.7,0],markersize=ms,label='450 kg N ha$^-$$^1$')
@@ -426,7 +427,7 @@ ax[0,0].legend(loc='lower left')
 ax[1,0].plot([1965,2015],[0,0],'k-')
 ax[1,0].fill_between(tsf,np.cumsum(rsT[spc]['Bsw_G'][225]['DA_mu']-rsT[spc]['Bsw_G'][225]['DA_se']),
   np.cumsum(rsT[spc]['Bsw_G'][225]['DA_mu']+rsT[spc]['Bsw_G'][225]['DA_se']),color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[1,0].plot(tsf,np.cumsum(rsT[spc]['Bsw_G'][225]['DA_mu']),'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[1,0].plot(tsf,np.cumsum(rsT[spc]['Bsw_G'][225]['DA_mu']),'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[1,0].fill_between(tsf,np.cumsum(rsT[spc]['Bsw_G'][450]['DA_mu']-rsT[spc]['Bsw_G'][450]['DA_se']),
   np.cumsum(rsT[spc]['Bsw_G'][450]['DA_mu']+rsT[spc]['Bsw_G'][450]['DA_se']),color=[0,0.7,0],alpha=Alpha,linewidth=0)
 ax[1,0].plot(tsf,np.cumsum(rsT[spc]['Bsw_G'][450]['DA_mu']),'-s',color=[0,0.7,0],markersize=ms)
@@ -437,7 +438,7 @@ ax[1,0].set(position=[0.07,0.07,0.42,0.41],xlim=[1970,2012],xlabel='Time since N
 ax[0,1].plot([1965,2015],[0,0],'k-')
 ax[0,1].fill_between(tsf,rsT[spc]['Bsw_M'][225]['DA_mu']-rsT[spc]['Bsw_M'][225]['DA_se'],
   rsT[spc]['Bsw_M'][225]['DA_mu']+rsT[spc]['Bsw_M'][225]['DA_se'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][225]['DA_mu'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[0,1].fill_between(tsf,rsT[spc]['Bsw_M'][450]['DA_mu']-rsT[spc]['Bsw_M'][450]['DA_se'],
   rsT[spc]['Bsw_M'][450]['DA_mu']+rsT[spc]['Bsw_M'][450]['DA_se'],color=[0,0.7,0],alpha=Alpha,linewidth=0)
 ax[0,1].plot(tsf,rsT[spc]['Bsw_M'][450]['DA_mu'],'-s',color=[0,0.7,0],markersize=ms)
@@ -448,7 +449,7 @@ ax[0,1].set(position=[0.57,0.57,0.42,0.41],xlim=[1970,2012],xlabel='Time since N
 ax[1,1].plot([1965,2015],[0,0],'k-')
 ax[1,1].fill_between(tsf,np.cumsum(rsT[spc]['Bsw_M'][225]['DA_mu']-rsT[spc]['Bsw_M'][225]['DA_se']),
   np.cumsum(rsT[spc]['Bsw_M'][225]['DA_mu']+rsT[spc]['Bsw_M'][225]['DA_se']),color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[1,1].plot(tsf,np.cumsum(rsT[spc]['Bsw_M'][225]['DA_mu']),'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[1,1].plot(tsf,np.cumsum(rsT[spc]['Bsw_M'][225]['DA_mu']),'-o',color=[0.27,0.49,0.79],markersize=ms)
 #ax[1,1].fill_between(tsf,np.cumsum(rsT[spc]['Bsw_M'][450]['DA_mu']-rsT[spc]['Bsw_M'][450]['DA_se']),
 #  np.cumsum(rsT[spc]['Bsw_M'][450]['DA_mu']+rsT[spc]['Bsw_M'][450]['DA_se']),color=[0,0.7,0],alpha=Alpha,linewidth=0)
 #ax[1,1].plot(tsf,np.cumsum(rsT[spc]['Bsw_M'][450]['DA_mu']),'-s',color=[0,0.7,0],markersize=ms)
@@ -479,27 +480,27 @@ for iVar in range(len(uVar)):
     Y=sobs[uVar[iVar]]
     rsT[uVar[iVar]]={}
     for iDose in range(uDose.size):
-        rsT[uVar[iVar]][uDose[iDose]]={}            
+        rsT[uVar[iVar]][uDose[iDose]]={}
         Y_C_mu=np.nan*np.ones((tsf.size,uSite.size))
         Y_F_mu=np.nan*np.ones((tsf.size,uSite.size))
         for iSite in range(uSite.size):
             for iTSF in range(uTSF.shape[0]):
                 iC=np.where( (sobs['Spc1_ID_t0']!='X') & (sobs['ID_Site']==uSite[iSite]) & (sobs['TSF_t0_adj']>=uTSF[iTSF,0]) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==0) )[0]
                 iF=np.where( (sobs['Spc1_ID_t0']!='X') & (sobs['ID_Site']==uSite[iSite]) & (sobs['TSF_t0_adj']>=uTSF[iTSF,0]) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==uDose[iDose]) )[0]
-                if (iC.size==0) | (iF.size==0): continue    
+                if (iC.size==0) | (iF.size==0): continue
                 it=np.where( (tsf>=uTSF[iTSF,0]) & (tsf<=uTSF[iTSF,1]) )[0]
                 Y_C_mu[it,iSite]=np.nanmean(sobs[uVar[iVar]][iC])
                 Y_F_mu[it,iSite]=np.nanmean(sobs[uVar[iVar]][iF])
-            
+
         # Exclude plots if they have no site-paired control/treatment
         ind=np.where((np.isnan(Y_C_mu+Y_F_mu)==True))
         Y_C_mu[ind]=np.nan
         Y_F_mu[ind]=np.nan
-            
+
         # Calculate differences
         DA=Y_F_mu-Y_C_mu
         DR=DA/Y_C_mu*100
-            
+
         # Summarize
         SampleSize=np.zeros(Y_C_mu.shape[0])
         for i in range(SampleSize.size):
@@ -509,7 +510,7 @@ for iVar in range(len(uVar)):
         rsT[uVar[iVar]][uDose[iDose]]['yF_mu']=Y_F_mu
         rsT[uVar[iVar]][uDose[iDose]]['DA_mu']=DA
         rsT[uVar[iVar]][uDose[iDose]]['DR_mu']=DR
-   
+
 # Get leading species
 LeadSpc=np.zeros(uSite.size)
 for i in range(uSite.size):
@@ -521,7 +522,7 @@ for i in range(uSite.size):
     else:
         LeadSpc[i]=2
 
-#------------------------------------------------------------------------------     
+#------------------------------------------------------------------------------
 # Plot each installation for tree coring site selection
 #------------------------------------------------------------------------------
 
@@ -549,22 +550,22 @@ for i in range(len(LeadSpc)):
     ax[1,0].plot(tsf,rsT['Bsw_t0'][Dose]['yC_mu'][:,i],'-b.')
     ax[1,0].plot(tsf,rsT['Bsw_t0'][Dose]['yF_mu'][:,i]-d,'-g.')
     ax[1,0].set(ylabel='Stemwood biomass (MgC/ha)')
-    
+
     ax[1,1].plot(tsf,rsT['Bsw_G'][Dose]['yC_mu'][:,i],'-b.')
     ax[1,1].plot(tsf,rsT['Bsw_G'][Dose]['yF_mu'][:,i],'-g.')
     ax[1,1].set(ylabel='Stemwood gross growth (MgC/ha/yr)')
     ax[1,2].plot(tsf,rsT['Bsw_Net'][Dose]['yC_mu'][:,i],'-b.')
     ax[1,2].plot(tsf,rsT['Bsw_Net'][Dose]['yF_mu'][:,i],'-g.')
     ax[1,2].set(ylabel='Stemwood net growth (MgC/ha/yr)')
-    
+
     ax[2,0].plot(tsf,0*np.ones(tsf.size),'-k')
     ax[2,0].plot(tsf,rsT['Bsw_G'][Dose]['yF_mu'][:,i]-rsT['Bsw_G'][Dose]['yC_mu'][:,i],'-b.')
     ax[2,0].set(ylabel='Delta gross growth (MgC/ha/yr)')
-    
+
     ax[2,1].plot(tsf,0*np.ones(tsf.size),'-k')
     ax[2,1].plot(tsf,rsT['Bsw_M'][Dose]['yF_mu'][:,i]-rsT['Bsw_M'][Dose]['yC_mu'][:,i],'-b.')
     ax[2,1].set(ylabel='Delta mortality (MgC/ha/yr)')
-    
+
     ax[2,2].plot(tsf,0*np.ones(tsf.size),'-k')
     ax[2,2].plot(tsf,rsT['Bsw_Net'][Dose]['yF_mu'][:,i]-rsT['Bsw_Net'][Dose]['yC_mu'][:,i],'-b.')
     ax[2,2].set(ylabel='Delta net growth (MgC/ha/yr)')
@@ -592,10 +593,10 @@ df=pd.DataFrame(data=np.nan*np.ones((len(LeadSpc),len(cols))),columns=cols)
 for i in range(len(LeadSpc)):
     df.loc[i,'dB']=np.nanmean(rsT['Bsw_t0'][Dose]['yF_mu'][0:2,i]-rsT['Bsw_t0'][Dose]['yC_mu'][0:2,i])
     df.loc[i,'rdB']=np.nanmean( (rsT['Bsw_t0'][Dose]['yF_mu'][0:2,i]-rsT['Bsw_t0'][Dose]['yC_mu'][0:2,i])/rsT['Bsw_t0'][Dose]['yC_mu'][0:2,i]*100 )
-    
+
     df.loc[i,'dG']=np.nanmean(rsT['Bsw_G'][Dose]['yF_mu'][iTSF,i]-rsT['Bsw_G'][Dose]['yC_mu'][iTSF,i])
     df.loc[i,'dNet']=np.nanmean(rsT['Bsw_Net'][Dose]['yF_mu'][iTSF,i]-rsT['Bsw_Net'][Dose]['yC_mu'][iTSF,i])
-    
+
     df.loc[i,'rdG']=np.nanmean( (rsT['Bsw_G'][Dose]['yF_mu'][iTSF,i]-rsT['Bsw_G'][Dose]['yC_mu'][iTSF,i])/rsT['Bsw_G'][Dose]['yC_mu'][iTSF,i]*100 )
     df.loc[i,'rdNet']=np.nanmean( (rsT['Bsw_Net'][Dose]['yF_mu'][iTSF,i]-rsT['Bsw_Net'][Dose]['yC_mu'][iTSF,i])/rsT['Bsw_Net'][Dose]['yC_mu'][iTSF,i]*100 )
 
@@ -723,15 +724,15 @@ for iSpc in range(len(uSpc)):
         rsT[uSpc[iSpc]][uVar[iVar]]={}
         for iDose in range(uDose.size):
             print(iSpc,iVar,iDose)
-            rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]={}            
+            rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]={}
             Y_C_mu=np.nan*np.ones((tsf.size,uSite.size))
             Y_F_mu=np.nan*np.ones((tsf.size,uSite.size))
             for iSite in range(uSite.size):
                 for iTSF in range(uTSF.shape[0]):
                     iC=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==uSpc[iSpc]) & (sobs['TSF_t0_adj']>=uTSF[iTSF,0]) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==0) )[0]
                     iF=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==uSpc[iSpc]) & (sobs['TSF_t0_adj']>=uTSF[iTSF,0]) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==uDose[iDose]) )[0]
-                    if (iC.size==0) | (iF.size==0): 
-                        continue    
+                    if (iC.size==0) | (iF.size==0):
+                        continue
                     it=np.where( (tsf>=uTSF[iTSF,0]) & (tsf<=uTSF[iTSF,1]) )[0]
                     Y_C_mu[it,iSite]=np.mean(sobs[uVar[iVar]][iC])
                     Y_F_mu[it,iSite]=np.mean(sobs[uVar[iVar]][iF])
@@ -742,10 +743,10 @@ for iSpc in range(len(uSpc)):
             # Calculate differences
             DA=Y_F_mu-Y_C_mu
             DR=DA/Y_C_mu*100
-            
+
             # Summarize
             SampleSize=np.zeros(Y_C_mu.shape[0])
-            for i in range(SampleSize.size):                
+            for i in range(SampleSize.size):
                 SampleSize[i]=np.where(np.isnan(Y_C_mu[i,:]+Y_F_mu[i,:])==False)[0].size
             rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]['N_Inst']=SampleSize
             rsT[uSpc[iSpc]][uVar[iVar]][uDose[iDose]]['yC_mu']=np.nanmean(Y_C_mu,axis=1)
@@ -797,20 +798,20 @@ for iSpc in range(len(spc)):
     for iVar in range(len(vr)):
         rsD[spc[iSpc]][vr[iVar]]={}
         for iTSF in range(uTSF.size):
-            rsD[spc[iSpc]][vr[iVar]][iTSF]={}            
-            print(iSpc,iVar,iTSF)            
+            rsD[spc[iSpc]][vr[iVar]][iTSF]={}
+            print(iSpc,iVar,iTSF)
             yCmu0=np.nan*np.ones((uDose.size,uSite.size))
             yFmu0=np.nan*np.ones((uDose.size,uSite.size))
             for iSite in range(uSite.size):
-                
+
                 # Exclude responders
                 #ind=np.where(FullResponse[:,0]==uSite[iSite])[0]
                 #if FullResponse[ind,1]>0.05: continue
-            
+
                 for iDose in range(uDose.shape[0]):
                     iC=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==spc[iSpc]) & (sobs['TSF_t0_adj']>=1) & (sobs['TSF_t1']<=uTSF[iTSF]) & (sobs['N_Dose']==0) )[0]
                     iF=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==spc[iSpc]) & (sobs['TSF_t0_adj']>=1) & (sobs['TSF_t1']<=uTSF[iTSF]) & (sobs['N_Dose']==uDose[iDose]) )[0]
-                    if (iC.size==0) | (iF.size==0): continue                        
+                    if (iC.size==0) | (iF.size==0): continue
                     yCmu0[iDose,iSite]=np.mean(sobs[vr[iVar]][iC])
                     yFmu0[iDose,iSite]=np.mean(sobs[vr[iVar]][iF])
             # Exclude plots if they have no site-paired control/treatment
@@ -822,10 +823,10 @@ for iSpc in range(len(spc)):
             DR=DA/yCmu0*100
             # Summarize
             SampleSize=np.zeros(yCmu0.shape[0])
-            for i in range(SampleSize.size): 
+            for i in range(SampleSize.size):
                 SampleSize[i]=np.where(np.isnan(yCmu0[i,:]+yFmu0[i,:])==False)[0].size
             rsD[spc[iSpc]][vr[iVar]][iTSF]['Cmu']=np.nanmean(yCmu0,axis=1)
-            rsD[spc[iSpc]][vr[iVar]][iTSF]['Fmu']=np.nanmean(yFmu0,axis=1)            
+            rsD[spc[iSpc]][vr[iVar]][iTSF]['Fmu']=np.nanmean(yFmu0,axis=1)
             rsD[spc[iSpc]][vr[iVar]][iTSF]['DA_mu']=np.nanmean(DA,axis=1)
             rsD[spc[iSpc]][vr[iVar]][iTSF]['DA_se']=np.nanstd(DA,axis=1)/np.sqrt(SampleSize)
             rsD[spc[iSpc]][vr[iVar]][iTSF]['DR_mu']=np.nanmean(DR,axis=1)
@@ -951,7 +952,7 @@ ax[2,1].set(position=[0.57,0.06,0.42,ah],xlim=[0.4,4.6],xticks=np.arange(1,5),xt
 
 gu.axletters(ax,plt,0.03,0.92,['Douglas-fir','Western hemlock','Douglas-fir','Western hemlock',
                                'Douglas-fir','Western hemlock'],0.06)
-    
+
 gu.PrintFig(PathFigures + '\\DA_by_CrownClass_TSF_1to9','png',500)
 
 #%% Nitrogen response stratified by N dose
@@ -974,8 +975,8 @@ for iSpc in range(len(spc)):
     for iVar in range(len(vr)):
         rsD[spc[iSpc]][vr[iVar]]={}
         for iTSF in range(uTSF.shape[0]):
-            rsD[spc[iSpc]][vr[iVar]][iTSF]={}            
-            print(iSpc,iVar,iTSF)            
+            rsD[spc[iSpc]][vr[iVar]][iTSF]={}
+            print(iSpc,iVar,iTSF)
             yCmu0=np.nan*np.ones((uDose.size,uSite.size))
             yFmu0=np.nan*np.ones((uDose.size,uSite.size))
             for iSite in range(uSite.size):
@@ -984,7 +985,7 @@ for iSpc in range(len(spc)):
                     #iF=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==spc[iSpc]) & (sobs['TSF_t0']>=0) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==uDose[iDose]) )[0]
                     iC=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==spc[iSpc]) & (sobs['TSF_t0_adj']>=1) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==0) )[0]
                     iF=np.where( (sobs['ID_Site']==uSite[iSite]) & (sobs['Spc1_ID_t0']==spc[iSpc]) & (sobs['TSF_t0_adj']>=1) & (sobs['TSF_t1']<=uTSF[iTSF,1]) & (sobs['N_Dose']==uDose[iDose]) )[0]
-                    if (iC.size==0) | (iF.size==0): continue                        
+                    if (iC.size==0) | (iF.size==0): continue
                     yCmu0[iDose,iSite]=np.mean(sobs[vr[iVar]][iC])
                     yFmu0[iDose,iSite]=np.mean(sobs[vr[iVar]][iF])
             # Exclude plots if they have no site-paired control/treatment
@@ -996,15 +997,15 @@ for iSpc in range(len(spc)):
             DR=DA/yCmu0*100
             # Summarize
             SampleSize=np.zeros(yCmu0.shape[0])
-            for i in range(SampleSize.size): 
+            for i in range(SampleSize.size):
                 SampleSize[i]=np.where(np.isnan(yCmu0[i,:]+yFmu0[i,:])==False)[0].size
             rsD[spc[iSpc]][vr[iVar]][iTSF]['Cmu']=np.nanmean(yCmu0,axis=1)
-            rsD[spc[iSpc]][vr[iVar]][iTSF]['Fmu']=np.nanmean(yFmu0,axis=1)            
+            rsD[spc[iSpc]][vr[iVar]][iTSF]['Fmu']=np.nanmean(yFmu0,axis=1)
             rsD[spc[iSpc]][vr[iVar]][iTSF]['DA_mu']=np.nanmean(DA,axis=1)
             rsD[spc[iSpc]][vr[iVar]][iTSF]['DA_se']=np.nanstd(DA,axis=1)/np.sqrt(SampleSize)
             rsD[spc[iSpc]][vr[iVar]][iTSF]['DR_mu']=np.nanmean(DR,axis=1)
             rsD[spc[iSpc]][vr[iVar]][iTSF]['DR_se']=np.nanstd(DR,axis=1)/np.sqrt(SampleSize)
-        
+
 #------------------------------------------------------------------------------
 # Plot
 #------------------------------------------------------------------------------
@@ -1076,7 +1077,7 @@ for i in range(uSite.size):
 
     df0.loc[cnt,'ID_Site']=uSite[i]
     df0.loc[cnt,'Spc1_ID_t0']=sobs['Spc1_ID_t0'][ind[0]]
-    
+
     iC=np.where( (sobs['ID_Site']==uSite[i]) & (sobs['TSF_t0']<=tsf0_max) & (sobs['N_Dose']==0) )[0]
     iF=np.where( (sobs['ID_Site']==uSite[i]) & (sobs['TSF_t0']<=tsf0_max) & (sobs['N_Dose']==dose) )[0]
     df0.loc[cnt,'LogN_C']=np.mean(np.log(sobs['N_t0'][iC]))
@@ -1098,7 +1099,7 @@ for i in range(uSite.size):
 
     df1.loc[cnt,'ID_Site']=uSite[i]
     df1.loc[cnt,'Spc1_ID_t0']=sobs['Spc1_ID_t0'][ind[0]]
-    
+
     iC=np.where( (sobs['ID_Site']==uSite[i]) & (sobs['TSF_t0']<=tsf0_max) & (sobs['N_Dose']==0) )[0]
     iF=np.where( (sobs['ID_Site']==uSite[i]) & (sobs['TSF_t0']<=tsf0_max) & (sobs['N_Dose']==dose) )[0]
     df1.loc[cnt,'LogN_C']=np.mean(np.log(sobs['N_t0'][iC]))
@@ -1111,7 +1112,7 @@ df1=df1.loc[ind]
 df1=df1.reset_index(drop=True)
 
 # Plot
-plt.close('all'); 
+plt.close('all');
 fig,ax=plt.subplots(1,2,figsize=gu.cm2inch(15.5,7))
 
 # Douglas-fir
@@ -1204,7 +1205,7 @@ gu.axletters(ax,plt,0.03,0.92,['Coastal Douglas-fir','Western hemlock'],0.04)
 gu.PrintFig(PathFigures + '\\SelfThinningCurves','emf',500)
 
 # Plot density-size relationships
-plt.close('all'); 
+plt.close('all');
 fig,ax=plt.subplots(1,2,figsize=gu.cm2inch(15.5,7))
 ikp=np.where( (sobs['Spc1_ID_t0']=='FD') & (sobs['N_Dose']==0) )[0]
 ax[0].plot(sobs['Bsw_t0'][ikp]/sobs['N_t0'][ikp],sobs['N_t0'][ikp],'.')
@@ -1235,23 +1236,23 @@ AveDyingB=0.2
 dSN_rel=np.zeros((rrG.size,Neta.size))
 M=np.zeros((rrG.size,Neta.size))
 for iNeta in range(Neta.size):
-    for k in range(rrG.size):        
+    for k in range(rrG.size):
         SG=rrG[k]*SG0
         SN=SN0*np.ones(m)
         SB=SB0*np.ones(m)
         Ba=np.zeros(Amax)
         for iA in range(1,Amax):
-            SB[iA]=SB[iA-1]+SG; 
+            SB[iA]=SB[iA-1]+SG;
             SN[iA]=SN[iA-1]
-            Ba[iA]=SB[iA]*1000*2/SN[iA]; 
+            Ba[iA]=SB[iA]*1000*2/SN[iA];
             Ba_max=Ba1000*(SN[iA]/1000)**Neta[iNeta] # kgC/tree
             if Ba[iA]>Ba_max:
                 for j in range(1000):
-                    SN[iA]=SN[iA]-1; 
-                    Ba[iA]=SB[iA]*1000*2/SN[iA]; 
-                    Ba_max=Ba1000*(SN[iA]/1000)**Neta[iNeta] 
+                    SN[iA]=SN[iA]-1;
+                    Ba[iA]=SB[iA]*1000*2/SN[iA];
+                    Ba_max=Ba1000*(SN[iA]/1000)**Neta[iNeta]
                     if Ba[iA]<=Ba_max:
-                        break            
+                        break
         #plt.plot(Ba,SN,'-')
         dSN=-np.append(0,SN[1:]-SN[0:-1])
         dSN_rel[k,iNeta]=np.mean(-np.append(0,SN[1:]-SN[0:-1])/SN*100)
@@ -1261,7 +1262,7 @@ cl=[0,0.8,0]
 cl=[0.27,0.49,0.77]
 
 
-plt.close('all'); 
+plt.close('all');
 fig,ax=plt.subplots(1,2,figsize=gu.cm2inch(14.5,6.5))
 ax[0].plot(rrG,M[:,0]-M[0,0],'k--',color=cl,linewidth=0.75)
 ax[0].plot(rrG,M[:,1]-M[0,1],'k-',color=cl,linewidth=1.5)
@@ -1269,7 +1270,7 @@ ax[0].plot(rrG,M[:,2]-M[0,2],'k--',color=cl,linewidth=0.75)
 ax[0].set(position=[0.075,0.13,0.42,0.82],xlim=[1,2],ylim=[0,2],xlabel='Growth enhancement (response ratio)',ylabel='Mortality (Mg C ha-1 yr-1)')
 ax[0].grid(True)
 
-#plt.close('all'); 
+#plt.close('all');
 #fig,ax=plt.subplots(1,figsize=gu.cm2inch(8,6.5))
 ax[1].plot([1,2],[1,2],'k-',linewidth=3,color=[0.8,0.8,0.8])
 ax[1].text(1.64,1.71,'1:1')
@@ -1283,7 +1284,7 @@ gu.axletters(ax,plt,0.04,0.92)
 
 
 
-plt.close('all'); 
+plt.close('all');
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(8,6.5))
 plt.plot(rrG,dSN_rel[:,0]-dSN_rel[0,0],'k--',color=[0.7,0.7,0.7],linewidth=0.75)
 plt.plot(rrG,dSN_rel[:,1]-dSN_rel[0,1],'k-',linewidth=1.5)
@@ -1312,7 +1313,7 @@ for iSpc in range(len(uSpc)):
         for iVar in range(len(uVar)):
             rts[uSpc[iSpc]][uDose[iDose]]['y_c'][uVar[iVar]]=np.nan*np.ones((tv.size,sobs['Year_t0'].size))
             rts[uSpc[iSpc]][uDose[iDose]]['y_f'][uVar[iVar]]=np.nan*np.ones((tv.size,sobs['Year_t0'].size))
-            cnt_c=0; 
+            cnt_c=0;
             cnt_f=0;
             for iYr in range(sobs['Year_t0'].size):
                 #if (sobs['ID_Site'][iYr]==29) | (sobs['ID_Site'][iYr]==71) | (sobs['ID_Site'][iYr]==77):
@@ -1321,12 +1322,12 @@ for iSpc in range(len(uSpc)):
                 #    continue
                 it=np.where( (tv>=sobs['Year_t0'][iYr]) & (tv<=sobs['Year_t1'][iYr]) )[0]
                 if (sobs['Spc1_ID_t0'][iYr]==uSpc[iSpc]) & (sobs['N_Dose'][iYr]==0):
-                    #it=np.where( (tv>=sobs['Year_t0'][iYr]) & (tv<=sobs['Year_t1'][iYr]) )[0]                    
-                    rts[uSpc[iSpc]][uDose[iDose]]['y_c'][uVar[iVar]][it,cnt_c]=sobs[uVar[iVar]][iYr]; 
+                    #it=np.where( (tv>=sobs['Year_t0'][iYr]) & (tv<=sobs['Year_t1'][iYr]) )[0]
+                    rts[uSpc[iSpc]][uDose[iDose]]['y_c'][uVar[iVar]][it,cnt_c]=sobs[uVar[iVar]][iYr];
                     cnt_c=cnt_c+1
                 if (sobs['Spc1_ID_t0'][iYr]==uSpc[iSpc]) & (sobs['N_Dose'][iYr]==uDose[iDose]):
                     #it=np.where( (tv>=sobs['Year_t0'][iYr]) & (tv<=sobs['Year_t1'][iYr]) )[0]
-                    rts[uSpc[iSpc]][uDose[iDose]]['y_f'][uVar[iVar]][it,cnt_f]=sobs[uVar[iVar]][iYr]; 
+                    rts[uSpc[iSpc]][uDose[iDose]]['y_f'][uVar[iVar]][it,cnt_f]=sobs[uVar[iVar]][iYr];
                     cnt_f=cnt_f+1
 
 
@@ -1360,9 +1361,9 @@ plt.plot(tv,np.cumsum(np.nanmean(rts[Spc][450]['y_f'][nam],axis=1)-np.nanmean(rt
 
 
 # Damage agents
-da=['DA_A_t1', 'DA_AB_t1', 'DA_AD_t1', 'DA_AE_t1', 'DA_AX_t1', 'DA_BT_t1', 'DA_CK_t1', 'DA_D_t1', 
+da=['DA_A_t1', 'DA_AB_t1', 'DA_AD_t1', 'DA_AE_t1', 'DA_AX_t1', 'DA_BT_t1', 'DA_CK_t1', 'DA_D_t1',
  'DA_DDF_t1', 'DA_DDP_t1', 'DA_DDS_t1', 'DA_DM_t1', 'DA_DN_t1', 'DA_DR_t1', 'DA_DRA_t1', 'DA_DS_t1',
- 'DA_DT_t1', 'DA_FCK_t1', 'DA_FK_t1', 'DA_MT_t1', 'DA_N_t1', 'DA_NGC_t1', 'DA_NW_t1', 'DA_NWS_t1', 
+ 'DA_DT_t1', 'DA_FCK_t1', 'DA_FK_t1', 'DA_MT_t1', 'DA_N_t1', 'DA_NGC_t1', 'DA_NW_t1', 'DA_NWS_t1',
  'DA_NX_t1', 'DA_NY_t1', 'DA_PC_t1', 'DA_SC_t1', 'DA_SCB_t1', 'DA_SCM_t1', 'DA_SCT_t1']
 
 muC=np.zeros(len(da))
@@ -1384,7 +1385,7 @@ muf=np.zeros(tv.size)
 for i in range(len(da)):
     muc=muc+np.nanmean(ytc[da[i]],axis=1)
     muf=muf+np.nanmean(ytf1[da[i]],axis=1)
- 
+
 plt.close('all')
 plt.plot(tv,muc,'-o')
 plt.plot(tv,muf,'-s')
@@ -1404,7 +1405,7 @@ c_cwd=0
 for i in range(sobs['Year_t0'].size):
     it=np.where( (tv>=sobs['Year_t0'][i]) & (tv<=sobs['Year_t1'][i]) )[0]
     #cwd[it,c_cwd]=sobs['tmean_mjjas_r'][i]
-    
+
     if (sobs['Spc1_ID_t0'][i]=='FD') & (sobs['N_Dose'][i]==0):
         it=np.where( (tv>=sobs['Year_t0'][i]) & (tv<=sobs['Year_t1'][i]) )[0]
         Gc[it,c_c]=sobs['Bsw_M'][i]
@@ -1412,7 +1413,7 @@ for i in range(sobs['Year_t0'].size):
         c_c=c_c+1
     if (sobs['Spc1_ID_t0'][i]=='FD') & (sobs['N_Dose'][i]>0) & (sobs['N_Dose'][i]==225):
         it=np.where( (tv>=sobs['Year_t0'][i]) & (tv<=sobs['Year_t1'][i]) )[0]
-        Gf1[it,c_f1]=sobs['Bsw_M'][i]    
+        Gf1[it,c_f1]=sobs['Bsw_M'][i]
         c_f1=c_f1+1
 
 dGY=gu.ReadExcel(r'C:\Users\rhember\Documents\fd_yield_tipsy.xlsx')
@@ -1423,11 +1424,11 @@ for i in range(Amu.size):
     G_gy[i]=dGY['Gnet'][ind]
 
 
-plt.close('all')    
+plt.close('all')
 plt.plot(tv,np.nanmean(Gc,axis=1),'-ko')
 plt.plot(tv,np.nanmean(Gf1,axis=1),'-go')
 
-plt.close('all')    
+plt.close('all')
 plt.plot(tv,np.nanmean(Gc,axis=1)-gu.movingave(G_gy,5,'centre'),'-ko')
 plt.plot(tv,np.nanmean(Gf1,axis=1)-gu.movingave(G_gy,5,'centre'),'-go')
 
@@ -1464,23 +1465,23 @@ for iSpc in range(len(uSpc)):
         for iVar in range(len(uVar)):
             rts[uSpc[iSpc]][uDose[iDose]]['y_c'][uVar[iVar]]=np.nan*np.ones((A.size,sobs['Year_t0'].size))
             rts[uSpc[iSpc]][uDose[iDose]]['y_f'][uVar[iVar]]=np.nan*np.ones((A.size,sobs['Year_t0'].size))
-            cnt_c=0; 
+            cnt_c=0;
             cnt_f=0;
             for iYr in range(sobs['Year_t0'].size):
                 it=np.where( (A>=sobs['Age_t0'][iYr]) & (A<=sobs['Age_t1'][iYr]) )[0]
                 if (sobs['Spc1_ID_t0'][iYr]==uSpc[iSpc]) & (sobs['N_Dose'][iYr]==0):
-                    #it=np.where( (tv>=sobs['Year_t0'][iYr]) & (tv<=sobs['Year_t1'][iYr]) )[0]                    
-                    rts[uSpc[iSpc]][uDose[iDose]]['y_c'][uVar[iVar]][it,cnt_c]=sobs[uVar[iVar]][iYr]; 
+                    #it=np.where( (tv>=sobs['Year_t0'][iYr]) & (tv<=sobs['Year_t1'][iYr]) )[0]
+                    rts[uSpc[iSpc]][uDose[iDose]]['y_c'][uVar[iVar]][it,cnt_c]=sobs[uVar[iVar]][iYr];
                     cnt_c=cnt_c+1
                 if (sobs['Spc1_ID_t0'][iYr]==uSpc[iSpc]) & (sobs['N_Dose'][iYr]==uDose[iDose]):
                     #it=np.where( (tv>=sobs['Year_t0'][iYr]) & (tv<=sobs['Year_t1'][iYr]) )[0]
-                    rts[uSpc[iSpc]][uDose[iDose]]['y_f'][uVar[iVar]][it,cnt_f]=sobs[uVar[iVar]][iYr]; 
+                    rts[uSpc[iSpc]][uDose[iDose]]['y_f'][uVar[iVar]][it,cnt_f]=sobs[uVar[iVar]][iYr];
                     cnt_f=cnt_f+1
 
 
 Spc='HW'
 nam='Bsw_G'
-Dose=450
+Dose=225
 
 plt.close('all')
 plt.plot(A,np.nanmean(rts[Spc][Dose]['y_c'][nam],axis=1),'-o')
@@ -1489,7 +1490,7 @@ plt.plot(A,np.nanmean(rts[Spc][Dose]['y_f'][nam],axis=1),'-s')
 
 #%% Plot age responses of stand density and stemwood biomass (for SI)
 
-uV=['N_t0','Dam_t0','H_obs_t0','H_gf_t0','Bsw_t0','H_obs_G']
+uV=['N_t0','Dam_t0','H_obs_t0','H_gf_t0','Bsw_t0','H_obs_G','Bsw_Net']
 uS=['FD','HW']
 uA=np.unique(sobs['Age_t0'])
 uDose=[0,225,450,675]
@@ -1518,54 +1519,80 @@ fig,ax=plt.subplots(4,2,figsize=gu.cm2inch(15.5,14))
 ax[0,0].plot([-5,200],[0,0],'k-')
 ax[0,0].fill_between(uA,fA_mu[0][0]['N_t0']-fA_sig[0][0]['N_t0'],
   fA_mu[0][0]['N_t0']+fA_sig[0][0]['N_t0'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[0,0].plot(uA,fA_mu[0][0]['N_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[0,0].plot(uA,fA_mu[0][0]['N_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[0,0].set(position=[0.07,0.78,0.42,0.2],xlim=xlim,xlabel='',ylim=[0,6000],ylabel='Stand density (stems/ha)')
 
 ax[1,0].plot([-5,200],[0,0],'k-')
 ax[1,0].fill_between(uA,fA_mu[0][0]['Dam_t0']-fA_sig[0][0]['Dam_t0'],
   fA_mu[0][0]['Dam_t0']+fA_sig[0][0]['Dam_t0'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[1,0].plot(uA,fA_mu[0][0]['Dam_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[1,0].plot(uA,fA_mu[0][0]['Dam_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[1,0].set(position=[0.07,0.54,0.42,0.2],xlim=xlim,xlabel='',ylim=[0,60],ylabel='Diameter mean (cm)')
 
 ax[2,0].plot([-5,200],[0,0],'k-')
 ax[2,0].fill_between(uA,fA_mu[0][0]['H_obs_t0']-fA_sig[0][0]['H_obs_t0'],
   fA_mu[0][0]['H_obs_t0']+fA_sig[0][0]['H_obs_t0'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[2,0].plot(uA,fA_mu[0][0]['H_obs_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[2,0].plot(uA,fA_mu[0][0]['H_obs_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[2,0].set(position=[0.07,0.3,0.42,0.2],xlim=xlim,xlabel='',ylim=[0,50],ylabel='Height mean (m)')
 
 ax[3,0].plot([-5,200],[0,0],'k-')
 ax[3,0].fill_between(uA,fA_mu[0][0]['Bsw_t0']-fA_sig[0][0]['Bsw_t0'],
   fA_mu[0][0]['Bsw_t0']+fA_sig[0][0]['Bsw_t0'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[3,0].plot(uA,fA_mu[0][0]['Bsw_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[3,0].plot(uA,fA_mu[0][0]['Bsw_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[3,0].set(position=[0.07,0.06,0.42,0.2],xlim=xlim,xlabel='Stand age, years',ylim=[0,400],ylabel='Stemwood biomas (Mg C/ha)')
 
 ax[0,1].plot([-5,200],[0,0],'k-')
 ax[0,1].fill_between(uA,fA_mu[1][0]['N_t0']-fA_sig[1][0]['N_t0'],
   fA_mu[1][0]['N_t0']+fA_sig[1][0]['N_t0'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[0,1].plot(uA,fA_mu[1][0]['N_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[0,1].plot(uA,fA_mu[1][0]['N_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[0,1].set(position=[0.58,0.78,0.42,0.2],xlim=xlim,xlabel='',ylim=[0,6000],ylabel='Stand density (stems/ha)')
 
 ax[1,1].plot([-5,200],[0,0],'k-')
 ax[1,1].fill_between(uA,fA_mu[1][0]['Dam_t0']-fA_sig[1][0]['Dam_t0'],
   fA_mu[1][0]['Dam_t0']+fA_sig[1][0]['Dam_t0'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[1,1].plot(uA,fA_mu[1][0]['Dam_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[1,1].plot(uA,fA_mu[1][0]['Dam_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[1,1].set(position=[0.58,0.54,0.42,0.2],xlim=xlim,xlabel='',ylim=[0,60],ylabel='Diameter mean (cm)')
 
 ax[2,1].plot([-5,200],[0,0],'k-')
 ax[2,1].fill_between(uA,fA_mu[1][0]['H_obs_t0']-fA_sig[1][0]['H_obs_t0'],
   fA_mu[1][0]['H_obs_t0']+fA_sig[1][0]['H_obs_t0'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[2,1].plot(uA,fA_mu[1][0]['H_obs_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[2,1].plot(uA,fA_mu[1][0]['H_obs_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[2,1].set(position=[0.58,0.3,0.42,0.2],xlim=xlim,xlabel='',ylim=[0,50],ylabel='Height mean (m)')
 
 ax[3,1].plot([-5,200],[0,0],'k-')
 ax[3,1].fill_between(uA,fA_mu[1][0]['Bsw_t0']-fA_sig[1][0]['Bsw_t0'],
   fA_mu[1][0]['Bsw_t0']+fA_sig[1][0]['Bsw_t0'],color=[0.27,0.49,0.79],alpha=Alpha,linewidth=0)
-ax[3,1].plot(uA,fA_mu[1][0]['Bsw_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms) 
+ax[3,1].plot(uA,fA_mu[1][0]['Bsw_t0'],'-o',color=[0.27,0.49,0.79],markersize=ms)
 ax[3,1].set(position=[0.58,0.06,0.42,0.2],xlim=xlim,xlabel='Stand age, years',ylim=[0,400],ylabel='Stemwood biomas (Mg C/ha)')
 
-gu.axletters(ax,plt,0.03,0.85,['Douglas-fir','Western hemlock','','','',''],0.05)
+gu.axletters(ax,plt,0.03,0.85,Labels=['Douglas-fir','Western hemlock','','','','','','','',''],LabelSpacer=0.05)
 #plt.savefig(r'G:\My Drive\Figures\GHGBenefit_EP703\AgeResponse_Yield_StandLevel.png',format='png',dpi=900)
 
+
+#%% Age response
+
+ind=np.where( (sobs['Spc1_ID_t0']=='FD') & (sobs['N_Dose']>=0) )[0]
+
+x=sobs['Age_t0'][ind]
+y=sobs['Bsw_Net'][ind]
+bw=10; bin=np.arange(0,200,bw)
+N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+
+plt.close('all'); ms=2; Alpha=0.14;
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15.5,14))
+ax.plot(bin,mu,'-o',lw=1,color=[0.27,0.49,0.79],markersize=5)
+
+#%%
+
+ind=np.where( (sobs['Spc1_ID_t0']=='FD') & (sobs['N_Dose']>=0) )[0]
+
+x=sobs['Year_t0'][ind]
+y=sobs['Bsw_G'][ind]
+bw=5; bin=np.arange(1900,2020,bw)
+N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+
+plt.close('all'); ms=2; Alpha=0.14;
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(15.5,14))
+ax.plot(bin,mu,'-o',lw=1,color=[0.27,0.49,0.79],markersize=5)
 
 #%% Quality assurance check
 # Save site summaries to spreadsheet for inspection.
@@ -1598,7 +1625,7 @@ for i in range(uSite.size):
             elif k==2: df0.loc[cnt,'C3']=sobs[sy][iC[k]]
             elif k==3: df0.loc[cnt,'C4']=sobs[sy][iC[k]]
             elif k==4: df0.loc[cnt,'C5']=sobs[sy][iC[k]]
-            elif k==5: df0.loc[cnt,'C6']=sobs[sy][iC[k]]                
+            elif k==5: df0.loc[cnt,'C6']=sobs[sy][iC[k]]
         df0.loc[cnt,'Cmu']=np.mean(sobs[sy][iC])
         df0.loc[cnt,'Cse']=np.std(sobs[sy][iC])/np.sqrt(iC.size)
         for k in range(iF.size):
@@ -1613,7 +1640,7 @@ for i in range(uSite.size):
         df0.loc[cnt,'DA_mu']=np.round(df0.loc[cnt,'Fmu']-df0.loc[cnt,'Cmu'],2)
         df0.loc[cnt,'DR_mu']=np.round((df0.loc[cnt,'Fmu']-df0.loc[cnt,'Cmu'])/df0.loc[cnt,'Cmu']*100,0)
         cnt=cnt+1
-    
+
 df0.to_excel(PathProject + '\\Processed\\QA_' + sy + '.xlsx',index=False)
 
 
@@ -1636,38 +1663,38 @@ for i in range(uSite.size):
     if ind.size==0: continue
 
     dfR.loc[cnt,'ID_Site']=uSite[i]
-    
+
     iC=np.where( (sobs['ID_Site']==uSite[i]) & (sobs['TSF_t0']<=tsf0_max) & (sobs['N_Dose']==0) )[0]
     iF=np.where( (sobs['ID_Site']==uSite[i]) & (sobs['TSF_t0']<=tsf0_max) & (sobs['N_Dose']==dose) )[0]
     if iF.size==0: continue
     dfR.loc[cnt,'DA_mu']=np.mean(sobs[yv][iF])-np.mean(sobs[yv][iC])
-    
+
     dfR.loc[cnt,'Age_Init']=np.min(sobs['Age_t0'][ind])
     dfR.loc[cnt,'N_Dose']=sobs['N_Dose'][iF[0]]
-            
+
     col_adj=4
-    
+
     for j in range(len(cols)-col_adj):
         dfR.loc[cnt,cols[j+col_adj]]=sobs[cols[j+col_adj]][ind[0]]
     cnt=cnt+1
-  
+
 dose=450
 for i in range(uSite.size):
     ind=np.where((sobs['ID_Site']==uSite[i]))[0]
     if ind.size==0: continue
 
     dfR.loc[cnt,'ID_Site']=uSite[i]
-    
+
     iC=np.where( (sobs['ID_Site']==uSite[i]) & (sobs['TSF_t0']<=tsf0_max) & (sobs['N_Dose']==0) )[0]
     iF=np.where( (sobs['ID_Site']==uSite[i]) & (sobs['TSF_t0']<=tsf0_max) & (sobs['N_Dose']==dose) )[0]
     if iF.size==0: continue
     dfR.loc[cnt,'DA_mu']=np.mean(sobs[yv][iF])-np.mean(sobs[yv][iC])
-    
+
     dfR.loc[cnt,'Age_Init']=np.min(sobs['Age_t0'][ind])
     dfR.loc[cnt,'N_Dose']=sobs['N_Dose'][iF[0]]
-            
+
     col_adj=4
-    
+
     for j in range(len(cols)-col_adj):
         dfR.loc[cnt,cols[j+col_adj]]=sobs[cols[j+col_adj]][ind[0]]
     cnt=cnt+1
@@ -1684,7 +1711,7 @@ dfR.shape
 #------------------------------------------------------------------------------
 # Exclude sites with no response data
 #------------------------------------------------------------------------------
-    
+
 dfR=dfR.dropna()
 dfR=dfR.reset_index(drop=True)
 
@@ -1704,7 +1731,7 @@ plt.bar(np.arange(1,cp.shape[0]+1),cp[:,0])
 #------------------------------------------------------------------------------
 # OLS regression results
 #------------------------------------------------------------------------------
- 
+
 # Dependent variable
 y=dfR['DA_mu'].values.astype(float)
 

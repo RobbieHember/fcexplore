@@ -16,16 +16,32 @@ from fcgadgets.psp import psp_utilities as utl
 
 #%% Import data
 
-d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
-tl=d['tobs'].copy()
+metaGP,tl=ugp.ImportPSPs(type='Tree')
+#d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
+#tl=d['tobs'].copy()
 
 #%% Filter
 
 ikp=np.where( (tl['Mortality']>=0) & \
-             (tl['ID Species']==meta['LUT']['Species']['BL']) & \
-             (tl['DA t0']!=meta['LUT']['Damage Agents']['Insect']) & (tl['DA t1']!=meta['LUT']['Damage Agents']['Insect']) & \
+             (tl['ID Species']==metaGP['LUT']['Species']['AT']) & \
+             (tl['DBH t0']>=0) & (tl['H t0']>0) & (tl['Stand Age VRI t0']>=0) & \
+             (tl['Stand Cag L Larger t0']>=0) )[0]
+
+#%%
+
+plt.hist(tl['H t0'][ikp])
+
+#%%
+
+ikp=np.where( (tl['Mortality']>=0) & \
+             (tl['ID Species']==metaGP['LUT']['Species']['SE']) & \
+             (tl['DA t0']!=metaGP['LUT']['Damage Agents']['Insect']) & (tl['DA t1']!=metaGP['LUT']['Damage Agents']['Insect']) & \
              (tl['DBH t0']>=0) & (tl['H t0']>0) & (tl['Stand Age t0']>=0) & \
              (tl['Stand Cag L Larger t0']>=0) )[0]
+
+#%%
+
+
 
 #%% Set variables
 

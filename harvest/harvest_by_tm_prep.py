@@ -1,4 +1,8 @@
 
+'''
+SUMMARIZE HARVEST VOLUME AND WASTE FROM HBS AND WASTE SYSTEM
+'''
+
 #%% Import modules
 
 from os import listdir
@@ -6,34 +10,28 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from fcgadgets.macgyver import utilities_general as gu
-import scipy.io
-import copy
-import geopandas as gpd
 import fiona
-import scipy.io as spio
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-from scipy import stats, linalg
 from fcgadgets.macgyver import utilities_inventory as invu
-from fcgadgets.cbrunner import cbrun_utilities as cbu
 
-#%% Start year
+#%% Parameters
 
 YrStart=2007
 
-#%% Graphics parameters
+# Grades
+gradeL=['1','2','3','4','5','6','7','8','B','C','D','E','F','G','H','L','M','U','W','X','Y','Z']
 
-fs=7
-params={'font.sans-serif':'Arial','font.size':fs,'axes.edgecolor':'black','axes.labelsize':fs,'axes.labelcolor':'black','axes.titlesize':fs,'axes.linewidth':0.5,'lines.linewidth':0.5,
-        'text.color':'black','xtick.color':'black','xtick.labelsize':fs,'xtick.major.width':0.5,'xtick.major.size':3,'xtick.direction':'in','ytick.color':'black','ytick.labelsize':fs,
-        'ytick.major.width':0.5,'ytick.major.size':3,'ytick.direction':'in','legend.fontsize':fs,'savefig.dpi':300,'savefig.transparent':True}
-plt.rcParams.update(params)
+# Graphics parameters
+gp=gu.SetGraphics('Manuscript')
+
+# Paths
+Paths={}
+Paths['Dist']=r'C:\Users\rhember\Documents\Data\ForestInventory\Disturbances\20230501\Disturbances.gdb'
+Paths['Results']=r'C:\Users\rhember\Documents\Data\ForestInventory\Results\20230430\Results.gdb'
+Paths['HBS']=r'C:\Users\rhember\Documents\Data\Harvest\HBS'
+Paths['Waste']=r'C:\Users\rhember\Documents\Data\Waste Wood\FromWasteSystem'
+# List layers # fiona.listlayers(Paths['Dist'])
 
 #%% Import forest tenure layer
-
-# List layers
-pthin=r'C:\Users\rhember\Documents\Data\ForestInventory\LandUse\20220422\LandUse.gdb'
-# fiona.listlayers(pthin)
 
 N=5000000
 dFT={}
@@ -48,7 +46,7 @@ dFT['DISTURBANCE_END_YEAR']=np.zeros(N)
 #dFT['CLIENT_NUMBER']=np.array(['' for _ in range(N)],dtype=object)
 #dFT['ADMIN_DISTRICT_CODE']=np.array(['' for _ in range(N)],dtype=object)
 cnt=0
-with fiona.open(pthin,layer='FTEN_CUT_BLOCK_OPEN_ADMIN') as source:
+with fiona.open(Paths['Dist'],layer='FTEN_CUT_BLOCK_OPEN_ADMIN') as source:
     for feat in source:
         p=feat['properties']
 
@@ -90,37 +88,43 @@ if flg==1:
     dFT['DISTURBANCE_GROSS_AREA'][ind]
     np.sum(dFT['PLANNED_NET_BLOCK_AREA'][ind])
 
-#%% Database by unique timber marks
+#%% Create database by unique timber marks
 
-# Unique timber marks
-uTM=np.unique(dFT['TIMBER_MARK'])
+# Indices to unique timber marks
+iTM=gu.IndicesFromUniqueArrayValues(dFT['TIMBER_MARK'])
+n=len(iTM)
 
 dTM={}
-dTM['TM']=uTM
-dTM['N Openings']=np.zeros(uTM.size)
-dTM['DISTURBANCE_GROSS_AREA']=np.zeros(uTM.size)
-dTM['PLANNED_NET_BLOCK_AREA']=np.zeros(uTM.size)
-dTM['Year First']=np.zeros(uTM.size)
-dTM['Year Last']=np.zeros(uTM.size)
-dTM['District']=np.array(['' for _ in range(dTM['TM'].size)],dtype=object)
+dTM['TM']=np.array(['' for _ in range(n)],dtype=object)
+dTM['N Openings']=np.zeros(n)
+dTM['DISTURBANCE_GROSS_AREA']=np.zeros(n)
+dTM['PLANNED_NET_BLOCK_AREA']=np.zeros(n)
+dTM['Year First']=np.zeros(n)
+dTM['Year Last']=np.zeros(n)
+dTM['District']=np.array(['' for _ in range(n)],dtype=object)
 #dTM['ADMIN_DISTRICT_CODE']=np.array(['' for _ in range(uTM.size)],dtype=object)
 #dTM['FEATURE_AREA']=np.zeros(uTM.size)
-
-for iTM in range(uTM.size):
-    ind=np.where(dFT['TIMBER_MARK']==uTM[iTM])[0]
+cnt=0
+for k in iTM.keys():
+    #ind=np.where(dFT['TIMBER_MARK']==uTM[iTM])[0]
+    dTM['TM'][cnt]=k
+    dTM['N Openings'][cnt]=np.unique(dFT['OPENING_ID'][iTM[k]]).size
+    dTM['DISTURBANCE_GROSS_AREA'][cnt]=np.round(np.nansum(dFT['DISTURBANCE_GROSS_AREA'][iTM[k]]))
+    dTM['PLANNED_NET_BLOCK_AREA'][cnt]=np.round(np.sum(dFT['PLANNED_NET_BLOCK_AREA'][iTM[k]]))
+    dTM['Year First'][cnt]=np.min(dFT['DISTURBANCE_START_YEAR'][iTM[k]])
+    dTM['Year Last'][cnt]=np.max(dFT['DISTURBANCE_END_YEAR'][iTM[k]])
     #dTM['CLIENT_NUMBER'][iTM]=dFT['CLIENT_NUMBER'][ind]
-    dTM['N Openings'][iTM]=np.unique(dFT['OPENING_ID'][ind]).size
     #dTM['ADMIN_DISTRICT_CODE'][iTM]=dFT['ADMIN_DISTRICT_CODE'][ind[0]]
     #dTM['FEATURE_AREA'][iTM]=np.round(np.sum(dFT['FEATURE_AREA'][ind]))
-    dTM['DISTURBANCE_GROSS_AREA'][iTM]=np.round(np.nansum(dFT['DISTURBANCE_GROSS_AREA'][ind]))
-    dTM['PLANNED_NET_BLOCK_AREA'][iTM]=np.round(np.sum(dFT['PLANNED_NET_BLOCK_AREA'][ind]))
-    dTM['Year First'][iTM]=np.min(dFT['DISTURBANCE_START_YEAR'][ind])
-    dTM['Year Last'][iTM]=np.max(dFT['DISTURBANCE_END_YEAR'][ind])
+    cnt=cnt+1
+
+# Unique timber marks
+uTM=np.unique(dTM['TM'])
 
 # Plot
 flg=0
 if flg==1:
-    tv=np.arange(1990,2022,1)
+    tv=np.arange(1990,2023,1)
     y=np.zeros(tv.size)
     for iT in range(tv.size):
         ind=np.where(dFT['Year First']==tv[iT])[0]
@@ -130,7 +134,7 @@ if flg==1:
 #%% Import HBS
 # The system appears to be down often
 # -> Date of Invoice, "Billing processed" only
-# Can only do 12months at a time
+# Can only do 12 months at a time
 
 # Definition of volume types (from Ross Pavan)
 #   1.	Normal:  the volume delivered to the sawmill (the volume calculation is based on weight to volume ratios)
@@ -138,36 +142,11 @@ if flg==1:
 #   3.	Waste: the volume is derived from the waste assessment of a scale based cutting authority
 #   4.	Beachcomb: volume scaled because of the beachcombing efforts of an individual or salvage logger
 
-
-##------------------------------------------------------------------------------
-## Populate from annual summary files
-#binY=np.arange(YrStart,2021,1)
-#N=2000000
-#cnt=0
-#tm_hbs=np.array(['' for _ in range(N)],dtype=object)
-#for iY in range(binY.size):
-#    print(binY[iY])
-#    df=pd.read_csv(r'C:\Users\rhember\Documents\Data\Harvest\HBS\HBS ' + str(binY[iY]) + '.csv',header=None)
-#    tm=df.iloc[:,0].to_numpy()
-#    tm=tm.astype(str)
-#    tm=np.unique(tm)
-#    tm_hbs[cnt:cnt+tm.size]=tm
-#    cnt=cnt+tm.size
-#
-#tm_hbs=tm_hbs[0:cnt]
-#tm_flg=np.zeros(tm_hbs.size)
-#
-#for i in range(tm_hbs.size):
-#    ind=np.where(dTM['TM']==tm_hbs[i])[0]
-#    if ind.size>0:
-#        tm_flg[i]=1
-##------------------------------------------------------------------------------
-
-# Grades
-gradeL=['1','2','3','4','5','6','7','8','B','C','D','E','F','G','H','L','M','U','W','X','Y','Z']
-
 # Initialize
 dTM['Tenure Type']=np.array(['' for _ in range(dTM['TM'].size)],dtype=object)
+dTM['Tenure Holder']=np.array(['' for _ in range(dTM['TM'].size)],dtype=object)
+dTM['Year Min']=np.zeros(dTM['TM'].size)
+dTM['Year Max']=np.zeros(dTM['TM'].size)
 dTM['V Logs Delivered m3']=np.zeros(dTM['TM'].size)
 dTM['V Logs Delivered Abs m3']=np.zeros(dTM['TM'].size)
 dTM['V Logs Delivered m3/ha']=np.zeros(dTM['TM'].size)
@@ -186,29 +165,28 @@ dTM['V NonLog Delivered Abs m3']=np.zeros(dTM['TM'].size)
 dTM['V NonLog Waste m3/ha']=np.zeros(dTM['TM'].size)
 
 # Populate from annual summary files
-binY=np.arange(YrStart,2021,1)
+binY=np.arange(YrStart,2023,1)
 for iY in range(binY.size):
 
     print(binY[iY])
 
-    df=pd.read_csv(r'C:\Users\rhember\Documents\Data\Harvest\HBS\HBS ' + str(binY[iY]) + '.csv',header=None)
+    df=pd.read_csv(Paths['HBS'] + '\\HBS ' + str(binY[iY]) + '.csv',header=None)
 
     dHB={}
     for i in range(len(df.columns)):
         dHB[i]=df.iloc[:,i].to_numpy()
 
-    # Remove unnecessary data to speed this up
-    #ind=np.where( (dHB[6]=='Logs') )[0]
-    #for k in dHB.keys():
-    #    dHB[k]=dHB[k][ind]
+    # Create indices for each TM
+    dHB[0]=dHB[0].astype('U')
+    tm=gu.IndicesFromUniqueArrayValues(dHB[0])
 
     for iTM in range(uTM.size):
-        #print(iTM)
 
-        ind=np.where( (dHB[0]==uTM[iTM]) )[0]
-
-        if ind.size==0:
+        if uTM[iTM] not in tm.keys():
+            # TM not active this year, continue
             continue
+
+        ind=tm[uTM[iTM]]
 
         Mat=dHB[6][ind]
         Type=dHB[9][ind]
@@ -221,7 +199,19 @@ for iY in range(binY.size):
         # logs delivered
         ind2=np.where( (Mat=='Logs') )[0]
         if ind2.size>0:
-            dTM['Tenure Type'][iTM]=dTM['Tenure Type'][iTM]+dHB[19][ind[ind2][0]]
+
+            if dTM['Year Min'][iTM]==0:
+                dTM['Year Min'][iTM]=binY[iY]
+            elif binY[iY]<=dTM['Year Min'][iTM]:
+                dTM['Year Min'][iTM]=binY[iY]
+
+            if dTM['Year Max'][iTM]==0:
+                dTM['Year Max'][iTM]=binY[iY]
+            elif binY[iY]>=dTM['Year Max'][iTM]:
+                dTM['Year Max'][iTM]=binY[iY]
+
+            dTM['Tenure Type'][iTM]=dHB[19][ind[ind2][0]]
+            dTM['Tenure Holder'][iTM]=dHB[26][ind[ind2][0]]
             dTM['V Logs Delivered m3'][iTM]=np.round(dTM['V Logs Delivered m3'][iTM]+np.sum(V[ind2]),decimals=0)
             dTM['V Logs Delivered Abs m3'][iTM]=np.round(dTM['V Logs Delivered Abs m3'][iTM]+np.sum(V_abs[ind2]),decimals=0)
             dTM['V Logs Delivered m3/ha'][iTM]=np.round(dTM['V Logs Delivered m3/ha'][iTM]+np.sum(V[ind2]),decimals=0)
@@ -262,11 +252,11 @@ for Grade in gradeL:
     dTM['V Logs Delivered Grade ' + Grade + ' Abs m3/ha']=dTM['V Logs Delivered Grade ' + Grade + ' Abs m3/ha']/dTM['DISTURBANCE_GROSS_AREA']
 
 #%% Import Waste summaries
+# Just inlcude status = "Billing Issued"
 # Don't download more than 3 years at a time
 # Don't download the regions - tempting but too big
 
-pthinW=r'C:\Users\rhember\Documents\Data\Waste Wood\FromWasteSystem'
-fL=listdir(pthinW)
+fL=listdir(Paths['Waste'])
 
 N=2000000
 dW={}
@@ -287,7 +277,8 @@ cnt=0
 
 for iF in range(len(fL)):
 
-    df=pd.read_excel(pthinW + '\\' + fL[iF],skiprows=list(range(0,14)))
+    df=pd.read_excel(Paths['Waste'] + '\\' + fL[iF],skiprows=list(range(0,14)))
+    #a=gu.ReadExcel(Paths['Waste'] + '\\' + fL[iF],skiprows=list(range(0,14)))
 
     dW['TM'][cnt:cnt+len(df)]=df['TM'].to_numpy()
     dW['Net Area Ha'][cnt:cnt+len(df)]=df['Net Area Ha'].to_numpy()
@@ -322,9 +313,20 @@ dTM['Waste Accumulation m3/ha']=np.zeros(dTM['TM'].size)
 dTM['Waste Standing m3/ha']=np.zeros(dTM['TM'].size)
 dTM['Waste Bill $']=np.zeros(dTM['TM'].size)
 
+# for iTM in range(uTM.size):
+#     ind=np.where( (dW['TM']==uTM[iTM]) )[0]
+
+# Create indices for each TM
+dW['TM']=dW['TM'].astype('U')
+tm=gu.IndicesFromUniqueArrayValues(dW['TM'])
+
 for iTM in range(uTM.size):
 
-    ind=np.where( (dW['TM']==uTM[iTM]) )[0]
+    if uTM[iTM] not in tm.keys():
+        # TM not active this year, continue
+        continue
+
+    ind=tm[uTM[iTM]]
 
     dTM['Waste N Entries'][iTM]=ind.size
     if ind.size>0:
@@ -357,6 +359,49 @@ dTM['Waste Standing %']=np.round(dTM['Waste Standing m3/ha']/tot*100)
 #ind=np.where( (dTM['V Delivered m3/ha (A from WS)']<-10000) | (dTM['V Delivered m3/ha (A from WS)']>10000) )[0]
 #dTM['V Delivered m3/ha (A from WS)'][ind]=0
 
+#%% Add timber cruise data
+
+dTC=gu.ipickle(r'C:\Users\rhember\Documents\Data\ECAS\Received 2023-04-04\rh_COMP_DATA_CleanCombined.pkl')
+
+vL=['NET_AREA','Year','Age','V Gross (m3/ha)','V Net (m3/ha)','Pct Dead Net','PCT Net','PCT_DIST','PCT_DECAY','PCT_WASTE','PCT_WASTE_BILL','PCT_BREAK','PCT_DWB','PCT_NET_2NDGROWTH','PCT_INSECT_VOL','PCT_NO_INSECT_M3','PCT_GREEN_INSECT_M3', \
+    'PCT_RED_INSECT_M3','PCT_GREY_INSECT_M3','PCT_OTHER_INSECT_M3','X_DEFOLIATOR_LIVE_CAMB_PCT','Y_DEFOLIATOR_DEAD_CAMB_PCT']
+for v in vL:
+    dTM['Cruise_' + v]=np.zeros(dTM['TM'].size)
+
+uTM=np.unique(dTC['PRIMARY_MARK'])
+for iTM in range(uTM.size):
+    ind1=np.where(dTC['PRIMARY_MARK']==uTM[iTM])[0]
+    ind2=np.where(dTM['TM']==uTM[iTM])[0]
+    for v in vL:
+        dTM['Cruise_' + v][ind2]=dTC[v][ind1]
+
+#%% Save
+
+gu.opickle(r'C:\Users\rhember\Documents\Data\Harvest\HBS\HavestSummary_ByTM.pkl',dTM)
+
+#gu.opickle(r'C:\Users\rhember\Documents\Data\Waste Wood\WasteSummary_UniqueOpenings.pkl',dOp)
+
+#%%
+
+list(dTM.keys())
+
+ind=np.where( (dTM['Cruise_V Net (m3/ha)']>0) )[0]
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(8,8))
+ax.plot(dTM['Cruise_V Net (m3/ha)'][ind],dTM['V Logs Delivered Abs m3/ha'][ind],'b.',mew=0.25,ms=3,mfc='b',mec='w')
+ax.plot([0,2000],[0,2000],'k-',lw=2,color=[0.8,0.8,0.8])
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=2)
+ax.set(xlabel='Net vol from cruise (m3/ha)',ylabel='Net volume delivered (m3/ha)',xlim=[0,1500],ylim=[0,1500])
+plt.tight_layout()
+#gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Harvest\Timber Cruise Info\TimeSeries','png',900)
+
+#%% Export to spreadsheet for review
+
+#del dTM['V Logs Delivered m3 By Grade']
+df=pd.DataFrame(dTM)
+df.to_excel(r'C:\Users\rhember\Documents\Data\Waste Wood\WasteSummary.xlsx',index=False)
+
 #%% Keep a complete list of unique openings for crosswalk to VRI
 
 # No need to keep earlier timber marks
@@ -383,14 +428,13 @@ for k in dOp.keys():
 #%% Import RESULTS OP layer to get stand age
 
 # List layers
-pthin=r'C:\Users\rhember\Documents\Data\ForestInventory\Results\20210930\Results.gdb'
-# fiona.listlayers(pthin)
+# fiona.listlayers(Paths['Results'])
 
 dOp['PREV_AGE_CLASS_CODE']=np.zeros(dOp['OPENING_ID'].size)
 dOp['DISTRICT_CODE']=np.array(['' for _ in range(dOp['OPENING_ID'].size)],dtype=object)
 
 cnt=0
-with fiona.open(pthin,layer='RSLT_OPENING_SVW') as source:
+with fiona.open(Paths['Results'],layer='RSLT_OPENING_SVW') as source:
     for feat in source:
         p=feat['properties']
         #break
@@ -419,18 +463,6 @@ for iTM in range(uTM.size):
         continue
     dTM['Age RSLTS WA'][iTM]=np.round(np.sum(dOp['Age RSLTS'][ind]*dOp['PLANNED_NET_BLOCK_AREA'][ind])/np.sum(dOp['PLANNED_NET_BLOCK_AREA'][ind]),decimals=0)
     dTM['District'][iTM]=dOp['DISTRICT_CODE'][ind[0]]
-
-#%% Save
-
-gu.opickle(r'C:\Users\rhember\Documents\Data\Waste Wood\WasteSummary.pkl',dTM)
-
-gu.opickle(r'C:\Users\rhember\Documents\Data\Waste Wood\WasteSummary_UniqueOpenings.pkl',dOp)
-
-#%% Export to spreadsheet for review
-
-#del dTM['V Logs Delivered m3 By Grade']
-df=pd.DataFrame(dTM)
-df.to_excel(r'C:\Users\rhember\Documents\Data\Waste Wood\WasteSummary.xlsx',index=False)
 
 #%% Add insect and fire damage
 
@@ -491,11 +523,5 @@ for iTM in range(uTM.size):
     # Sum the average per-hectare mortality due to beetles
     dTM['D_Beetle'][iTM]=np.sum(flg_B*Mort)/indP.size
 
-
-#%%
-
-# plt.hist(dTM['D_Beetle'])
-
-gu.opickle(r'C:\Users\rhember\Documents\Data\Waste Wood\WasteSummary.pkl',dTM)
 
 

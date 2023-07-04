@@ -189,6 +189,7 @@ for iJur in range(len(jurL)):
          'Ctot L SW t0','Ctot D SW t0',
          'Ctot L SE t0','Ctot D SE t0',
          'Ctot L Decid t0','Ctot D Decid t0',
+         'Ctot G Surv HGT10',
          'Cag L t0','Cag L t1','Cag D t0','Cag D t1','Cag L Fallen t0','Cag L Fallen t1','Cag D Fallen t0','Cag D Fallen t1','Cag G Surv','Cag G Recr','Cag Mort','Cag Harv',
          'Cbk L t0','Cbk L t1','Cbk G Surv','Cbk G Recr','Cbk Mort',
          'Cbr L t0','Cbr L t1','Cbr G Surv','Cbr G Recr','Cbr Mort',
@@ -206,7 +207,8 @@ for iJur in range(len(jurL)):
     # Initialize fields in the Level 2 tree-level structure TOBS
     tlvL=['ID Source','ID Plot','ID Visit','ID Tree','ID Species','ID PFT','Lat','Lon','X','Y','Elev','Aspect','Slope',
          'Ecozone BC L1','Ecozone BC L2','Ecozone CA L1','Plot Type','Stand Management',
-         'Year t0','Year t1','Delta t','Stand Spc1 ID','Stand Spc1 %BA','Stand Spc1 %N','Stand Age VRI t0','Stand Age VRI t1',
+         'Year t0','Year t1','Delta t','Stand Spc1 ID','Stand Spc1 %BA','Stand Spc1 %N',
+         'Stand Age VRI t0','Stand Age VRI t1','Stand Age Med t0',
          'Stand N L t0','Stand N L t1','Stand Cag L t0','Stand Cag L t1','Stand Cag L Larger t0','Stand BA L Larger t0',
          'Stand DA Insect t0','Stand DA Instect t1','Stand DA Disease t0','Stand DA Disease t1',
          'Stand DA Fire t0','Stand DA Fire t1','Stand DA Animal t0','Stand DA Animal t1','Stand DA Weather t0','Stand DA WEather t1',
@@ -415,7 +417,7 @@ for iJur in range(len(jurL)):
             if flg_PSP==1:
 
                 # Index to trees that were alive in t1 (including those that were
-                # Recrited)
+                # Recruted)
                 ind_live1=np.where(vital_status1_all==meta['LUT']['Vital Status']['Live'])[0]
                 ind_live_fallen1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Live']) & (stature1_all==meta['LUT']['Stature']['Fallen']) )[0]
                 ind_live_conifer1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Live']) & (stature1_all==meta['LUT']['PFT']['Coniferous']) )[0]
@@ -433,6 +435,8 @@ for iJur in range(len(jurL)):
 
                 # Index to survivors
                 ind_surv=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Live']) )[0]
+
+                ind_surv_HGT10=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Live']) & (h0_all[ia1]>10) )[0]
 
                 # Index to trees that were counted as dead and then counted as alive
                 ind_reborn=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Dead']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Live']) )[0]
@@ -456,10 +460,10 @@ for iJur in range(len(jurL)):
                 #ind_mort_ibm=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) & (flag_ibm0_all[ia1]==0) &
                 #                             (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) & (flag_ibm1_all[ia1]==1) )[0]
 
-                # Index to Recrited trees that died during interval
+                # Index to Recruted trees that died during interval
                 ind_mort_r=np.where(vital_status1_all[ib2]==meta['LUT']['Vital Status']['Dead'])[0]
 
-                # Index to Recrited trees that remain alive
+                # Index to Recruted trees that remain alive
                 ind_rec=np.where(vital_status1_all[ib2]==meta['LUT']['Vital Status']['Live'])[0]
 
                 # Index to harvested trees
@@ -765,6 +769,12 @@ for iJur in range(len(jurL)):
                 dCtot_surv=(Ctot_t1_surv-Ctot_t0_surv)/dt
                 sobs['Ctot G Surv'][cnt]=np.round(np.nansum(dCtot_surv)/sobs['Num Plots'][cnt],decimals=2)
 
+                # Total carbon growth (Mg C ha-1 yr-1)
+                Ctot_t0_surv=aef0_all[ia1[ind_surv_HGT10]]*0.001*Ctot0_all[ia1[ind_surv_HGT10]]
+                Ctot_t1_surv=aef1_all[ib1[ind_surv_HGT10]]*0.001*Ctot1_all[ib1[ind_surv_HGT10]]
+                dCtot_surv=(Ctot_t1_surv-Ctot_t0_surv)/dt
+                sobs['Ctot G Surv HGT10'][cnt]=np.round(np.nansum(dCtot_surv)/sobs['Num Plots'][cnt],decimals=2)
+
                 # Litterfall of survivors:
 
                 # Litterfall Litterfall from foliage biomass (Mg C ha-1 yr-1)
@@ -819,6 +829,7 @@ for iJur in range(len(jurL)):
 
                 tobs['Stand Age VRI t0'][iFill]=sobs['Age VRI t0'][cnt]
                 tobs['Stand Age VRI t1'][iFill]=sobs['Age VRI t1'][cnt]
+                tobs['Stand Age Med t0'][iFill]=sobs['Age Med t0'][cnt]
                 tobs['Stand Spc1 ID'][iFill]=sobs['Spc1 L ID t0'][cnt]
                 tobs['Stand Spc1 %BA'][iFill]=sobs['Spc1 L %BA t0'][cnt]
                 tobs['Stand Spc1 %N'][iFill]=sobs['Spc1 L %N t0'][cnt]
@@ -981,6 +992,7 @@ for iJur in range(len(jurL)):
 
                 tobs['Stand Age VRI t0'][iFillD]=sobs['Age VRI t0'][cnt]
                 tobs['Stand Age VRI t1'][iFillD]=sobs['Age VRI t1'][cnt]
+                tobs['Stand Age Med t0'][iFillD]=sobs['Age Med t0'][cnt]
                 tobs['Stand Spc1 ID'][iFillD]=sobs['Spc1 L ID t0'][cnt]
                 tobs['Stand Spc1 %BA'][iFillD]=sobs['Spc1 L %BA t0'][cnt]
                 tobs['Stand Spc1 %N'][iFillD]=sobs['Spc1 L %N t0'][cnt]
@@ -1080,6 +1092,7 @@ for iJur in range(len(jurL)):
 
                 tobs['Stand Age VRI t0'][iFillD]=sobs['Age VRI t0'][cnt]
                 tobs['Stand Age VRI t1'][iFillD]=sobs['Age VRI t1'][cnt]
+                tobs['Stand Age Med t0'][iFillD]=sobs['Age Med t0'][cnt]
                 tobs['Stand Spc1 ID'][iFillD]=sobs['Spc1 L ID t0'][cnt]
                 tobs['Stand Spc1 %BA'][iFillD]=sobs['Spc1 L %BA t0'][cnt]
                 tobs['Stand Spc1 %N'][iFillD]=sobs['Spc1 L %N t0'][cnt]
@@ -1231,6 +1244,7 @@ for iJur in range(len(jurL)):
 
                 tobs['Stand Age VRI t0'][iFill]=sobs['Age VRI t0'][cnt]
                 tobs['Stand Age VRI t1'][iFill]=sobs['Age VRI t1'][cnt]
+                tobs['Stand Age Med t0'][iFill]=sobs['Age Med t0'][cnt]
                 tobs['Stand Spc1 ID'][iFill]=sobs['Spc1 L ID t0'][cnt]
                 tobs['Stand Spc1 %BA'][iFill]=sobs['Spc1 L %BA t0'][cnt]
                 tobs['Stand Spc1 %N'][iFill]=sobs['Spc1 L %N t0'][cnt]
@@ -1417,12 +1431,18 @@ if flg==1:
         ind0=np.where((sobs['ID Plot']==gdf_j['ID Plot'][i]))[0]
         if (gdf_j.loc[i,'DENUDATION_1_DISTURBANCE_CODE']=='L') | (gdf_j.loc[i,'DENUDATION_1_DISTURBANCE_CODE']=='S'):
             if gdf_j.loc[i,'DENUDATION_1_COMPLETION_DATE'] is not None:
-                Year_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_1_COMPLETION_DATE'][0:4])
-                Mon_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_1_COMPLETION_DATE'][5:7])
+                try:
+                    Year_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_1_COMPLETION_DATE'][0:4])
+                    Mon_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_1_COMPLETION_DATE'][5:7])
+                except:
+                    pass
         if (gdf_j.loc[i,'DENUDATION_2_DISTURBANCE_CODE']=='L') | (gdf_j.loc[i,'DENUDATION_2_DISTURBANCE_CODE']=='S'):
             if gdf_j.loc[i,'DENUDATION_2_COMPLETION_DATE'] is not None:
-                Year_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_2_COMPLETION_DATE'][0:4])
-                Mon_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_2_COMPLETION_DATE'][5:7])
+                try:
+                    Year_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_2_COMPLETION_DATE'][0:4])
+                    Mon_Harv[ind0]=int(gdf_j.loc[i,'DENUDATION_2_COMPLETION_DATE'][5:7])
+                except:
+                    pass
     DY_Harv=Year_Harv+Mon_Harv/12
     sobs['Year Harvest']=DY_Harv
 

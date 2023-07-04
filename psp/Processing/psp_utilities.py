@@ -14,6 +14,7 @@ def ImportPSPs(**kwargs):
     meta['Paths']['Figs']=r'C:\Users\rhember\OneDrive - Government of BC\Figures\Ground Plots'
     meta=ImportParameters(meta)
     d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
+    #d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC_WithLID.pkl')
     if kwargs['type']=='Stand':
         data=d['sobs']
     elif kwargs['type']=='Tree':

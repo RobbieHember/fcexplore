@@ -20,24 +20,21 @@ from fcgadgets.macgyver import utilities_gis as gis
 from fcexplore.psp.Processing import psp_utilities as ugp
 from fcgadgets.bc1ha import bc1ha_utilities as u1ha
 
-#%% Set figure properties
+#%% Prep
 
-#gp=gu.SetGraphics('Presentation Dark')
+# Set figure properties
+
 gp=gu.SetGraphics('Manuscript')
 
-#%% Import Canadian Upland forest database
-
+# Import Canadian Upland forest database
 soc=gu.ipickle(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.pkl')
 
-#%% Import ground plot data
-
+# Import ground plot data
 metaGP,gplt=ugp.ImportPSPs(type='Stand')
 
-#%% Import Raster grids
-
+# Import Raster grids
 lut_1ha=u1ha.Import_BC1ha_LUTs()
 zBGCZ=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
-
 zLCC1=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\LandCoverClass1.tif')
 
 #%% Plot mean by BGC zone
@@ -85,7 +82,7 @@ for i in range(u.size):
 ds['mu C All']=ds['mu SOC tot']+ds['mu Ctot D t0']+ds['mu Cbk L t0']+ds['mu Cbr L t0']+ds['mu Cf L t0']+ds['mu Cr L t0']+ds['mu Csw L t0']
 
 for i in range(lab.size):
-    ind2=np.where( (zBGCZ['Data']==lut_1ha['bgcz'][lab[i]]) & (zLCC1['Data']==lut_1ha['lcc1']['Forest Land']) )
+    ind2=np.where( (zBGCZ['Data']==lut_1ha['bgcz'][lab[i]]) & (zLCC1['Data']==lut_1ha['lcc1']['Forest']) )
     ds['Sum TEC'][i]=ds['mu C All'][i]*ind2[0].size/1e9
     ds['Sum Area'][i]=ind2[0].size/1e6
 
@@ -169,7 +166,7 @@ ax.bar(np.arange(u.size),ds['Sum Cf L t0'],bottom=y+ds['Sum Cr L t0']+ds['Sum Cb
 ax.bar(np.arange(u.size),ds['Sum Csw L t0'],bottom=y+ds['Sum Cr L t0']+ds['Sum Cbk L t0']+ds['Sum Cbr L t0']+ds['Sum Cf L t0'],facecolor=cl[7,:],label='Stemwood')
 ax.text(2,3.75,'Total = ' + str(np.round(tot,decimals=1)) + ' (billion tonnes of C)',fontsize=10)
 ax.set(position=[0.08,0.1,0.9,0.88],xticks=np.arange(u.size),
-       xticklabels=lab,ylabel='Total stock (billion tonnes C)',xlim=[-0.5,u.size-0.5],ylim=[0,4.5])
+       xticklabels=lab,ylabel='Total stock (billion tonnes C)',xlim=[-0.5,u.size-0.5],ylim=[0,5])
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 gu.PrintFig(metaGP['Paths']['Figs'] + '\\TEC Sum','png',900)

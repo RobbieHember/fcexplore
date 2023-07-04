@@ -13,6 +13,7 @@ import scipy.io as spio
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from scipy import stats, linalg
+from fcgadgets.macgyver import utilities_gis as gis
 from fcgadgets.macgyver import utilities_inventory as invu
 from fcgadgets.macgyver import utilities_query_gdb as qgdb
 from fcgadgets.cbrunner import cbrun_utilities as cbu
@@ -40,7 +41,7 @@ for iT in range(d['tv'].size):
 
 #%% Annual harvest area from consolidated cutblock DB
 
-fin=r'C:\Users\rhember\Documents\Data\ForestInventory\Disturbances\20210401\Disturbances.gdb'
+fin=r'C:\Users\rhember\Documents\Data\ForestInventory\Disturbances\20230501\Disturbances.gdb'
 
 d['Area Harvested CC']=np.zeros(d['tv'].size)
 #d['Area Harvested CC From Geom']=np.zeros(d['tv'].size)
@@ -166,6 +167,16 @@ for iT in range(d['tv'].size):
 # Populate
 d['Area Harvested RESULTS']=metaOP['ts']['OPENING_GROSS_AREA']-metaOP['ts']['Area Reserves']
 d['Area Planted RESULTS']=metaAT['ts']['Area Regen Total']
+
+#%% Harvest area from NTEM
+
+#d=gu.ipickle(r'C:\Users\rhember\Documents\Data\Harvest\Harvest Area\HarvestAreaBC.pkl')
+zH=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\NTEM_harv85to20_bc1ha.tif')
+d['Area Harvest NTEM']=np.nan*np.ones(d['tv'].size)
+for iT in range(d['tv'].size):
+    ind=np.where(zH['Data']==d['tv'][iT])
+    if ind[0].size!=0:
+        d['Area Harvest NTEM'][iT]=ind[0].size
 
 #%% Save time series of harvest area
 
