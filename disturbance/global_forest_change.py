@@ -86,14 +86,3 @@ ax.legend(loc='upper right',facecolor=[1,1,1],frameon=False);
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Global Forest Change\Comparison','png',900)
 
-#%% Save filterred GFC data for mapping
-
-zGFC2['Data']=zGFC2['Data'].astype('int16')
-gis.SaveGeoTiff(zGFC2,r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\GlobalForestChange_LossYear_2021_KnownEventsRemoved.tif')
-
-ind0=np.where(zGFC['Data']>0)
-ind1=np.where(zGFC2['Data']>0)
-
-print(ind0[0].size)
-print(ind1[0].size)
-print(ind1[0].size/ind0[0].size)

@@ -7,13 +7,24 @@ from fcgadgets.macgyver import utilities_general as gu
 
 #%% Import data
 
-def ImportPSPs(**kwargs):
-    meta={}
-    meta['Paths']={}
-    meta['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
-    meta['Paths']['Figs']=r'C:\Users\rhember\OneDrive - Government of BC\Figures\Ground Plots'
+def ImportPlotData(meta,**kwargs):
+
+    # Define paths
+    if 'Paths' not in meta:
+        meta['Paths']={}
+    meta['Paths']['GP']={}
+    meta['Paths']['GP']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
+    meta['Paths']['GP']['Figures']=r'C:\Users\rhember\OneDrive - Government of BC\Figures\Ground Plots'
+
+    if 'LUT' not in meta:
+        meta['LUT']={}
+
+    # Import parameters
+    if 'GP' not in meta:
+        meta['GP']={}
     meta=ImportParameters(meta)
-    d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
+
+    d=gu.ipickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
     #d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC_WithLID.pkl')
     if kwargs['type']=='Stand':
         data=d['sobs']
@@ -31,88 +42,100 @@ def ImportPSPs(**kwargs):
 
 def ImportParameters(meta):
 
+    if 'GP' not in meta.keys():
+        meta['GP']={}
+    if 'LUT' not in meta.keys():
+        meta['LUT']={}
+
+    # Parameters
+    meta['GP']['Param']={}
+
+    meta['GP']['Param']['Carbon Content']=0.5
+
     # Allometry
-    meta['Allo B']=gu.ReadExcel(meta['Paths']['DB'] + '\\Parameters\\Parameters Allometry Biomass.xlsx')
-    meta['Allo V Tot Nigh16']=gu.ReadExcel(meta['Paths']['DB'] + '\\Parameters\\Parameters Allometry Volume Total BC Nigh 2016.xlsx')
+    meta['GP']['Param']['Allo B']=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters Allometry Biomass.xlsx')
+    meta['GP']['Param']['Allo V Tot Nigh16']=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters Allometry Volume Total BC Nigh 2016.xlsx')
 
-    # Species kyes
-    meta['Species']={}
-    meta['Species']['BC']=gu.ReadExcel(meta['Paths']['DB'] + '\\Parameters\\Parameters Species Codes.xlsx','Key_BC')
+    # Look up tables
+    meta['LUT']['GP']={}
 
-    meta['LUT Tables']={}
+    # Raw tables
+    meta['LUT']['GP']['Raw Tables']={}
     tabL=['Source','Jurisdiction','Plot Type','Damage Agents','DA BC','Vital Status','Management','Insect Codes','Pathogen Codes','PFT',
           'Crown Class','Ecozone BC L1','Ecozone BC L2','Ecozone CA L1']
     for tab in tabL:
-        meta['LUT Tables'][tab]=gu.ReadExcel(meta['Paths']['DB'] + '\\Parameters\\Parameters LUTs.xlsx',tab)
+        meta['LUT']['GP']['Raw Tables'][tab]=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters LUTs.xlsx',tab)
 
-    meta['LUT']={}
+    # Species kyes
+    meta['LUT']['GP']['Species Given']={}
+    meta['LUT']['GP']['Species Given']['BC']=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters Species Codes.xlsx','Key_BC')
 
-    meta['LUT']['Source']={}
-    for i in range(meta['LUT Tables']['Source']['ID'].size):
-        meta['LUT']['Source'][ meta['LUT Tables']['Source']['Value'][i] ]=meta['LUT Tables']['Source']['ID'][i]
+    meta['LUT']['GP']['Species']={}
+    for i in range(meta['GP']['Param']['Allo B']['ID'].size):
+            meta['LUT']['GP']['Species'][ meta['GP']['Param']['Allo B']['Code'][i] ]=meta['GP']['Param']['Allo B']['ID'][i]
 
-    meta['LUT']['Species']={}
-    for i in range(meta['Allo B']['ID'].size):
-            meta['LUT']['Species'][ meta['Allo B']['Code'][i] ]=meta['Allo B']['ID'][i]
+    meta['LUT']['GP']['Source']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Source']['ID'].size):
+        meta['LUT']['GP']['Source'][ meta['LUT']['GP']['Raw Tables']['Source']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Source']['ID'][i]
 
-    meta['LUT']['Plot Type BC']={}
-    for i in range(meta['LUT Tables']['Plot Type']['Given'].size):
-        if meta['LUT Tables']['Plot Type']['Jurisdiction'][i]=='BC':
-            meta['LUT']['Plot Type BC'][ meta['LUT Tables']['Plot Type']['Given'][i] ]=meta['LUT Tables']['Plot Type']['Value'][i]
+    meta['LUT']['GP']['Plot Type BC']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Plot Type']['Given'].size):
+        if meta['LUT']['GP']['Raw Tables']['Plot Type']['Jurisdiction'][i]=='BC':
+            meta['LUT']['GP']['Plot Type BC'][ meta['LUT']['GP']['Raw Tables']['Plot Type']['Given'][i] ]=meta['LUT']['GP']['Raw Tables']['Plot Type']['Value'][i]
 
-    meta['LUT']['Vital Status']={}
-    for i in range(meta['LUT Tables']['Vital Status']['ID'].size):
-        meta['LUT']['Vital Status'][ meta['LUT Tables']['Vital Status']['Value'][i] ]=meta['LUT Tables']['Vital Status']['ID'][i]
+    meta['LUT']['GP']['Vital Status']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Vital Status']['ID'].size):
+        meta['LUT']['GP']['Vital Status'][ meta['LUT']['GP']['Raw Tables']['Vital Status']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Vital Status']['ID'][i]
 
-    meta['LUT']['Damage Agents']={}
-    for i in range(meta['LUT Tables']['Damage Agents']['ID'].size):
-        meta['LUT']['Damage Agents'][ meta['LUT Tables']['Damage Agents']['Value'][i] ]=meta['LUT Tables']['Damage Agents']['ID'][i]
+    meta['LUT']['GP']['Damage Agents']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'].size):
+        meta['LUT']['GP']['Damage Agents'][ meta['LUT']['GP']['Raw Tables']['Damage Agents']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'][i]
 
-    meta['LUT']['Ecozone BC L1']={}
-    for i in range(meta['LUT Tables']['Ecozone BC L1']['ID'].size):
-        meta['LUT']['Ecozone BC L1'][ meta['LUT Tables']['Ecozone BC L1']['Value'][i] ]=meta['LUT Tables']['Ecozone BC L1']['ID'][i]
+    meta['LUT']['GP']['Ecozone BC L1']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Ecozone BC L1']['ID'].size):
+        meta['LUT']['GP']['Ecozone BC L1'][ meta['LUT']['GP']['Raw Tables']['Ecozone BC L1']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Ecozone BC L1']['ID'][i]
 
-    meta['LUT']['Ecozone BC L2']={}
-    for i in range(meta['LUT Tables']['Ecozone BC L2']['ID'].size):
-        meta['LUT']['Ecozone BC L2'][ meta['LUT Tables']['Ecozone BC L2']['Value'][i] ]=meta['LUT Tables']['Ecozone BC L2']['ID'][i]
+    meta['LUT']['GP']['Ecozone BC L2']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Ecozone BC L2']['ID'].size):
+        meta['LUT']['GP']['Ecozone BC L2'][ meta['LUT']['GP']['Raw Tables']['Ecozone BC L2']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Ecozone BC L2']['ID'][i]
 
-    meta['LUT']['Ecozone CA L1']={}
-    for i in range(meta['LUT Tables']['Ecozone CA L1']['ID'].size):
-        meta['LUT']['Ecozone CA L1'][ meta['LUT Tables']['Ecozone CA L1']['Value'][i] ]=meta['LUT Tables']['Ecozone CA L1']['ID'][i]
+    meta['LUT']['GP']['Ecozone CA L1']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Ecozone CA L1']['ID'].size):
+        meta['LUT']['GP']['Ecozone CA L1'][ meta['LUT']['GP']['Raw Tables']['Ecozone CA L1']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Ecozone CA L1']['ID'][i]
 
-    meta['LUT']['Insect Codes']={}
-    for i in range(meta['LUT Tables']['Insect Codes']['ID'].size):
-        meta['LUT']['Insect Codes'][ meta['LUT Tables']['Insect Codes']['Value'][i] ]=meta['LUT Tables']['Insect Codes']['ID'][i]
+    meta['LUT']['GP']['Insect Codes']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Insect Codes']['ID'].size):
+        meta['LUT']['GP']['Insect Codes'][ meta['LUT']['GP']['Raw Tables']['Insect Codes']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Insect Codes']['ID'][i]
 
-    meta['LUT']['Pathogen Codes']={}
-    for i in range(meta['LUT Tables']['Pathogen Codes']['ID'].size):
-        meta['LUT']['Pathogen Codes'][ meta['LUT Tables']['Pathogen Codes']['Value'][i] ]=meta['LUT Tables']['Pathogen Codes']['ID'][i]
+    meta['LUT']['GP']['Pathogen Codes']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Pathogen Codes']['ID'].size):
+        meta['LUT']['GP']['Pathogen Codes'][ meta['LUT']['GP']['Raw Tables']['Pathogen Codes']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Pathogen Codes']['ID'][i]
 
-    meta['LUT']['Management']={}
-    for i in range(meta['LUT Tables']['Management']['ID'].size):
-        meta['LUT']['Management'][ meta['LUT Tables']['Management']['Value'][i] ]=meta['LUT Tables']['Management']['ID'][i]
+    meta['LUT']['GP']['Management']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Management']['ID'].size):
+        meta['LUT']['GP']['Management'][ meta['LUT']['GP']['Raw Tables']['Management']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Management']['ID'][i]
 
-    meta['LUT']['Crown Class']={}
-    for i in range(meta['LUT Tables']['Crown Class']['ID'].size):
-        meta['LUT']['Crown Class'][ meta['LUT Tables']['Crown Class']['Value'][i] ]=meta['LUT Tables']['Crown Class']['ID'][i]
+    meta['LUT']['GP']['Crown Class']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['Crown Class']['ID'].size):
+        meta['LUT']['GP']['Crown Class'][ meta['LUT']['GP']['Raw Tables']['Crown Class']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Crown Class']['ID'][i]
 
-    meta['LUT']['PFT']={}
-    for i in range(meta['LUT Tables']['PFT']['ID'].size):
-        meta['LUT']['PFT'][ meta['LUT Tables']['PFT']['Value'][i] ]=meta['LUT Tables']['PFT']['ID'][i]
+    meta['LUT']['GP']['PFT']={}
+    for i in range(meta['LUT']['GP']['Raw Tables']['PFT']['ID'].size):
+        meta['LUT']['GP']['PFT'][ meta['LUT']['GP']['Raw Tables']['PFT']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['PFT']['ID'][i]
 
-    meta['LUT']['Stature']={}
-    meta['LUT']['Stature']['Standing']=1
-    meta['LUT']['Stature']['Fallen']=2
+    meta['LUT']['GP']['Stature']={}
+    meta['LUT']['GP']['Stature']['Standing']=1
+    meta['LUT']['GP']['Stature']['Fallen']=2
 
-    meta['LUT']['ClimateClassCondensed']={}
+    meta['LUT']['GP']['ClimateClassCondensed']={}
     labL=['Hyper humid','Humid','Subhumid','Semi arid','Arid','Outside Boundary']
     for iLab in range(len(labL)):
-        meta['LUT']['ClimateClassCondensed'][labL[iLab]]=iLab+1
+        meta['LUT']['GP']['ClimateClassCondensed'][labL[iLab]]=iLab+1
 
     # List of jurisdictions
-    meta['List of Jurisidictions']={}
-    meta['List of Jurisidictions']['CA']=['BC','AB','SK','MB','ON','QC','NL','NS','NB']
-    meta['List of Jurisidictions']['US']=['AK','AL','AR','AZ','CA','CO','CT','DE','FL','GA','IA','ID','IL',
+    meta['LUT']['GP']['List of Jurisidictions']={}
+    meta['LUT']['GP']['List of Jurisidictions']['CA']=['BC','AB','SK','MB','ON','QC','NL','NS','NB']
+    meta['LUT']['GP']['List of Jurisidictions']['US']=['AK','AL','AR','AZ','CA','CO','CT','DE','FL','GA','IA','ID','IL',
         'IN','KS','KY','LA','MA','MD','ME','MI','MN','MO','MS','MT','NC','ND',
         'NE','NH','NJ','NM','NV','NY','OK','OH','OR','PA','RI','SC','SD',
         'TN','TX','UT','VA','VT','WA','WI','WV','WY']
@@ -121,9 +144,9 @@ def ImportParameters(meta):
 
 #%% Get code from LUT ID
 
-def lut_id2cd(meta,nam_lut,id):
-    for k in meta['LUT'][nam_lut].keys():
-        if meta['LUT'][nam_lut][k]==id:
+def lut_id2cd(lut,id):
+    for k in lut.keys():
+        if lut[k]==id:
             cd=k
     return cd
 

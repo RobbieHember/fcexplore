@@ -13,35 +13,49 @@ VRI remeasurements:
 
 #%% Import modules
 
-import os
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-import gc as garc
-import time
-import matplotlib.pyplot as plt
-from fcgadgets.macgyver import utilities_general as gu
-from fcgadgets.macgyver import utilities_gis as gis
-from fcexplore.psp.Processing import psp_utilities as utl
+import fcgadgets.macgyver.utilities_general as gu
+import fcgadgets.macgyver.utilities_gis as gis
+import fcexplore.psp.Processing.psp_utilities as utl
 from scipy.optimize import curve_fit
 
 #%% Import project info
 
 meta={}
-meta['Paths']={}
-meta['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
-meta['Paths']['Raw Data']=meta['Paths']['DB'] + '\\Given\BC\Received 2023-03-02'
+meta['Paths']={'GP':{}}
+meta['Paths']['GP']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
+meta['Paths']['GP']['Raw Data']=meta['Paths']['GP']['DB'] + '\\Given\BC\Received 2023-03-02'
 
 meta=utl.ImportParameters(meta)
 
 #%% Import data
 
-hd0_unfuzzed=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\Given\BC\Received 2022-10-13\faib_header.xlsx')
-hd0=gu.ReadExcel(meta['Paths']['Raw Data'] + '\\faib_header.xlsx')
-pl0=gu.ReadExcel(meta['Paths']['Raw Data'] + '\\faib_sample_byvisit.xlsx')
-tl0=gu.ReadExcel(meta['Paths']['Raw Data'] + '\\faib_tree_detail.xlsx')
+hd0_unfuzzed=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Given\\BC\\Received 2022-10-13\\faib_header.xlsx')
+hd0=gu.ReadExcel(meta['Paths']['GP']['Raw Data'] + '\\faib_header.xlsx')
+pl0=gu.ReadExcel(meta['Paths']['GP']['Raw Data'] + '\\faib_sample_byvisit.xlsx')
+tl0=gu.ReadExcel(meta['Paths']['GP']['Raw Data'] + '\\faib_tree_detail.xlsx')
 
 srs=gis.ImportSRSs()
+
+#%% Add felled indicator to tree level data
+# Received this LUT - replace when felled indicator is added to new DB
+# Most harvested trees not in the tree file -> asking Dan to look into fixing
+fel=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Given\\BC\\Received 2023-07-12\\Compilation_Out_harv_to_Robbie_2023Jul12.xlsx','Query1')
+
+tl0['Felled']=np.zeros(tl0['PLOT'].size,dtype='int8')
+N_Missing=0
+for i in range(fel['PLOT'].size):
+    ind=np.where( (tl0['CLSTR_ID']==fel['CLSTR_ID'][i]) & (tl0['PLOT']==fel['PLOT'][i]) & (tl0['TREE_NO']==fel['TREE_NO'][i]) )[0]
+    if ind.size==0:
+        #print('Missing')
+        print(fel['CLSTR_ID'][i])
+        #break
+        N_Missing=N_Missing+1
+    tl0['Felled'][ind]=1
+
+ind=np.where(tl0['Felled']==1)[0]
+np.sum(tl0['Felled'])
 
 #%% Processing of input variables
 
@@ -62,17 +76,17 @@ pl={}
 pl['ID Plot']=pl0['site_identifier']
 pl['ID Visit']=pl0['visit_number']
 pl['Area (ha)']=np.zeros(N,dtype=float)
-pl['Year']=np.zeros(N,dtype=int)
-pl['Month']=np.zeros(N,dtype=int)
+pl['Year']=np.zeros(N,dtype='int16')
+pl['Month']=np.zeros(N,dtype='int16')
 pl['Lat']=np.zeros(N,dtype=float)
 pl['Lon']=np.zeros(N,dtype=float)
 pl['X']=np.zeros(N,dtype=float)
 pl['Y']=np.zeros(N,dtype=float)
-pl['Ecozone BC L1']=np.zeros(N,dtype=int)
-pl['Ecozone BC L2']=np.zeros(N,dtype=int)
-pl['Site Series']=np.zeros(N,dtype=int)
-pl['Plot Type']=np.zeros(N,dtype=int)
-pl['Num Plots']=np.zeros(N,dtype=int)
+pl['Ecozone BC L1']=np.zeros(N,dtype='int16')
+pl['Ecozone BC L2']=np.zeros(N,dtype='int16')
+pl['Site Series']=np.zeros(N,dtype='int16')
+pl['Plot Type']=np.zeros(N,dtype='int16')
+pl['Num Plots']=np.zeros(N,dtype='int16')
 pl['Age VRI']=np.zeros(N,dtype=float)
 pl['SI']=np.zeros(N,dtype=float)
 pl['Elev']=np.zeros(N,dtype=float)
@@ -95,8 +109,8 @@ for i in range(N):
     pl['X'][i]=hd0['BC_ALBERS_X'][ind0]
     pl['Y'][i]=hd0['BC_ALBERS_Y'][ind0]
 
-    pl['Ecozone BC L1'][i]=meta['LUT']['Ecozone BC L1'][ hd0['BEC_ZONE'][ind0[0]] ]
-    pl['Ecozone BC L2'][i]=meta['LUT']['Ecozone BC L2'][ hd0['BEC_ZONE'][ind0[0]] + hd0['BEC_SBZ'][ind0[0]]  ]
+    pl['Ecozone BC L1'][i]=meta['LUT']['GP']['Ecozone BC L1'][ hd0['BEC_ZONE'][ind0[0]] ]
+    pl['Ecozone BC L2'][i]=meta['LUT']['GP']['Ecozone BC L2'][ hd0['BEC_ZONE'][ind0[0]] + hd0['BEC_SBZ'][ind0[0]]  ]
 
 # Get coordinates from unfuzzed version where possible
 for i in range(N):
@@ -113,8 +127,8 @@ pl['Lon'],pl['Lat']=gis.ReprojectCoordinates(srs['String']['BC1ha'],srs['String'
 u=np.unique(pl0['sampletype'])
 for i in range(u.size):
     ind0=np.where( pl0['sampletype']==u[i] )[0]
-    ind1=np.where( (meta['LUT Tables']['Plot Type']['Jurisdiction']=='BC') & (meta['LUT Tables']['Plot Type']['Given']==u[i]) )[0]
-    pl['Plot Type'][ind0]=meta['LUT Tables']['Plot Type']['Value'][ind1[0]]
+    ind1=np.where( (meta['LUT']['GP']['Raw Tables']['Plot Type']['Jurisdiction']=='BC') & (meta['LUT']['GP']['Raw Tables']['Plot Type']['Given']==u[i]) )[0]
+    pl['Plot Type'][ind0]=meta['LUT']['GP']['Raw Tables']['Plot Type']['Value'][ind1[0]]
 
 for i in range(pl0['MEAS_DT'].size):
     pl['Num Plots'][i]=pl0['NO_PLOTS'][i]
@@ -126,11 +140,12 @@ N_tl=tl0['site_identifier'].size
 
 tl={}
 tl['ID Plot']=tl0['site_identifier'].astype('int32')
-tl['ID Visit']=tl0['visit_number'].astype(int)
-tl['ID Tree']=tl0['TREE_NO'].astype(int)
-tl['ID Tree Unique To Jurisdiction']=np.zeros(N_tl,dtype=int)
-tl['ID Species']=np.zeros(N_tl,dtype=int)
-tl['Vital Status']=np.zeros(N_tl,dtype=int)
+tl['ID Visit']=tl0['visit_number'].astype('int16')
+tl['ID Tree']=tl0['TREE_NO'].astype('int16')
+tl['ID Tree Unique To Jurisdiction']=np.zeros(N_tl,dtype='int16')
+tl['ID Species']=np.zeros(N_tl,dtype='int16')
+tl['Vital Status']=np.zeros(N_tl,dtype='int16')
+tl['Felled']=tl0['Felled']
 tl['Age']=tl0['AGE_TOT']
 tl['DBH']=tl0['DBH']
 tl['H']=tl0['HEIGHT']
@@ -138,8 +153,8 @@ tl['H Obs']=tl0['HEIGHT']
 tl['Vws']=tl0['VOL_WSV']
 tl['Vntwb']=tl0['VOL_NTWB']
 tl['AEF']=tl0['PHF_TREE']
-tl['Resid']=np.zeros(N_tl,dtype=int)
-tl['Flag WithinPlot']=np.ones(N_tl,dtype=int)
+tl['Resid']=np.zeros(N_tl,dtype='int16')
+tl['Flag WithinPlot']=np.ones(N_tl,dtype='int16')
 
 ind=np.where(tl0['MEAS_INTENSE']=='OUT_OF_PLOT')[0]
 tl['Flag WithinPlot'][ind]=0
@@ -150,9 +165,9 @@ for i in range(u.shape[0]):
     tl['ID Tree Unique To Jurisdiction'][i]=i
 
 ind=np.where(tl0['LV_D']=='L')[0]
-tl['Vital Status'][ind]=meta['LUT']['Vital Status']['Live']
+tl['Vital Status'][ind]=meta['LUT']['GP']['Vital Status']['Live']
 ind=np.where(tl0['LV_D']=='D')[0]
-tl['Vital Status'][ind]=meta['LUT']['Vital Status']['Dead']
+tl['Vital Status'][ind]=meta['LUT']['GP']['Vital Status']['Dead']
 
 #np.unique(tl0['RESIDUAL'])
 ind=np.where(tl0['RESIDUAL']=='Y')[0]
@@ -161,51 +176,51 @@ tl['Resid'][ind]=1
 u=np.unique(tl0['SPECIES'])
 for i in range(u.size):
     ind0=np.where(tl0['SPECIES']==u[i])[0]
-    ind1=np.where(meta['Species']['BC']['Code Given']==u[i])[0][0]
-    ind2=np.where(meta['Allo B']['Code']==meta['Species']['BC']['Code Final'][ind1] )[0]
-    tl['ID Species'][ind0]=meta['Allo B']['ID'][ind2]
+    ind1=np.where(meta['LUT']['GP']['Species Given']['BC']['Code Given']==u[i])[0][0]
+    ind2=np.where(meta['GP']['Param']['Allo B']['Code']==meta['LUT']['GP']['Species Given']['BC']['Code Final'][ind1] )[0]
+    tl['ID Species'][ind0]=meta['GP']['Param']['Allo B']['ID'][ind2]
 
-tl['Crown Class']=np.zeros(N_tl,dtype=int)
-for k in meta['LUT']['Crown Class'].keys():
+tl['Crown Class']=np.zeros(N_tl,dtype='int16')
+for k in meta['LUT']['GP']['Crown Class'].keys():
     ind=np.where(tl0['CR_CL']==k)[0]
-    tl['Crown Class'][ind]=meta['LUT']['Crown Class'][k]
+    tl['Crown Class'][ind]=meta['LUT']['GP']['Crown Class'][k]
 
-tl['ID DA1']=np.zeros(N_tl,dtype=int)
-tl['ID DA2']=np.zeros(N_tl,dtype=int)
-tl['ID DA3']=np.zeros(N_tl,dtype=int)
+tl['ID DA1']=np.zeros(N_tl,dtype='int16')
+tl['ID DA2']=np.zeros(N_tl,dtype='int16')
+tl['ID DA3']=np.zeros(N_tl,dtype='int16')
 u=np.unique(tl0['DAM_AGNA'])
 for i in range(u.size):
     if u[i]=='nan':
         continue
     ind0=np.where(tl0['DAM_AGNA']==u[i])[0]
-    ind1=np.where(meta['LUT Tables']['DA BC']['Given']==u[i])[0][0]
-    tl['ID DA1'][ind0]=meta['LUT Tables']['DA BC']['Final'][ind1]
+    ind1=np.where(meta['LUT']['GP']['Raw Tables']['DA BC']['Given']==u[i])[0][0]
+    tl['ID DA1'][ind0]=meta['LUT']['GP']['Raw Tables']['DA BC']['Final'][ind1]
 u=np.unique(tl0['DAM_AGNB'])
 for i in range(u.size):
     if u[i]=='nan':
         continue
     ind0=np.where(tl0['DAM_AGNB']==u[i])[0]
-    ind1=np.where(meta['LUT Tables']['DA BC']['Given']==u[i])[0]
+    ind1=np.where(meta['LUT']['GP']['Raw Tables']['DA BC']['Given']==u[i])[0]
     if ind1.size==0:
         continue
-    tl['ID DA2'][ind0]=meta['LUT Tables']['DA BC']['Final'][ind1[0]]
+    tl['ID DA2'][ind0]=meta['LUT']['GP']['Raw Tables']['DA BC']['Final'][ind1[0]]
 u=np.unique(tl0['DAM_AGNC'])
 for i in range(u.size):
     if u[i]=='nan':
         continue
     ind0=np.where(tl0['DAM_AGNC']==u[i])[0]
-    ind1=np.where(meta['LUT Tables']['DA BC']['Given']==u[i])[0]
+    ind1=np.where(meta['LUT']['GP']['Raw Tables']['DA BC']['Given']==u[i])[0]
     if ind1.size==0:
         continue
-    tl['ID DA3'][ind0]=meta['LUT Tables']['DA BC']['Final'][ind1[0]]
+    tl['ID DA3'][ind0]=meta['LUT']['GP']['Raw Tables']['DA BC']['Final'][ind1[0]]
 
 # Mountain pine beetle
-tl['Flag IBM']=np.zeros(N_tl,dtype=int)
+tl['Flag IBM']=np.zeros(N_tl,dtype='int16')
 ind0=np.where( (tl0['DAM_AGNA']=='IBM') | (tl0['DAM_AGNB']=='IBM') | (tl0['DAM_AGNC']=='IBM') )[0]
 tl['Flag IBM'][ind0]=1
 
 # Western spruce budworm
-tl['Flag IDW']=np.zeros(N_tl,dtype=int)
+tl['Flag IDW']=np.zeros(N_tl,dtype='int16')
 ind0=np.where( (tl0['DAM_AGNA']=='IDW') | (tl0['DAM_AGNB']=='IDW') | (tl0['DAM_AGNC']=='IDW') )[0]
 tl['Flag IDW'][ind0]=1
 
@@ -213,11 +228,11 @@ tl['Age']=np.nan*np.ones(N_tl,dtype=float)
 ind=np.where(tl0['AGE_TOT']>=0)[0]
 tl['Age'][ind]=tl0['AGE_TOT'][ind]
 
-tl['Stature']=np.zeros(N_tl,dtype=int)
+tl['Stature']=np.zeros(N_tl,dtype='int16')
 ind=np.where(tl0['s_f']=='S')[0]
-tl['Stature'][ind]=meta['LUT']['Stature']['Standing']
+tl['Stature'][ind]=meta['LUT']['GP']['Stature']['Standing']
 ind=np.where(tl0['s_f']=='F')[0]
-tl['Stature'][ind]=meta['LUT']['Stature']['Fallen']
+tl['Stature'][ind]=meta['LUT']['GP']['Stature']['Fallen']
 
 #%% Gap-fill heights
 
@@ -233,7 +248,7 @@ indG=np.where( (tl['DBH']>0) & (tl['H']>0) )[0]
 indG.size/tl['DBH'].size
 
 # Global model
-ikp=np.where( (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['Damage Agents']['None']) & (tl['Stature']==meta['LUT']['Stature']['Standing']) )[0]
+ikp=np.where( (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['GP']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['GP']['Damage Agents']['None']) & (tl['Stature']==meta['LUT']['GP']['Stature']['Standing']) )[0]
 x=tl['DBH'][ikp]
 y=tl['H'][ikp]
 popt_glob0=[26,0.1,0.66,2]
@@ -244,7 +259,7 @@ rs_glob,txt=gu.GetRegStats(x,y)
 uS=np.unique(tl['ID Species'])
 rs=[None]*uS.size
 for iS in range(uS.size):
-    ikp=np.where( (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['Damage Agents']['None']) & (tl['Stature']==meta['LUT']['Stature']['Standing']) )[0]
+    ikp=np.where( (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['GP']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['GP']['Damage Agents']['None']) & (tl['Stature']==meta['LUT']['GP']['Stature']['Standing']) )[0]
     x=tl['DBH'][ikp]
     y=tl['H'][ikp]
     #plt.plot(x,y,'b.')
@@ -263,10 +278,9 @@ for iS in range(uS.size):
     except:
         tl['H'][indGF]=np.maximum(0.0,fun(tl['DBH'][indGF],popt_glob[0],popt_glob[1],popt_glob[2],popt_glob[3]))
 
-
 #%% Save
 
 d={'pl':pl,'tl':tl}
-gu.opickle(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\Processed\L1\L1_BC.pkl',d)
+gu.opickle(meta['Paths']['GP']['DB'] + '\\Processed\\L1\\L1_BC.pkl',d)
 
 #%%

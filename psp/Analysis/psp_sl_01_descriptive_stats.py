@@ -15,63 +15,59 @@ from scipy import stats
 import statsmodels.formula.api as smf
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
+import fcgadgets.bc1ha.bc1ha_utilities as u1ha
 import fcexplore.psp.Processing.psp_utilities as ugp
-from fcgadgets.bc1ha import bc1ha_utilities as u1ha
-
-#%% Set figure properties
 
 gp=gu.SetGraphics('Manuscript')
 
 #%% Import data
 
-metaGP,gplt=ugp.ImportPSPs(type='Stand')
+meta=u1ha.Init()
+meta=u1ha.ImportLUTs(meta)
+#lut_1ha=u1ha.Import_BC1ha_LUTs()
+#metaGP,gpt=ugp.ImportPSPs(type='Stand')
+meta,gpt=ugp.ImportPlotData(meta,type='Stand')
 
-# Import Raster grids
-lut_1ha=u1ha.Import_BC1ha_LUTs()
-zBGCZ=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
-zLCC1=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\LandCoverClass1.tif')
-zAge=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\age1.tif')
+#%% Import Raster grids
 
-#%%
-
-ind=np.where( (gplt['Plot Type']==metaGP['LUT']['Plot Type BC']['LID']) )[0]
-
-plt.plot(gplt['X'],gplt['Y'],'.')
+zLCC1=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\LandCoverUse\\LandCoverClass1.tif')
+zBGCZ=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\BEC_BIOGEOCLIMATIC_POLY\\ZONE.tif')
+zAge=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\VRI 2023\\PROJ_AGE_1.tif')
 
 #%% Export summary by Plot Type
 
 d={}
-ind=np.where( (gplt['Plot Type']==metaGP['LUT']['Plot Type BC']['VRI']) )[0]
-for k in gplt.keys():
-    d[k]=np.round(np.nanmean(gplt[k][ind]),decimals=2)
-ind=np.where( (gplt['Plot Type']==metaGP['LUT']['Plot Type BC']['YSM']) )[0]
-for k in gplt.keys():
-    d[k]=np.append(d[k],np.round(np.nanmean(gplt[k][ind]),decimals=2))
-ind=np.where( (gplt['PTF CN']==1) )[0]
-for k in gplt.keys():
-    d[k]=np.append(d[k],np.round(np.nanmean(gplt[k][ind]),decimals=2))
+ind=np.where( (gpt['Plot Type']==meta['LUT']['GP']['Plot Type BC']['VRI']) )[0]
+for k in gpt.keys():
+    d[k]=np.round(np.nanmean(gpt[k][ind]),decimals=2)
+ind=np.where( (gpt['Plot Type']==meta['LUT']['GP']['Plot Type BC']['YSM']) )[0]
+for k in gpt.keys():
+    d[k]=np.append(d[k],np.round(np.nanmean(gpt[k][ind]),decimals=2))
+ind=np.where( (gpt['PTF CN']==1) )[0]
+for k in gpt.keys():
+    d[k]=np.append(d[k],np.round(np.nanmean(gpt[k][ind]),decimals=2))
 df=pd.DataFrame(d,index=[0,1,2])
-df.to_excel(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\Processed\SummarySL_ByPlotType.xlsx')
+df.to_excel(meta['Paths']['GP']['DB'] + '\\Processed\\SummarySL_ByPlotType.xlsx')
 
 #%% QA - compare standing biomass with standing volume whole stem
 
 plt.close('all')
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,7.2))
-ind=np.where( (gplt['PTF CN']==1) & (gplt['Vws L t0']>0) & (gplt['Ctot L t0']>0) )[0]
-ax.plot(gplt['Vws L t0'][ind],gplt['Ctot L t0'][ind],'b.',ms=4,mec='w',mfc=[0.27,0.44,0.79],markeredgewidth=0.25)
-rs,txt=gu.GetRegStats(gplt['Vws L t0'][ind],gplt['Ctot L t0'][ind])
+ind=np.where( (gpt['PTF CN']==1) & (gpt['Vws L t0']>0) & (gpt['Ctot L t0']>0) )[0]
+ax.plot(gpt['Vws L t0'][ind],gpt['Ctot L t0'][ind],'b.',ms=4,mec='w',mfc=[0.27,0.44,0.79],markeredgewidth=0.25)
+rs,txt=gu.GetRegStats(gpt['Vws L t0'][ind],gpt['Ctot L t0'][ind])
 ax.plot(rs['xhat'],rs['yhat'],'-k')
 ax.set(ylabel='Tree biomass (MgC ha$^{-1}$)',xlabel='Whole-stem volume (m$^{3}$ ha$^{-1}$)',xlim=[0,1800],ylim=[0,600])
 ax.text(900,100,txt,fontsize=8)
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\QA_BiomassVsVolume','png',900)
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_QA_BiomassVsVolume','png',900)
 
 #%% Plot Stocks by BGC zone
 
 vL=['Age VRI t0','Cbk L t0','Cbr L t0','Cf L t0','Csw L t0','Cr L t0','Cag L t0','Ctot L t0','Ctot G Surv','Ctot G Recr','Ctot Mort+Lost','Ctot Net']
 
-u=np.unique(gplt['Ecozone BC L1'])
+u=np.unique(gpt['Ecozone BC L1'])
 u=u[u>0]
 lab=np.array(['' for _ in range(u.size)],dtype=object)
 
@@ -84,22 +80,22 @@ for v in vL:
     d[v]['se']=np.zeros(u.size)
 data=[None]*u.size
 for i in range(u.size):
-    lab[i]=ugp.lut_id2cd(metaGP,'Ecozone BC L1',u[i])
+    lab[i]=ugp.lut_id2cd(meta['LUT']['GP']['Ecozone BC L1'],u[i])
     for v in vL:
-        ind=np.where( (gplt['Ecozone BC L1']==u[i]) &
-                     (gplt['PTF CNV']==1) &
-                     (gplt['Cbk L t0']>=0) & (gplt['Cbk L t0']<2000) &
-                     (gplt['Cbr L t0']>=0) & (gplt['Cbr L t0']<2000) &
-                     (gplt['Cf L t0']>=0) & (gplt['Cf L t0']<2000) &
-                     (gplt['Cr L t0']>=0) & (gplt['Cr L t0']<2000) &
-                     (gplt['Csw L t0']>=0) & (gplt['Csw L t0']<2000) &
-                     (gplt['Ctot L t0']>=0) & (gplt['Ctot L t0']<10000))[0]
+        ind=np.where( (gpt['Ecozone BC L1']==u[i]) &
+                     (gpt['PTF CNV']==1) &
+                     (gpt['Cbk L t0']>=0) & (gpt['Cbk L t0']<2000) &
+                     (gpt['Cbr L t0']>=0) & (gpt['Cbr L t0']<2000) &
+                     (gpt['Cf L t0']>=0) & (gpt['Cf L t0']<2000) &
+                     (gpt['Cr L t0']>=0) & (gpt['Cr L t0']<2000) &
+                     (gpt['Csw L t0']>=0) & (gpt['Csw L t0']<2000) &
+                     (gpt['Ctot L t0']>=0) & (gpt['Ctot L t0']<10000))[0]
         d[v]['N'][i]=ind.size
-        d[v]['mu'][i]=np.nanmean(gplt[v][ind])
-        d[v]['sd'][i]=np.nanstd(gplt[v][ind])
-        #d[v]['se'][i]=np.nanstd(gplt[v][ind])/np.sqrt(ind[0].size)
-    ind=np.where( (gplt['Ecozone BC L1']==u[i]) & (gplt['PTF CNV']==1) & (gplt['Ctot L t0']>=0) & (gplt['Ctot L t0']<10000))[0]
-    data[i]=gplt['Ctot L t0'][ind]
+        d[v]['mu'][i]=np.nanmean(gpt[v][ind])
+        d[v]['sd'][i]=np.nanstd(gpt[v][ind])
+        #d[v]['se'][i]=np.nanstd(gpt[v][ind])/np.sqrt(ind[0].size)
+    ind=np.where( (gpt['Ecozone BC L1']==u[i]) & (gpt['PTF CNV']==1) & (gpt['Ctot L t0']>=0) & (gpt['Ctot L t0']<10000))[0]
+    data[i]=gpt['Ctot L t0'][ind]
 
 # Put in order
 d['Ctot L t0']['mu']=d['Cbk L t0']['mu']+d['Cbr L t0']['mu']+d['Cf L t0']['mu']+d['Cr L t0']['mu']+d['Csw L t0']['mu']
@@ -114,7 +110,7 @@ for i in range(len(data)):
     data2[i]=data[np.flip(ord)[i]]
 
 # Plot
-cl=np.array([[1,0.8,0.5],[0.5,0.25,0.80],[0.45,0.75,1],[0.6,1,0],[0.5,0.25,0]])
+cl=np.array([[0.65,0.85,0.05],[0.75,0.5,0.95],[0.6,0.85,1],[0,0.6,0],[0.75,0.5,0]])
 plt.close('all')
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,8))
 ax.bar(np.arange(u.size),d['Csw L t0']['mu'],facecolor=cl[0,:],label='Stemwood')
@@ -152,13 +148,13 @@ if flg==1:
 for i in range(u.size):
     ax.text(i,6,str(d['Csw L t0']['N'][i].astype(int)),color='k',ha='center',fontsize=7,fontweight='normal')
 
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\BiomassFromPlots_ByGBCZone','png',900)
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_Biomass_ByGBCZone_CNV','png',900)
 
 #%% Plot net biomass production by BGC zone (CN)
 
 vL=['Ctot G Surv','Ctot G Recr','Ctot Mort+Lost','Ctot Mort+Lost Harv','Ctot Net']
 
-u=np.unique(gplt['Ecozone BC L1'])
+u=np.unique(gpt['Ecozone BC L1'])
 u=u[u>0]
 lab=np.array(['' for _ in range(u.size)],dtype=object)
 
@@ -171,17 +167,17 @@ for v in vL:
     d[v]['se']=np.zeros(u.size)
 
 for i in range(u.size):
-    lab[i]=ugp.lut_id2cd(metaGP,'Ecozone BC L1',u[i])
+    lab[i]=ugp.lut_id2cd(meta['LUT']['GP']['Ecozone BC L1'],u[i])
     for v in vL:
-        ind=np.where( (gplt['Ecozone BC L1']==u[i]) &
-                     (gplt['PTF CN']==1) &
-                     (gplt['Ctot Net']>=-1000) & (gplt['Ctot Net']<1000) )[0]
+        ind=np.where( (gpt['Ecozone BC L1']==u[i]) &
+                     (gpt['PTF CN']==1) &
+                     (gpt['Ctot Net']>=-1000) & (gpt['Ctot Net']<1000) )[0]
 
-                     #(gplt['Ctot Mort Harv']==0) &
+                     #(gpt['Ctot Mort Harv']==0) &
         d[v]['N'][i]=ind.size
-        d[v]['mu'][i]=np.nanmean(gplt[v][ind])
-        d[v]['sd'][i]=np.nanstd(gplt[v][ind])
-        d[v]['se'][i]=np.nanstd(gplt[v][ind])/np.sqrt(ind.size)
+        d[v]['mu'][i]=np.nanmean(gpt[v][ind])
+        d[v]['sd'][i]=np.nanstd(gpt[v][ind])
+        d[v]['se'][i]=np.nanstd(gpt[v][ind])/np.sqrt(ind.size)
 
 # Remove classes with inadequate data
 ind=np.where(d['Ctot Net']['N']>=3)[0]
@@ -202,7 +198,7 @@ for v in d:
 # Area weighting
 d['Area']=np.zeros(lab.size)
 for i in range(lab.size):
-    ind2=np.where( (zBGCZ['Data']==lut_1ha['bgcz'][lab[i]]) & (zLCC1['Data']==lut_1ha['lcc1']['Forest']) )
+    ind2=np.where( (zBGCZ['Data']==meta['LUT']['BEC_BIOGEOCLIMATIC_POLY']['ZONE'][lab[i]]) & (zLCC1['Data']==meta['LUT']['Derived']['lcc1']['Forest']) )
     d['Area'][i]=ind2[0].size/1e6
 
 wa=np.sum(d['Ctot Net']['mu']*d['Area'])/np.sum(d['Area'])
@@ -228,13 +224,13 @@ for i in range(u.size):
     else:
         adj=-0.08
     ax.text(i+0.2,d['Ctot Net']['mu'][i]+adj,str(d['Ctot Net']['N'][i].astype(int)),color='k',ha='center',va='center',fontsize=7,fontweight='normal')
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\NetBiomassProductionFromPlots_ByGBCZone_CN','png',900)
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_NetGrowth_ByGBCZone_CN','png',900)
 
 #%% Plot net biomass production by BGC zone (YSM)
 
 vL=['Ctot G Surv','Ctot G Recr','Ctot Mort+Lost','Ctot Mort+Lost Harv','Ctot Net']
 
-u=np.unique(gplt['Ecozone BC L1'])
+u=np.unique(gpt['Ecozone BC L1'])
 u=u[u>0]
 lab=np.array(['' for _ in range(u.size)],dtype=object)
 
@@ -247,17 +243,17 @@ for v in vL:
     d[v]['se']=np.zeros(u.size)
 
 for i in range(u.size):
-    lab[i]=ugp.lut_id2cd(metaGP,'Ecozone BC L1',u[i])
+    lab[i]=ugp.lut_id2cd(meta['LUT']['GP']['Ecozone BC L1'],u[i])
     for v in vL:
-        ind=np.where( (gplt['Ecozone BC L1']==u[i]) &
-                     (gplt['PTF YSM']==1) &
-                     (gplt['Ctot Net']>=-1000) & (gplt['Ctot Net']<1000) )[0]
+        ind=np.where( (gpt['Ecozone BC L1']==u[i]) &
+                     (gpt['PTF YSM']==1) &
+                     (gpt['Ctot Net']>=-1000) & (gpt['Ctot Net']<1000) )[0]
 
-                     #(gplt['Ctot Mort Harv']==0) &
+                     #(gpt['Ctot Mort Harv']==0) &
         d[v]['N'][i]=ind.size
-        d[v]['mu'][i]=np.nanmean(gplt[v][ind])
-        d[v]['sd'][i]=np.nanstd(gplt[v][ind])
-        d[v]['se'][i]=np.nanstd(gplt[v][ind])/np.sqrt(ind.size)
+        d[v]['mu'][i]=np.nanmean(gpt[v][ind])
+        d[v]['sd'][i]=np.nanstd(gpt[v][ind])
+        d[v]['se'][i]=np.nanstd(gpt[v][ind])/np.sqrt(ind.size)
 
 # Remove classes with inadequate data
 ind=np.where(d['Ctot Net']['N']>=3)[0]
@@ -278,7 +274,7 @@ for v in d:
 # Area weighting
 d['Area']=np.zeros(lab.size)
 for i in range(lab.size):
-    ind2=np.where( (zBGCZ['Data']==lut_1ha['bgcz'][lab[i]]) & (zLCC1['Data']==lut_1ha['lcc1']['Forest Land']) )
+    ind2=np.where( (zBGCZ['Data']==meta['LUT']['BEC_BIOGEOCLIMATIC_POLY']['ZONE'][lab[i]]) & (zLCC1['Data']==meta['LUT']['Derived']['lcc1']['Forest Land']) )
     d['Area'][i]=ind2[0].size/1e6
 
 wa=np.sum(d['Ctot Net']['mu']*d['Area'])/np.sum(d['Area'])
@@ -306,18 +302,18 @@ for i in range(u.size):
     else:
         adj=-0.08
     ax.text(i+0.2,d['Ctot Net']['mu'][i]+adj,str(d['Ctot Net']['N'][i].astype(int)),color='k',ha='center',va='center',fontsize=7,fontweight='normal')
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\NetBiomassProductionFromPlots_ByGBCZone_YSM','png',900)
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_NetGrowth_ByGBCZone_YSM','png',900)
 
 #%% Average biomass dynammics
 
-ikp=np.where( (gplt['PTF CN']==1) & (gplt['Year t1']>0) )[0]
+ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
 vL=['Year t0','Year t1','Ctot G Surv','Ctot G Recr','Ctot Mort+Lost','Ctot Net']
 sts={}
 for v in vL:
-    sts['mu ' + v]=np.nanmean(gplt[v][ikp])
-    sts['se ' + v]=np.nanstd(gplt[v][ikp])/np.sqrt(ikp.size)
+    sts['mu ' + v]=np.nanmean(gpt[v][ikp])
+    sts['se ' + v]=np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)
 
-print( str(np.nanpercentile(gplt['Year t0'],25)) + ' ' + str(np.nanpercentile(gplt['Year t1'],75)) )
+print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
 print(sts['mu Ctot Net'])
 
 cl=np.array([[0.75,0.75,0.75],[0.24,0.49,0.77],[0.6,1,0]])
@@ -341,22 +337,22 @@ ax.errorbar(4,sts['mu Ctot Net'],yerr=sts['se Ctot Net'],color=cle,fmt='none',ca
 ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,len(lab)+1),xticklabels=lab,ylabel='Carbon balance of trees (MgC ha${^-1}$ yr$^{-1}$)',xlim=[0.5,4.5],ylim=[-1.5,2])
 #plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\BiomassDynamicsTotAtPlots_Mean_CN','png',900)
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_BiomassDynamics_Mean_CN','png',900)
 
 #%% Average biomass dynammics (totals in CO2e)
 
 # Area of forest
-ind=np.where(zLCC1['Data']==lut_1ha['lcc1']['Forest Land'])
+ind=np.where(zLCC1['Data']==meta['LUT']['Derived']['lcc1']['Forest Land'])
 A=ind[0].size
 
-ikp=np.where( (gplt['PTF CN']==1) & (gplt['Year t1']>0) )[0]
+ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
 vL=['Year t0','Year t1','Ctot G Surv','Ctot G Recr','Ctot Mort+Lost','Ctot Net']
 sts={}
 for v in vL:
-    sts['mu ' + v]=A*np.nanmean(gplt[v][ikp])/1e6*3.667
-    sts['se ' + v]=A*np.nanstd(gplt[v][ikp])/np.sqrt(ikp.size)/1e6*3.667
+    sts['mu ' + v]=A*np.nanmean(gpt[v][ikp])/1e6*3.667
+    sts['se ' + v]=A*np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)/1e6*3.667
 
-print( str(np.nanpercentile(gplt['Year t0'],25)) + ' ' + str(np.nanpercentile(gplt['Year t1'],75)) )
+print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
 print(sts['mu Ctot Net'])
 #print(sts['mu Ctot Mort Harv'])
 
@@ -381,19 +377,19 @@ ax.errorbar(4,sts['mu Ctot Net'],yerr=sts['se Ctot Net'],color=cle,fmt='none',ca
 ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,len(lab)+1),xticklabels=lab,ylabel='Carbon balance of trees (MtCO$_{2}$e yr$^{-1}$)',xlim=[0.5,4.5],ylim=[-350,350])
 #plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\BiomassDynamicsTotAtPlots_Sum_CN','png',900)
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_BiomassDynamics_Sum_CN','png',900)
 
 #%% Net Volume Production
 
-ikp=np.where( (gplt['PTF CN']==1) & (gplt['Year t1']>0) )[0]
+ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
 
 vL=['Year t0','Year t1','Vws G Surv','Vws G Recr','Vws Mort','Vws Net'] #,'Vws Mort Harv'
 sts={}
 for v in vL:
-    sts['mu ' + v]=np.nanmean(gplt[v][ikp])
-    sts['se ' + v]=np.nanstd(gplt[v][ikp])/np.sqrt(ikp.size)
+    sts['mu ' + v]=np.nanmean(gpt[v][ikp])
+    sts['se ' + v]=np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)
 
-print( str(np.nanpercentile(gplt['Year t0'],25)) + ' ' + str(np.nanpercentile(gplt['Year t1'],75)) )
+print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
 print(sts['mu Vws Net'])
 #print(sts['mu Vws Mort Harv'])
 
@@ -418,7 +414,7 @@ ax.errorbar(4,sts['mu Vws Net'],yerr=sts['se Vws Net'],color=cle,fmt='none',caps
 ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,5),xticklabels=lab,ylabel='Whole stem volume chagne (m$^{3}$ ha$^{-1}$ yr$^{-1}$)',xlim=[0.5,4.5],ylim=[-3,5])
 #plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(r'C:\Users\rhember\OneDrive - Government of BC\Figures\Biomass\Volume Dynamics from Ground Plots','png',900)
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_VolumeDynamics_Mean_CN','png',900)
 
 
 #%% Age distributions
@@ -433,26 +429,26 @@ plt.close('all'); lw=1.25
 fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,7))
 #plt.plot(x,p1/np.sum(p1)*100,'b-',lw=lw,color=[0.27,0.49,0.77],label='VRI R1 Comp Polygons')
 
-ind=np.where( (gplt['Plot Type']==metaGP['LUT']['Plot Type BC']['VRI']) & (gplt['Age Mean t0']>=0) )[0]
-kde=stats.gaussian_kde(gplt['Age Mean t0'][ind])
+ind=np.where( (gpt['Plot Type']==meta['LUT']['GP']['Plot Type BC']['VRI']) & (gpt['Age Mean t0']>=0) )[0]
+kde=stats.gaussian_kde(gpt['Age Mean t0'][ind])
 p=kde(x)
 plt.plot(x,p/np.sum(p)*100,'r-',lw=lw,color=[0.27,0.49,0.77],label='VRI ground plots')
 
-ind=np.where( (gplt['PTF CN']==1) & (gplt['Age Mean t0']>=0) )[0]
-kde=stats.gaussian_kde(gplt['Age Mean t0'][ind])
+ind=np.where( (gpt['PTF CN']==1) & (gpt['Age Mean t0']>=0) )[0]
+kde=stats.gaussian_kde(gpt['Age Mean t0'][ind])
 p=kde(x)
 plt.plot(x,p/np.sum(p)*100,'r--',lw=lw,color=[1,0.5,0],label='CMI + NFI cores (mean)')
 
-kde=stats.gaussian_kde(gplt['Age Min t0'][ind])
+kde=stats.gaussian_kde(gpt['Age Min t0'][ind])
 p=kde(x)
 plt.plot(x,p/np.sum(p)*100,'r-.',lw=lw,color=[0.5,1,0],label='CMI + NFI cores (min)')
 
-kde=stats.gaussian_kde(gplt['Age Max t0'][ind])
+kde=stats.gaussian_kde(gpt['Age Max t0'][ind])
 p=kde(x)
 plt.plot(x,p/np.sum(p)*100,'r:',lw=lw,color=[0,0.4,0],label='CMI + NFI cores (max)')
 
-# ind=np.where( (gplt['PTF YSM']==1) & (gplt['Age Mean t0']>=0) )[0]
-# kde=stats.gaussian_kde(gplt['Age Mean t0'][ind])
+# ind=np.where( (gpt['PTF YSM']==1) & (gpt['Age Mean t0']>=0) )[0]
+# kde=stats.gaussian_kde(gpt['Age Mean t0'][ind])
 # p=kde(x)
 # plt.plot(x,p,'g--')
 
@@ -460,4 +456,4 @@ ax.set(ylabel='Frequency (%)',xlabel='Stand age, years',xlim=[0,400],ylim=[0,0.8
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 plt.tight_layout()
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\AgeDistribution','png',900)
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_AgeDistribution','png',900)

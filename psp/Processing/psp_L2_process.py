@@ -37,25 +37,21 @@ import time
 import warnings
 from shapely.geometry import Point, Polygon
 from shapely import geometry
-from fcgadgets.macgyver import utilities_general as gu
-from fcgadgets.macgyver import utilities_gis as gis
+import fcgadgets.macgyver.utilities_general as gu
+import fcgadgets.macgyver.utilities_gis as gis
 import fcgadgets.macgyver.utilities_query_gdb as qgdb
-from fcexplore.psp.Processing import psp_utilities as utl
+import fcexplore.psp.Processing.psp_utilities as utl
+import fcgadgets.bc1ha.bc1ha_utilities as u1ha
 
 warnings.filterwarnings("ignore")
 
 #%% Import project info
 
-meta={}
-meta['Paths']={}
-meta['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
+# Initialize
+meta=u1ha.Init()
+meta=u1ha.ImportLUTs(meta)
 
 meta=utl.ImportParameters(meta)
-
-#%% Parmaters and constants
-
-meta['prm']={}
-meta['prm']['Carbon Content']=0.5
 
 #%% Select source databases to run
 
@@ -67,14 +63,14 @@ QA_Flag1=[]
 
 #%% Import raster data
 
-zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\BC_Land_Mask.tif')
+zRef=gis.OpenGeoTiff(meta['Paths']['bc1ha Ref Grid'])
 
 #%% Loop through each source database
 
 for iJur in range(len(jurL)):
 
     # Import Level 1 tree and plot data structures, TL and PLT
-    d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L1\\L1_' + jurL[iJur] + '.pkl')
+    d=gu.ipickle(meta['Paths']['GP']['DB'] + '\\Processed\\L1\\L1_' + jurL[iJur] + '.pkl')
     tl=d['tl']
     pl=d['pl']
     del d
@@ -89,8 +85,8 @@ for iJur in range(len(jurL)):
     tl['ID PFT']=np.zeros(tl['ID Species'].size,dtype=int)
     for iU in range(uSpc.size):
         ind_all0=np.where(tl['ID Species']==uSpc[iU])[0]
-        ind_all1=np.where(meta['Allo B']['ID']==uSpc[iU])[0]
-        tl['ID PFT'][ind_all0]=meta['Allo B']['PFT'][ind_all1]
+        ind_all1=np.where(meta['GP']['Param']['Allo B']['ID']==uSpc[iU])[0]
+        tl['ID PFT'][ind_all0]=meta['GP']['Param']['Allo B']['PFT'][ind_all1]
 
     # Volume based on DBH+H (Nigh et al. 2016)
     # *** Using volume provided with dataset ***
@@ -103,19 +99,19 @@ for iJur in range(len(jurL)):
 
     for iU in range(uSpc.size):
         ind_all0=np.where(tl['ID Species']==uSpc[iU])[0]
-        ind_all1=np.where(meta['Allo B']['ID']==uSpc[iU])[0]
+        ind_all1=np.where(meta['GP']['Param']['Allo B']['ID']==uSpc[iU])[0]
 
-        if np.isnan(meta['Allo B']['GapFillCode'][ind_all1])==False:
+        if np.isnan(meta['GP']['Param']['Allo B']['GapFillCode'][ind_all1])==False:
             # Missing equaiton, using an alternative species
-            ind_all1=np.where(meta['Allo B']['ID']==meta['Allo B']['GapFillCode'][ind_all1])[0]
+            ind_all1=np.where(meta['GP']['Param']['Allo B']['ID']==meta['GP']['Param']['Allo B']['GapFillCode'][ind_all1])[0]
 
         for tissue in tissueL:
             for iP in range(3):
-                beta[tissue][ind_all0,iP]=meta['Allo B'][tissue + str(iP+1)][ind_all1]
+                beta[tissue][ind_all0,iP]=meta['GP']['Param']['Allo B'][tissue + str(iP+1)][ind_all1]
 
     # Carbon (kgC tree-1)
     for tissue in tissueL:
-        tl['C' + tissue]=meta['prm']['Carbon Content']*(beta[tissue][:,0]*tl['DBH']**beta[tissue][:,1]*tl['H']**beta[tissue][:,2])
+        tl['C' + tissue]=meta['GP']['Param']['Carbon Content']*(beta[tissue][:,0]*tl['DBH']**beta[tissue][:,1]*tl['H']**beta[tissue][:,2])
 
     # Merchcantable stemwood
     tl['Csw125']=tl['Csw']
@@ -129,10 +125,10 @@ for iJur in range(len(jurL)):
     # Kurz et al. (1996). ***
     tl['Cr']=np.zeros(tl['Csw'].size)
 
-    ind=np.where(tl['ID PFT']==meta['LUT']['PFT']['Deciduous'])[0]
+    ind=np.where(tl['ID PFT']==meta['LUT']['GP']['PFT']['Deciduous'])[0]
     tl['Cr'][ind]=1.576*tl['Cag'][ind]**0.615
 
-    ind=np.where(tl['ID PFT']==meta['LUT']['PFT']['Coniferous'])[0]
+    ind=np.where(tl['ID PFT']==meta['LUT']['GP']['PFT']['Coniferous'])[0]
     tl['Cr'][ind]=0.222*tl['Cag'][ind]
 
     # Total biomass carbon  (kg C tree-1)
@@ -145,11 +141,11 @@ for iJur in range(len(jurL)):
     FracLitterfallBr=np.zeros(tl['Csw'].size)
     FracLitterfallF=np.zeros(tl['Csw'].size)
     FracLitterfallR=np.zeros(tl['Csw'].size)
-    ind=np.where(tl['ID PFT']==meta['LUT']['PFT']['Deciduous'])[0]
+    ind=np.where(tl['ID PFT']==meta['LUT']['GP']['PFT']['Deciduous'])[0]
     FracLitterfallBk[ind]=0.035
     FracLitterfallBr[ind]=0.035
     FracLitterfallF[ind]=0.95
-    ind=np.where(tl['ID PFT']==meta['LUT']['PFT']['Coniferous'])[0]
+    ind=np.where(tl['ID PFT']==meta['LUT']['GP']['PFT']['Coniferous'])[0]
     FracLitterfallBk[ind_all1]=0.035
     FracLitterfallBr[ind_all1]=0.035
     FracLitterfallF[ind_all1]=0.10
@@ -167,7 +163,7 @@ for iJur in range(len(jurL)):
          'Delta t','Age VRI t0','Age VRI t1','Age Mean t0','Age Med t0','Age Min t0','Age Max t0','Spc1 L ID t0','Spc1 L %BA t0','Spc1 L %N t0','Spc2 L ID t0','Spc2 L %BA t0',
          'Spc2 L %N t0','Spc3 L ID t0','Spc3 L %BA t0','Spc3 L %N t0','Spc4 L ID t0','Spc4 L %BA t0','Spc4 L %N t0',
          'Conifer L %BA t0','Conifer L %N t0','Deciduous L %BA t0','Deciduous L %N t0',
-         'N L t0','N L t1','N D t0','N D t1','N Recr','N Mort','N L Lost','N Net','N L PL t0',
+         'N L t0','N L t1','N D t0','N D t1','N Recr','N Mort','N L Lost','N Harv','N Net','N L PL t0',
          'N Recr (%)','N Mort (%)','N L Lost (%)','N Mort+Lost (%)','N Net (%)',
          'N D Lost','N D PL t0','N L PL t1','N D PL t1',
          'Dam L t0','Dam L t1','Dam G Surv',
@@ -175,14 +171,13 @@ for iJur in range(len(jurL)):
          'BA L t0','BA L t1','BA G Surv','BA Mort',
          'H L t0','H L t1','H G Surv',
          'H L max t0','H L max t1',
-         'Vws L t0','Vws L t1','Vws G Surv','Vws G Recr','Vws Mort','Vws L Lost','Vws Mort+Lost','Vws Net','Vws Harv',
+         'Vws L t0','Vws L t1','Vws G Surv','Vws G Recr','Vws Mort','Vws L Lost','Vws Mort+Lost','Vws Harv','Vws Net',
          'Vntwb L t0','Vntwb D t0',
-         'Ctot L t0','Ctot L t1',
-         'Ctot L Resid t0',
-         'Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot L Lost','Ctot Mort+Lost','Ctot Net',
+         'Ctot L t0','Ctot L t1','Ctot L Resid t0',
+         'Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot L Lost','Ctot Mort+Lost','Ctot Harv','Ctot Net','Ctot Litf',
          'Ctot Mort+Lost None','Ctot Mort+Lost Insect','Ctot Mort+Lost Disease','Ctot Mort+Lost Plant Competition','Ctot Mort+Lost Animal Browsing','Ctot Mort+Lost Fire','Ctot Mort+Lost Frost',
          'Ctot Mort+Lost Drought','Ctot Mort+Lost Snow and Ice','Ctot Mort+Lost Wind','Ctot Mort+Lost Silviculture','Ctot Mort+Lost Other','Ctot Mort+Lost Unknown','Ctot Mort+Lost Harv',
-         'Ctot D t0','Ctot D t1','Ctot D Fallen t0','Ctot D Lost','Ctot Litf',
+         'Ctot D t0','Ctot D t1','Ctot D Fallen t0','Ctot D Lost',
          'Ctot L PL t0','Ctot D PL t0','Ctot L PL t1','Ctot D PL t1',
          'Ctot L FD t0','Ctot D FD t0',
          'Ctot L BL t0','Ctot D BL t0',
@@ -190,13 +185,14 @@ for iJur in range(len(jurL)):
          'Ctot L SE t0','Ctot D SE t0',
          'Ctot L Decid t0','Ctot D Decid t0',
          'Ctot G Surv HGT10',
-         'Cag L t0','Cag L t1','Cag D t0','Cag D t1','Cag L Fallen t0','Cag L Fallen t1','Cag D Fallen t0','Cag D Fallen t1','Cag G Surv','Cag G Recr','Cag Mort','Cag Harv',
+         'Cag L t0','Cag L t1','Cag D t0','Cag D t1','Cag L Fallen t0','Cag L Fallen t1','Cag D Fallen t0','Cag D Fallen t1',
+         'Cag G Surv','Cag G Recr','Cag Mort','Cag Harv',
          'Cbk L t0','Cbk L t1','Cbk G Surv','Cbk G Recr','Cbk Mort',
          'Cbr L t0','Cbr L t1','Cbr G Surv','Cbr G Recr','Cbr Mort',
          'Cf L t0','Cf L t1','Cf G Surv','Cf G Recr','Cf Mort',
          'Cr L t0','Cr L t1','Cr G Surv','Cr G Recr','Cr Mort',
-         'Csw L t0','Csw L t1','Csw G Surv','Csw G Recr','Csw Mort','Csw L Lost','Csw Mort+Lost','Csw Net',
-         'Csw Harv','Csw D t0','Csw D t1','Csw125 L t0','Csw125 L t1',
+         'Csw L t0','Csw L t1','Csw G Surv','Csw G Recr','Csw Mort','Csw L Lost','Csw Mort+Lost','Csw Harv','Csw Net',
+         'Csw D t0','Csw D t1','Csw125 L t0','Csw125 L t1',
          'Csw Indiv Med t0','Csw Indiv Mean t0','Csw Indiv Max t0',
          'Cdw t0']
 
@@ -297,7 +293,7 @@ for iJur in range(len(jurL)):
                     continue
 
             # Populate stand-level site variables
-            sobs['ID Source'][cnt]=meta['LUT']['Source'][jurL[iJur]]
+            sobs['ID Source'][cnt]=meta['LUT']['GP']['Source'][jurL[iJur]]
             sobs['ID Plot'][cnt]=pl['ID Plot'][iPlot_t0]
             sobs['ID Visit'][cnt]=uVisit[iVisit]
             sobs['Lat'][cnt]=np.round(pl['Lat'][iPlot_t0],decimals=4)
@@ -340,6 +336,7 @@ for iJur in range(len(jurL)):
             vntwb0_all=tl['Vntwb'][ind_all0]
             pft0_all=tl['ID PFT'][ind_all0]
             vital_status0_all=tl['Vital Status'][ind_all0]
+            felled0_all=tl['Felled'][ind_all0]
             stature0_all=tl['Stature'][ind_all0]
             aef0_all=tl['AEF'][ind_all0]
             spc0_all=tl['ID Species'][ind_all0]
@@ -371,6 +368,7 @@ for iJur in range(len(jurL)):
                 vntwb1_all=tl['Vntwb'][ind_all1]
                 pft1_all=tl['ID PFT'][ind_all1]
                 vital_status1_all=tl['Vital Status'][ind_all1]
+                felled1_all=tl['Felled'][ind_all1]
                 stature1_all=tl['Stature'][ind_all1]
                 aef1_all=tl['AEF'][ind_all1]
                 spc1_all=tl['ID Species'][ind_all1]
@@ -393,81 +391,83 @@ for iJur in range(len(jurL)):
             # Define indices to trees with a specific status and fate
 
             # Index to trees that were alive in t0 (including those that died)
-            ind_live0=np.where(vital_status0_all==meta['LUT']['Vital Status']['Live'])[0]
-            ind_live_resid0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (resid0_all==1) )[0]
-            ind_live_fallen0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (stature0_all==meta['LUT']['Stature']['Fallen']) )[0]
-            ind_live_conifer0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (pft0_all==meta['LUT']['PFT']['Coniferous']) )[0]
-            ind_live_decid0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (pft0_all==meta['LUT']['PFT']['Deciduous']) )[0]
-            ind_live_pine0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (spc0_all==meta['LUT']['Species']['PL']) )[0]
-            ind_live_bl0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (spc0_all==meta['LUT']['Species']['BL']) )[0]
-            ind_live_fd0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (spc0_all==meta['LUT']['Species']['FD']) )[0]
-            ind_live_sw0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (spc0_all==meta['LUT']['Species']['SW']) )[0]
-            ind_live_se0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (spc0_all==meta['LUT']['Species']['SE']) )[0]
+            ind_live0=np.where(vital_status0_all==meta['LUT']['GP']['Vital Status']['Live'])[0]
+            ind_live_resid0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (resid0_all==1) )[0]
+            ind_live_fallen0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (stature0_all==meta['LUT']['GP']['Stature']['Fallen']) )[0]
+            ind_live_conifer0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (pft0_all==meta['LUT']['GP']['PFT']['Coniferous']) )[0]
+            ind_live_decid0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (pft0_all==meta['LUT']['GP']['PFT']['Deciduous']) )[0]
+            ind_live_pine0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (spc0_all==meta['LUT']['GP']['Species']['PL']) )[0]
+            ind_live_bl0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (spc0_all==meta['LUT']['GP']['Species']['BL']) )[0]
+            ind_live_fd0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (spc0_all==meta['LUT']['GP']['Species']['FD']) )[0]
+            ind_live_sw0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (spc0_all==meta['LUT']['GP']['Species']['SW']) )[0]
+            ind_live_se0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (spc0_all==meta['LUT']['GP']['Species']['SE']) )[0]
 
             # Index to trees that were dead at t0
-            ind_dead0=np.where(vital_status0_all==meta['LUT']['Vital Status']['Dead'])[0]
-            ind_dead_fallen0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (stature0_all==meta['LUT']['Stature']['Fallen']) )[0]
-            ind_dead_decid0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (pft0_all==meta['LUT']['PFT']['Deciduous']) )[0]
-            ind_dead_pine0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['Species']['PL']) )[0]
-            ind_dead_bl0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['Species']['BL']) )[0]
-            ind_dead_fd0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['Species']['FD']) )[0]
-            ind_dead_sw0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['Species']['SW']) )[0]
-            ind_dead_se0=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['Species']['SE']) )[0]
+            ind_dead0=np.where(vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead'])[0]
+            ind_dead_fallen0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead']) & (stature0_all==meta['LUT']['GP']['Stature']['Fallen']) )[0]
+            ind_dead_decid0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead']) & (pft0_all==meta['LUT']['GP']['PFT']['Deciduous']) )[0]
+            ind_dead_pine0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['GP']['Species']['PL']) )[0]
+            ind_dead_bl0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['GP']['Species']['BL']) )[0]
+            ind_dead_fd0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['GP']['Species']['FD']) )[0]
+            ind_dead_sw0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['GP']['Species']['SW']) )[0]
+            ind_dead_se0=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead']) & (spc0_all==meta['LUT']['GP']['Species']['SE']) )[0]
 
             if flg_PSP==1:
 
                 # Index to trees that were alive in t1 (including those that were
                 # Recruted)
-                ind_live1=np.where(vital_status1_all==meta['LUT']['Vital Status']['Live'])[0]
-                ind_live_fallen1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Live']) & (stature1_all==meta['LUT']['Stature']['Fallen']) )[0]
-                ind_live_conifer1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Live']) & (stature1_all==meta['LUT']['PFT']['Coniferous']) )[0]
-                ind_live_decid1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Live']) & (stature1_all==meta['LUT']['PFT']['Deciduous']) )[0]
-                ind_live_pine1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Live']) & (spc1_all==meta['LUT']['Species']['PL']) )[0]
+                ind_live1=np.where(vital_status1_all==meta['LUT']['GP']['Vital Status']['Live'])[0]
+                ind_live_fallen1=np.where( (vital_status1_all==meta['LUT']['GP']['Vital Status']['Live']) & (stature1_all==meta['LUT']['GP']['Stature']['Fallen']) )[0]
+                ind_live_conifer1=np.where( (vital_status1_all==meta['LUT']['GP']['Vital Status']['Live']) & (stature1_all==meta['LUT']['GP']['PFT']['Coniferous']) )[0]
+                ind_live_decid1=np.where( (vital_status1_all==meta['LUT']['GP']['Vital Status']['Live']) & (stature1_all==meta['LUT']['GP']['PFT']['Deciduous']) )[0]
+                ind_live_pine1=np.where( (vital_status1_all==meta['LUT']['GP']['Vital Status']['Live']) & (spc1_all==meta['LUT']['GP']['Species']['PL']) )[0]
 
                 # Trees that go uncounted at t1
-                ind_live_lost1=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) & (np.isin(id0_all,id1_all)==False) )[0]
-                ind_dead_lost1=np.where( (vital_status0_all==meta['LUT']['Vital Status']['Dead']) & (np.isin(id0_all,id1_all)==False) )[0]
+                ind_live_lost1=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (np.isin(id0_all,id1_all)==False) )[0]
+                ind_dead_lost1=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Dead']) & (np.isin(id0_all,id1_all)==False) )[0]
 
                 # Index to trees that were dead at t1
-                ind_dead1=np.where(vital_status1_all==meta['LUT']['Vital Status']['Dead'])[0]
-                ind_dead_fallen1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Dead']) & (stature1_all==meta['LUT']['Stature']['Fallen']) )[0]
-                ind_dead_pine1=np.where( (vital_status1_all==meta['LUT']['Vital Status']['Dead']) & (spc1_all==meta['LUT']['Species']['PL']) )[0]
+                ind_dead1=np.where(vital_status1_all==meta['LUT']['GP']['Vital Status']['Dead'])[0]
+                ind_dead_fallen1=np.where( (vital_status1_all==meta['LUT']['GP']['Vital Status']['Dead']) & (stature1_all==meta['LUT']['GP']['Stature']['Fallen']) )[0]
+                ind_dead_pine1=np.where( (vital_status1_all==meta['LUT']['GP']['Vital Status']['Dead']) & (spc1_all==meta['LUT']['GP']['Species']['PL']) )[0]
 
                 # Index to survivors
-                ind_surv=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Live']) )[0]
+                ind_surv=np.where( (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Live']) )[0]
 
-                ind_surv_HGT10=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Live']) & (h0_all[ia1]>10) )[0]
+                ind_surv_HGT10=np.where( (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Live']) & (h0_all[ia1]>10) )[0]
 
                 # Index to trees that were counted as dead and then counted as alive
-                ind_reborn=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Dead']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Live']) )[0]
+                ind_reborn=np.where( (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Dead']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Live']) )[0]
 
                 # Index to trees that died during interval
-                ind_mort=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) )[0]
+                ind_mort=np.where( (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Dead']) )[0]
 
                 # Index to trees that died during interval
                 ind_mort_da=[]
-                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
-                    ind_mort_da.append(np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) & (da0_all[ia1]==meta['LUT Tables']['Damage Agents']['ID'][iDA]) |
-                                                 (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) & (da1_all[ib1]==meta['LUT Tables']['Damage Agents']['ID'][iDA]) )[0])
+                for iDA in range(meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'].size):
+                    ind_mort_da.append(np.where( (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Dead']) & (da0_all[ia1]==meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'][iDA]) |
+                                                 (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Dead']) & (da1_all[ib1]==meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'][iDA]) )[0])
 
                 ind_lost_da=[]
-                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
-                    ind_lost_da.append(np.where( (vital_status0_all==meta['LUT']['Vital Status']['Live']) &
+                for iDA in range(meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'].size):
+                    ind_lost_da.append(np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) &
                                                 (np.isin(id0_all,id1_all)==False) &
-                                                (da0_all==meta['LUT Tables']['Damage Agents']['ID'][iDA]) )[0])
+                                                (da0_all==meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'][iDA]) )[0])
 
                 # Mortality due to IBM
-                #ind_mort_ibm=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) & (flag_ibm0_all[ia1]==0) &
-                #                             (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Dead']) & (flag_ibm1_all[ia1]==1) )[0]
+                #ind_mort_ibm=np.where( (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Dead']) & (flag_ibm0_all[ia1]==0) &
+                #                             (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Dead']) & (flag_ibm1_all[ia1]==1) )[0]
 
                 # Index to Recruted trees that died during interval
-                ind_mort_r=np.where(vital_status1_all[ib2]==meta['LUT']['Vital Status']['Dead'])[0]
+                ind_mort_r=np.where(vital_status1_all[ib2]==meta['LUT']['GP']['Vital Status']['Dead'])[0]
 
                 # Index to Recruted trees that remain alive
-                ind_rec=np.where(vital_status1_all[ib2]==meta['LUT']['Vital Status']['Live'])[0]
+                ind_rec=np.where(vital_status1_all[ib2]==meta['LUT']['GP']['Vital Status']['Live'])[0]
 
                 # Index to harvested trees
-                ind_harv=np.where( (vital_status0_all[ia1]==meta['LUT']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['Vital Status']['Removed']) )[0]
+                ind_harv=np.where( (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Removed']) )[0]
+                #ind_harv=np.where( (felled0_all[ia1]==1) | (felled1_all[ib1]==1) )[0]
+                #ind_harv=np.where( (felled0_all==1) )[0]
 
             # Cleaning of trees that die
             # *** Sometimes they don't measure the DBH and H of the trees that die
@@ -535,7 +535,7 @@ for iJur in range(len(jurL)):
                 sobs['Spc' + str(iSpc+1) + ' L %N t0'][cnt]=np.round(SpcComp[iSpc,2]*100,decimals=0)
 
             # Plant functional type
-            indPFT=np.where(pft0_all[ind_live0]==meta['LUT']['PFT']['Coniferous'])[0]
+            indPFT=np.where(pft0_all[ind_live0]==meta['LUT']['GP']['PFT']['Coniferous'])[0]
 
             BA_pft=np.nansum((np.pi*(dbh0_all[indPFT]/200)**2)*aef0_all[indPFT])
             sobs['Conifer L %BA t0'][cnt]=np.round(BA_pft/BA_tot*100,decimals=0)
@@ -642,7 +642,7 @@ for iJur in range(len(jurL)):
             sobs['Ctot L SE t0'][cnt]=np.round(np.nansum(aef0_all[ind_live_se0]*0.001*Ctot0_all[ind_live_se0])/sobs['Num Plots'][cnt],decimals=0)
             sobs['Ctot D SE t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead_se0]*0.001*Ctot0_all[ind_dead_se0])/sobs['Num Plots'][cnt],decimals=0)
 
-            if (flg_PSP==1) & (sobs['Plot Type'][cnt]!=meta['LUT']['Plot Type BC']['VRI']) & (dt>0):
+            if (flg_PSP==1) & (sobs['Plot Type'][cnt]!=meta['LUT']['GP']['Plot Type BC']['VRI']) & (dt>0):
 
                 # Stand density (stems ha-1)
                 sobs['N L t1'][cnt]=np.round(np.nansum(aef1_all[ind_live1])/sobs['Num Plots'][cnt],decimals=0)
@@ -953,15 +953,15 @@ for iJur in range(len(jurL)):
                     sobs['Ctot Mort'][cnt]=np.round(Ctot1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
 
                 # Total mortality due to damage agents (Mg C ha-1 yr-1)
-                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
+                for iDA in range(meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'].size):
 
-                    nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                    nam=meta['LUT']['GP']['Raw Tables']['Damage Agents']['Value'][iDA]
                     ind_mort_da0=ind_mort_da[iDA]
 
                     if ind_mort_da0.size==0:
                         sobs['Ctot Mort+Lost ' + nam][cnt]=np.round(0.0,decimals=2)
                     else:
-                        nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                        nam=meta['LUT']['GP']['Raw Tables']['Damage Agents']['Value'][iDA]
                         Ctot0_dying=np.nansum(aef0_all[ia1[ind_mort_da0]]*0.001*Ctot0_all[ia1[ind_mort_da0]])
                         Ctot1_dying=np.nansum(aef1_all[ib1[ind_mort_da0]]*0.001*Ctot1_all[ib1[ind_mort_da0]])
                         sobs['Ctot Mort+Lost ' + nam][cnt]=np.round(Ctot1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
@@ -1054,14 +1054,14 @@ for iJur in range(len(jurL)):
 
                 sobs['Csw L Lost'][cnt]=np.round(np.nansum(aef0_all[ind_live_lost1]*0.001*Csw0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
 
-                nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                nam=meta['LUT']['GP']['Raw Tables']['Damage Agents']['Value'][iDA]
                 ind_mort_da0=ind_mort_da[iDA]
 
                 # Add lost carbon to mortality
                 sobs['Ctot Mort+Lost'][cnt]=np.round(sobs['Ctot Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*0.001*Ctot0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
-                for iDA in range(meta['LUT Tables']['Damage Agents']['ID'].size):
+                for iDA in range(meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'].size):
                     ind_lost_da0=ind_lost_da[iDA]
-                    nam=meta['LUT Tables']['Damage Agents']['Value'][iDA]
+                    nam=meta['LUT']['GP']['Raw Tables']['Damage Agents']['Value'][iDA]
                     sobs['Ctot Mort+Lost ' + nam][cnt]=np.round(sobs['Ctot Mort+Lost ' + nam][cnt]+np.nansum(aef0_all[ind_lost_da0]*0.001*Ctot0_all[ind_lost_da0])/dt/sobs['Num Plots'][cnt],decimals=1)
                 sobs['Csw Mort+Lost'][cnt]=np.round(sobs['Csw Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*0.001*Csw0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
                 sobs['Vws Mort+Lost'][cnt]=np.round(sobs['Vws Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*vws0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
@@ -1295,7 +1295,7 @@ for iJur in range(len(jurL)):
                     sobs['Vws Harv'][cnt]=0
                     sobs['Csw Harv'][cnt]=0
                     sobs['Cag Harv'][cnt]=0
-                    #sobs['Ctot Harv'][cnt]=0
+                    sobs['Ctot Harv'][cnt]=0
 
                 else:
 
@@ -1316,7 +1316,7 @@ for iJur in range(len(jurL)):
 
                     # Total carbon harvesting (Mg C ha-1 yr-1)
                     Ctot_h=np.nansum(aef0_all[ia1[ind_harv]]*0.001*Ctot0_all[ia1[ind_harv]])
-                    #sobs['Ctot Harv'][cnt]=np.round(Ctot_h/dt/sobs['Num Plots'][cnt],decimals=2)
+                    sobs['Ctot Harv'][cnt]=np.round(Ctot_h/dt/sobs['Num Plots'][cnt],decimals=2)
 
             # Update stand level counter
             cnt=cnt+1
@@ -1343,55 +1343,69 @@ for iJur in range(len(jurL)):
 
     # Save
     d1={'tobs':tobs,'sobs':sobs}
-    gu.opickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_' + jurL[iJur] + '.pkl',d1)
+    gu.opickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_' + jurL[iJur] + '.pkl',d1)
 
     # Export to spreadsheet
     flg=0
     if flg==1:
         df=pd.DataFrame(sobs)
-        df.to_excel(meta['Paths']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
+        df.to_excel(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
 
 #%% Plot type filter (CMI, NFI, and VRI)
 
 # Stand level
 
 sobs['PTF CNV']=np.zeros(sobs['ID Plot'].size)
-ind=np.where( (sobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) |
-             (sobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) |
-             (sobs['Plot Type']==meta['LUT']['Plot Type BC']['VRI']) )[0]
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) |
+             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) |
+             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['VRI']) )[0]
 sobs['PTF CNV'][ind]=1
 np.sum(sobs['PTF CNV'])
 
 sobs['PTF CN']=np.zeros(sobs['ID Plot'].size)
-ind=np.where( (sobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (sobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) )[0]
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) | (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) )[0]
 sobs['PTF CN'][ind]=1
 
 sobs['PTF CNY']=np.zeros(sobs['ID Plot'].size)
-ind=np.where( (sobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) |
-             (sobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) |
-             (sobs['Plot Type']==meta['LUT']['Plot Type BC']['YSM']) )[0]
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) |
+             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) |
+             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['YSM']) )[0]
 sobs['PTF CNY'][ind]=1
 
 sobs['PTF YSM']=np.zeros(sobs['ID Plot'].size)
-ind=np.where( (sobs['Plot Type']==meta['LUT']['Plot Type BC']['YSM']) )[0]
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['YSM']) )[0]
 sobs['PTF YSM'][ind]=1
 
 # Tree level
 
 tobs['PTF CNV']=np.zeros(tobs['ID Plot'].size)
-ind=np.where( (tobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) |
-             (tobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) |
-             (tobs['Plot Type']==meta['LUT']['Plot Type BC']['VRI']) )[0]
+ind=np.where( (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) |
+             (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) |
+             (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['VRI']) )[0]
 tobs['PTF CNV'][ind]=1
 np.sum(tobs['PTF CNV'])
 
 tobs['PTF CN']=np.zeros(tobs['ID Plot'].size)
-ind=np.where( (tobs['Plot Type']==meta['LUT']['Plot Type BC']['CMI']) | (tobs['Plot Type']==meta['LUT']['Plot Type BC']['NFI']) )[0]
+ind=np.where( (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) | (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) )[0]
 tobs['PTF CN'][ind]=1
 
 #%% Harvest indicator
 
-flg=1
+vList=['harv_yr_con1','fire_yr','ibm_yr'] #'lcc1_c','gfcly','gfcly_filt',
+z=u1ha.Import_Raster(meta,[],vList)
+
+ind1=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
+sobs['Year Harv']=z['harv_yr_con1']['Data'][ind1]
+
+ind2=np.where(sobs['PTF CNY']==1)[0]
+sobs['Year t0'][ind2]
+sobs['Year t1'][ind2]
+sobs['Ctot L t0'][ind2]
+
+
+
+
+flg=0
 if flg==1:
     # Import reference crs
     gdf_bm=gpd.read_file(r'C:\Users\rhember\Documents\Data\Basemaps\Basemaps.gdb',layer='NRC_POLITICAL_BOUNDARIES_1M_SP')
@@ -1467,87 +1481,91 @@ if flg==1:
 
 #%% Forest health indicator
 
-ind=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
-tv=np.arange(1990,2022,1)
+flg=0
+if flg==1:
+    ind=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
+    tv=np.arange(1990,2022,1)
 
-vL=['IBM','IBB','IBD','IBS','IDW']
-for v in vL:
-    z1=np.zeros( (tv.size,ind[0].size) ,dtype='int8')
-    for iT in range(tv.size):
-        z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PEST_INFESTATION_POLY_' + v + '_SeverityClass_' + str(tv[iT]) + '.tif')
-        z1[iT,:]=z['Data'][ind].copy()
+    vL=['IBM','IBB','IBD','IBS','IDW']
+    for v in vL:
+        z1=np.zeros( (tv.size,ind[0].size) ,dtype='int8')
+        for iT in range(tv.size):
+            z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PEST_INFESTATION_POLY_' + v + '_SeverityClass_' + str(tv[iT]) + '.tif')
+            z1[iT,:]=z['Data'][ind].copy()
 
-    #sobs[v + ' Severity Max']=np.zeros(sobs['Year t0'].size)
-    sobs[v + ' Occurrence']=np.zeros(sobs['Year t0'].size)
-    for i in range(sobs['Year t0'].size):
-        ind1=np.where( (z1[:,i]>=2) & (tv>=sobs['Year t0'][i]) & (tv<sobs['Year t1'][i]) )[0]
-        if ind1.size==0:
-            continue
-        #sobs[v + ' Severity Max'][i]=np.max(aos[ind,i])
-        sobs[v + ' Occurrence'][i]=1
+        #sobs[v + ' Severity Max']=np.zeros(sobs['Year t0'].size)
+        sobs[v + ' Occurrence']=np.zeros(sobs['Year t0'].size)
+        for i in range(sobs['Year t0'].size):
+            ind1=np.where( (z1[:,i]>=2) & (tv>=sobs['Year t0'][i]) & (tv<sobs['Year t1'][i]) )[0]
+            if ind1.size==0:
+                continue
+            #sobs[v + ' Severity Max'][i]=np.max(aos[ind,i])
+            sobs[v + ' Occurrence'][i]=1
 
 #%% Wildfire indicator
 
-ind=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
-tv=np.arange(1990,2022,1)
+flg=0
+if flg==1:
+    ind=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
+    tv=np.arange(1990,2022,1)
 
-z1=np.zeros( (tv.size,ind[0].size) ,dtype='int8')
-for iT in range(tv.size):
-    z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PROT_HISTORICAL_FIRE_POLYS_SP_' + str(tv[iT]) + '.tif')
-    z1[iT,:]=z['Data'][ind].copy()
+    z1=np.zeros( (tv.size,ind[0].size) ,dtype='int8')
+    for iT in range(tv.size):
+        z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PROT_HISTORICAL_FIRE_POLYS_SP_' + str(tv[iT]) + '.tif')
+        z1[iT,:]=z['Data'][ind].copy()
 
-sobs['Wildfire Occurrence']=np.zeros(sobs['Year t0'].size)
-for i in range(sobs['Year t0'].size):
-    ind1=np.where( (z1[:,i]==1) & (tv>=sobs['Year t0'][i]) & (tv<sobs['Year t1'][i]) )[0]
-    if ind1.size==0:
-        continue
-    sobs['Wildfire Occurrence'][i]=1
+    sobs['Wildfire Occurrence']=np.zeros(sobs['Year t0'].size)
+    for i in range(sobs['Year t0'].size):
+        ind1=np.where( (z1[:,i]==1) & (tv>=sobs['Year t0'][i]) & (tv<sobs['Year t1'][i]) )[0]
+        if ind1.size==0:
+            continue
+        sobs['Wildfire Occurrence'][i]=1
 
-#%% Add VRI variables
+# #%% Add VRI variables
 
-# Crown closure
-z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\crownc.tif')
-ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
-z0=z['Data'][ind]
-sobs['Crown Closure (VRI)']=z0
+# # Crown closure
+# z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\crownc.tif')
+# ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+# z0=z['Data'][ind]
+# sobs['Crown Closure (VRI)']=z0
 
-# Tree Density Class
-z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\ForestDensityClass.tif')
-ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
-z0=z['Data'][ind]
-sobs['Tree Density Class (VRI)']=z0
+# # Tree Density Class
+# z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\ForestDensityClass.tif')
+# ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+# z0=z['Data'][ind]
+# sobs['Tree Density Class (VRI)']=z0
 
-#%% Add climate data
+# #%% Add climate data
 
-# Thornthwaite's climate classification
-z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_ThornthwaiteClimateClassCondensed_norm_1971to2000.tif')
-ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
-z0=z['Data'][ind]
-sobs['Climate Class']=z0
+# # Thornthwaite's climate classification
+# z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_ThornthwaiteClimateClassCondensed_norm_1971to2000.tif')
+# ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+# z0=z['Data'][ind]
+# sobs['Climate Class']=z0
 
-# Temperature
-z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\BC1ha_mat_norm_1971to2000_si_hist_v1.tif')
-ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
-z0=z['Data'][ind]
-sobs['ta_ann_n']=z0
+# # Temperature
+# z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\BC1ha_mat_norm_1971to2000_si_hist_v1.tif')
+# ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+# z0=z['Data'][ind]
+# sobs['ta_ann_n']=z0
 
-# Climatic water deficit
-z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_cwd_gs_norm_1971to2000.tif')
-ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
-z0=z['Data'][ind]
-sobs['cwd_gs_n']=z0
+# # Climatic water deficit
+# z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_cwd_gs_norm_1971to2000.tif')
+# ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+# z0=z['Data'][ind]
+# sobs['cwd_gs_n']=z0
 
-# Potential evapotranspiration
-z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_etp_gs_norm_1971to2000.tif')
-ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
-z0=z['Data'][ind]
-sobs['etp_gs_n']=z0
+# # Potential evapotranspiration
+# z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_etp_gs_norm_1971to2000.tif')
+# ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+# z0=z['Data'][ind]
+# sobs['etp_gs_n']=z0
 
-# Soil water content
-z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_ws_gs_norm_1971to2000.tif')
-ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
-z0=z['Data'][ind]
-sobs['ws_gs_n']=z0
+# # Soil water content
+# z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\Seasonal\wbm_ws_gs_norm_1971to2000.tif')
+# ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
+# z0=z['Data'][ind]
+# sobs['ws_gs_n']=z0
 
 #%% Remove plots with bad coordinates
 
@@ -1558,7 +1576,7 @@ sobs['ws_gs_n']=z0
 #%% Save
 
 df=pd.DataFrame(sobs)
-df.to_excel(meta['Paths']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
+df.to_excel(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
 
 d1={'tobs':tobs,'sobs':sobs}
-gu.opickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_' + jurL[iJur] + '.pkl',d1)
+gu.opickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_' + jurL[iJur] + '.pkl',d1)
