@@ -25,14 +25,18 @@ meta,gpt=ugp.ImportPlotData(meta,type='Stand')
 
 #%% Import Raster grids
 
-zRef=gis.OpenGeoTiff(meta['Paths']['bc1ha Ref Grid'])
-zLCC1=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\LandCoverUse\\LandCoverClass1_Current.tif')
-zBGCZ=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\BEC_BIOGEOCLIMATIC_POLY\\ZONE.tif')
-zAge=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\VRI 2023\\PROJ_AGE_1.tif')
+vList=['refg','lcc1_c','bgcz','harv_yr_con1','fire_yr','ibm_yr'] #'lcc1_c','gfcly','gfcly_filt',
+z=u1ha.Import_Raster(meta,[],vList)
+iGrd=gis.GetGridIndexToPoints(z['refg'],gpt['X'],gpt['Y'])
 
-zH=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\VEG_CONSOLIDATED_CUT_BLOCKS_SP\\HARVEST_YEAR_YearLast.tif')
-zF=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\PROT_HISTORICAL_FIRE_POLYS_SP\\FIRE_YEAR_MaskAll.tif')
-zI=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\PEST_INFESTATION_POLY\\PEST_SEVERITY_CODE_IBM_MaskAll.tif')
+# zRef=gis.OpenGeoTiff(meta['Paths']['bc1ha Ref Grid'])
+# z['lcc1_c']=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\LandCoverUse\\LandCoverClass1_Current.tif')
+# z['bgcz']=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\BEC_BIOGEOCLIMATIC_POLY\\ZONE.tif')
+# zAge=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\VRI 2023\\PROJ_AGE_1.tif')
+
+# zH=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\VEG_CONSOLIDATED_CUT_BLOCKS_SP\\HARVEST_YEAR_YearLast.tif')
+# zF=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\PROT_HISTORICAL_FIRE_POLYS_SP\\FIRE_YEAR_MaskAll.tif')
+# zI=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\PEST_INFESTATION_POLY\\PEST_SEVERITY_CODE_IBM_MaskAll.tif')
 
 #%% Export summary by Plot Type
 
@@ -49,122 +53,6 @@ for k in gpt.keys():
 df=pd.DataFrame(d,index=[0,1,2])
 df.to_excel(meta['Paths']['GP']['DB'] + '\\Processed\\SummarySL_ByPlotType.xlsx')
 
-#%% Average biomass dynammics
-
-ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
-vL=['Year t0','Year t1','Ctot G Surv','Ctot G Recr','Ctot Mort+Lost','Ctot Net','Ctot Harv']
-sts={}
-for v in vL:
-    sts['mu ' + v]=np.nanmean(gpt[v][ikp])
-    sts['se ' + v]=np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)
-
-# Fix mortality to be natural mortality
-sts['mu Ctot Mort+Lost']=sts['mu Ctot Mort+Lost']-sts['mu Ctot Harv']
-
-print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
-print(sts['mu Ctot Net'])
-
-cl=np.array([[0.75,0.75,0.75],[0.24,0.49,0.77],[0.6,1,0]])
-cle=[0,0,0]#[0.05,0.2,0.45]
-barw=0.6
-lab=['Survivor\ngrowth','Recruitment\ngrowth','Natural\nmortality','Harvest\nmortality','Net\ngrowth'] #
-
-plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(10,8))
-ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
-ax.bar(1,sts['mu Ctot G Surv'],barw,facecolor=cl[0,:],label='Growth survivors')
-ax.bar(2,sts['mu Ctot G Recr'],barw,facecolor=cl[0,:],label='Growth recruitment')
-ax.bar(3,-sts['mu Ctot Mort+Lost'],barw,facecolor=cl[0,:],label='Natural\nmortality')
-ax.bar(4,-sts['mu Ctot Harv'],barw,facecolor=cl[0,:],label='Harvest')
-ax.bar(5,sts['mu Ctot Net'],barw,facecolor=cl[0,:],label='Net')
-ax.errorbar(1,sts['mu Ctot G Surv'],yerr=sts['se Ctot G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(2,sts['mu Ctot G Recr'],yerr=sts['se Ctot G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(3,-sts['mu Ctot Mort+Lost'],yerr=sts['se Ctot Mort+Lost'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(4,-sts['mu Ctot Harv'],yerr=sts['se Ctot Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(5,sts['mu Ctot Net'],yerr=sts['se Ctot Net'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,len(lab)+1),xticklabels=lab,ylabel='Carbon balance of trees (MgC ha${^-1}$ yr$^{-1}$)',xlim=[0.5,5.5],ylim=[-1.5,2])
-#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
-ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-#gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_BiomassDynamics_Mean_CN','png',900)
-
-#%% Average biomass dynammics (totals in CO2e)
-
-# Area of forest
-ind=np.where(zLCC1['Data']==meta['LUT']['Derived']['lcc1']['Forest'])
-A=ind[0].size
-
-ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
-vL=['Year t0','Year t1','Ctot G Surv','Ctot G Recr','Ctot Mort+Lost','Ctot Net','Ctot Harv']
-sts={}
-for v in vL:
-    sts['mu ' + v]=A*np.nanmean(gpt[v][ikp])/1e6*3.667
-    sts['se ' + v]=A*np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)/1e6*3.667
-
-print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
-print(sts['mu Ctot Net'])
-print(sts['mu Ctot Harv'])
-
-cl=np.array([[0.75,0.75,0.75],[0.24,0.49,0.77],[0.6,1,0]])
-cle=[0,0,0]#[0.05,0.2,0.45]
-barw=0.6
-lab=['Survivor\ngrowth','Recruitment\ngrowth','Natural\nmortality','Net\ngrowth'] #,'Harvest\nmortality'
-
-plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,8))
-ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
-ax.bar(1,sts['mu Ctot G Surv'],barw,facecolor=cl[0,:],label='Growth survivors')
-ax.bar(2,sts['mu Ctot G Recr'],barw,facecolor=cl[0,:],label='Growth recruitment')
-ax.bar(3,-sts['mu Ctot Mort+Lost'],barw,facecolor=cl[0,:],label='Mortality')
-ax.bar(4,-sts['mu Ctot Harv'],barw,facecolor=cl[0,:],label='Mortality')
-ax.bar(5,sts['mu Ctot Net'],barw,facecolor=cl[0,:],label='Mortality')
-ax.errorbar(1,sts['mu Ctot G Surv'],yerr=sts['se Ctot G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(2,sts['mu Ctot G Recr'],yerr=sts['se Ctot G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(3,-sts['mu Ctot Mort+Lost'],yerr=sts['se Ctot Mort+Lost'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(4,-sts['mu Ctot Harv'],yerr=sts['se Ctot Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(5,sts['mu Ctot Net'],yerr=sts['se Ctot Net'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,len(lab)+1),xticklabels=lab,ylabel='Carbon balance of trees (MtCO$_{2}$e yr$^{-1}$)',xlim=[0.5,5.5],ylim=[-350,450])
-#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
-ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-#gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_BiomassDynamics_Sum_CN','png',900)
-
-#%% Net Volume Production
-
-ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
-
-vL=['Year t0','Year t1','Vws G Surv','Vws G Recr','Vws Mort','Vws Net'] #,'Vws Mort Harv'
-sts={}
-for v in vL:
-    sts['mu ' + v]=np.nanmean(gpt[v][ikp])
-    sts['se ' + v]=np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)
-
-print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
-print(sts['mu Vws Net'])
-#print(sts['mu Vws Mort Harv'])
-
-cl=np.array([[0.8,0.8,0.8],[0.6,1,0]])
-cle=[0,0,0]
-barw=0.5
-lab=['Survivor\ngrowth','Recruitment\ngrowth','Mortality','Net\ngrowth'] # ,'Harvest\nmortality'
-
-plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(14.5,8))
-ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
-ax.bar(1,sts['mu Vws G Surv'],barw,facecolor=cl[0,:],label='Growth survivors')
-ax.bar(2,sts['mu Vws G Recr'],barw,facecolor=cl[0,:],label='Growth recruitment')
-ax.bar(3,-sts['mu Vws Mort'],barw,facecolor=cl[0,:],label='Mortality')
-#ax.bar(4,-sts['mu Vws Mort Harv'],barw,facecolor=cl[0,:],label='Mortality')
-ax.bar(4,sts['mu Vws Net'],barw,facecolor=cl[0,:],label='Mortality')
-ax.errorbar(1,sts['mu Vws G Surv'],yerr=sts['se Vws G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(2,sts['mu Vws G Recr'],yerr=sts['se Vws G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(3,-sts['mu Vws Mort'],yerr=sts['se Vws Mort'],color=cle,fmt='none',capsize=2,lw=0.5)
-#ax.errorbar(4,-sts['mu Vws Mort Harv'],yerr=sts['se Vws Mort Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.errorbar(4,sts['mu Vws Net'],yerr=sts['se Vws Net'],color=cle,fmt='none',capsize=2,lw=0.5)
-ax.set(position=[0.14,0.12,0.84,0.86],xticks=np.arange(1,5),xticklabels=lab,ylabel='Whole stem volume chagne (m$^{3}$ ha$^{-1}$ yr$^{-1}$)',xlim=[0.5,4.5],ylim=[-3,5])
-#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
-ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_VolumeDynamics_Mean_CN','png',900)
-
-
 #%% QA - compare standing biomass with standing volume whole stem
 
 plt.close('all')
@@ -177,7 +65,350 @@ ax.set(ylabel='Tree biomass (MgC ha$^{-1}$)',xlabel='Whole-stem volume (m$^{3}$ 
 ax.text(900,100,txt,fontsize=8)
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_QA_BiomassVsVolume','png',900)
+#gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_QA_BiomassVsVolume','png',900)
+
+#%% Average biomass dynammics
+
+ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
+vL=['Year t0','Year t1','Ctot G Surv','Ctot G Recr','Ctot Mort Nat','Ctot Net','Ctot Mort Harv']
+sts={}
+for v in vL:
+    sts['mu ' + v]=np.nanmean(gpt[v][ikp])
+    sts['se ' + v]=np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)
+
+print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
+print(sts['mu Ctot Net'])
+
+cl=np.array([[0.75,0.75,0.75],[0.24,0.49,0.77],[0.6,1,0]])
+cle=[0,0,0]#[0.05,0.2,0.45]
+barw=0.6
+lab=['Survivor\ngrowth','Recruitment\ngrowth','Natural\nmortality','Harvest\nmortality','Net\ngrowth'] #
+
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,6))
+ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
+ax.bar(1,sts['mu Ctot G Surv'],barw,facecolor=cl[0,:],label='Growth survivors')
+ax.bar(2,sts['mu Ctot G Recr'],barw,facecolor=cl[0,:],label='Growth recruitment')
+ax.bar(3,-sts['mu Ctot Mort Nat'],barw,facecolor=cl[0,:],label='Natural\nmortality')
+ax.bar(4,-sts['mu Ctot Harv'],barw,facecolor=cl[0,:],label='Harvest')
+ax.bar(5,sts['mu Ctot Net'],barw,facecolor=cl[0,:],label='Net')
+ax.errorbar(1,sts['mu Ctot G Surv'],yerr=sts['se Ctot G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(2,sts['mu Ctot G Recr'],yerr=sts['se Ctot G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(3,-sts['mu Ctot Mort Nat'],yerr=sts['se Ctot Mort Nat'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(4,-sts['mu Ctot Harv'],yerr=sts['se Ctot Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(5,sts['mu Ctot Net'],yerr=sts['se Ctot Net'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.set(xticks=np.arange(1,len(lab)+1),xticklabels=lab,ylabel='Carbon balance of trees (MgC ha${^-1}$ yr$^{-1}$)',xlim=[0.5,5.5],ylim=[-1.5,2])
+#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+plt.tight_layout()
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_BiomassDynamics_Mean_CN','png',900)
+
+#%% Average biomass dynammics (totals in CO2e)
+
+# Area of forest
+ind=np.where(z['lcc1_c']['Data']==meta['LUT']['Derived']['lcc1']['Forest'])
+A=ind[0].size
+
+ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
+vL=['Year t0','Year t1','Ctot G Surv','Ctot G Recr','Ctot Mort Nat','Ctot Net','Ctot Mort Harv']
+sts={}
+for v in vL:
+    sts['mu ' + v]=A*np.nanmean(gpt[v][ikp])/1e6*3.667
+    sts['se ' + v]=A*np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)/1e6*3.667
+
+print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
+print(sts['mu Ctot Net'])
+print(sts['mu Ctot Harv'])
+
+cl=np.array([[0.75,0.75,0.75],[0.24,0.49,0.77],[0.6,1,0]])
+cle=[0,0,0]#[0.05,0.2,0.45]
+barw=0.6
+lab=['Survivor\ngrowth','Recruitment\ngrowth','Natural\nmortality','Harvest\nmortality','Net\ngrowth'] #
+
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,6))
+ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
+ax.bar(1,sts['mu Ctot G Surv'],barw,facecolor=cl[0,:],label='Growth survivors')
+ax.bar(2,sts['mu Ctot G Recr'],barw,facecolor=cl[0,:],label='Growth recruitment')
+ax.bar(3,-sts['mu Ctot Mort Nat'],barw,facecolor=cl[0,:],label='Mortality')
+ax.bar(4,-sts['mu Ctot Harv'],barw,facecolor=cl[0,:],label='Mortality')
+ax.bar(5,sts['mu Ctot Net'],barw,facecolor=cl[0,:],label='Mortality')
+ax.errorbar(1,sts['mu Ctot G Surv'],yerr=sts['se Ctot G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(2,sts['mu Ctot G Recr'],yerr=sts['se Ctot G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(3,-sts['mu Ctot Mort Nat'],yerr=sts['se Ctot Mort Nat'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(4,-sts['mu Ctot Harv'],yerr=sts['se Ctot Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(5,sts['mu Ctot Net'],yerr=sts['se Ctot Net'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.set(xticks=np.arange(1,len(lab)+1),xticklabels=lab,ylabel='Carbon balance of trees (MtCO$_{2}$e yr$^{-1}$)',xlim=[0.5,5.5],ylim=[-350,450])
+#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+plt.tight_layout()
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_BiomassDynamics_Sum_CN','png',900)
+
+#%% Average volume dynammics
+
+ikp=np.where( (gpt['PTF CN']==1) & (gpt['Year t1']>0) )[0]
+
+vL=['Year t0','Year t1','Vws G Surv','Vws G Recr','Vws Mort Nat','Vws Harv','Vws Mort Net'] #,
+sts={}
+for v in vL:
+    sts['mu ' + v]=np.nanmean(gpt[v][ikp])
+    sts['se ' + v]=np.nanstd(gpt[v][ikp])/np.sqrt(ikp.size)
+
+print( str(np.nanpercentile(gpt['Year t0'],25)) + ' ' + str(np.nanpercentile(gpt['Year t1'],75)) )
+print(sts['mu Vws Net'])
+#print(sts['mu Vws Mort Harv'])
+
+cl=np.array([[0.8,0.8,0.8],[0.6,1,0]])
+cle=[0,0,0]
+barw=0.5
+lab=['Survivor\ngrowth','Recruitment\ngrowth','Natural\nmortality','Harvest\nmortality','Net\ngrowth'] #
+
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,6))
+ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
+ax.bar(1,sts['mu Vws G Surv'],barw,facecolor=cl[0,:],label='Growth survivors')
+ax.bar(2,sts['mu Vws G Recr'],barw,facecolor=cl[0,:],label='Growth recruitment')
+ax.bar(3,-sts['mu Vws Mort Nat'],barw,facecolor=cl[0,:],label='Mortality')
+ax.bar(4,-sts['mu Vws Harv'],barw,facecolor=cl[0,:],label='Mortality')
+ax.bar(5,sts['mu Vws Net'],barw,facecolor=cl[0,:],label='Mortality')
+ax.errorbar(1,sts['mu Vws G Surv'],yerr=sts['se Vws G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(2,sts['mu Vws G Recr'],yerr=sts['se Vws G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(3,-sts['mu Vws Mort Nat'],yerr=sts['se Vws Mort Nat'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(4,-sts['mu Vws Harv'],yerr=sts['se Vws Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.errorbar(5,sts['mu Vws Net'],yerr=sts['se Vws Net'],color=cle,fmt='none',capsize=2,lw=0.5)
+ax.set(xticks=np.arange(1,len(lab)+1),xticklabels=lab,ylabel='Whole stem volume periodic increment (m$^{3}$ ha$^{-1}$ yr$^{-1}$)',xlim=[0.5,5.5],ylim=[-4,5])
+#plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+plt.tight_layout()
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_VolumeDynamics_Mean_CN','png',900)
+
+#%% Fire profiles
+
+tvFire=np.arange(1990,2022,1)
+fy=z['fire_yr']['Data'][iGrd]
+tsf=gpt['Year t0']-fy
+
+bw=5; bin=np.arange(-12.5,20,bw)
+prfl={}
+for k in gpt.keys():
+    prfl[k]={}
+    prfl[k]['N'],prfl[k]['mu'],prfl[k]['med'],prfl[k]['sig'],prfl[k]['se']=gu.discres(tsf,gpt[k],bw,bin)
+
+# Plot
+v='Age Med t0'
+#v='Ctot L t0'
+#v='Ctot G Recr'
+#v='Ctot Mort'
+#v='N Net (%)'
+it0=np.where(bin<0)[0]
+it1=np.where( (bin>0) & (bin<=15) )[0]
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,6));
+ax.plot([0,0],[0,1.07*np.nanmax(prfl[v]['mu'])],'k-',lw=2,color=[0.75,0.75,0.75])
+ax.plot(bin,prfl[v]['mu'],'ko',ms=3,mfc='k',mec=cl[0,:],label='Live')
+ax.errorbar(bin,prfl[v]['mu'],yerr=prfl[v]['se'],color='k',fmt='none',capsize=1.5,lw=0.5)
+mu0=np.nanmean(prfl[v]['mu'][it0])
+mu1=np.nanmean(prfl[v]['mu'][it1])
+ax.plot(bin[it0],mu0*np.ones(it0.size),'k--',color='k',lw=0.5)
+ax.plot(bin[it1],mu1*np.ones(it1.size),'k-.',color='k',lw=0.5)
+ax.text(np.mean(bin[it1]),1.15*mu1,'Change = ' + str(np.round(mu1-mu0,decimals=1)) + '\n(' + str(np.round( (mu1-mu0)/mu0*100 ,decimals=1)) + '%)',ha='center',fontsize=7,style='normal',color='k')
+ax.set(ylabel='Tree carbon (tC ha$^1$)',xlabel='Time since detection, years',ylim=[0,1.07*np.nanmax(prfl[v]['mu'])])
+#ax[0].legend(loc='upper right',frameon=False,facecolor='w',edgecolor='w')
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+plt.tight_layout()
+#gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\QA_Wildfire_Profiles','png',900)
+
+#%% IBM profiles
+
+tso=-100*np.ones(gpt['Year t0'].size)
+for iY in range(10):
+    zY=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\PEST_INFESTATION_POLY\\PEST_SEVERITY_CODE_IBM_' + str(iY+1) + '_Year.tif')['Data'][iGrd]
+    zS=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\PEST_INFESTATION_POLY\\PEST_SEVERITY_CODE_IBM_' + str(iY+1) + '_Severity.tif')['Data'][iGrd]
+    ind=np.where( (zS==meta['LUT']['PEST_INFESTATION_POLY']['PEST_SEVERITY_CODE']['S']) & (gpt['Year t0']-zY>tso) )[0]
+    tso[ind]=gpt['Year t0'][ind]-zY[ind]
+
+#%%
+
+bw=5; bin=np.arange(-15,25,bw)
+prfl={}
+for k in gpt.keys():
+    prfl[k]={}
+    prfl[k]['N'],prfl[k]['mu'],prfl[k]['med'],prfl[k]['sig'],prfl[k]['se']=gu.discres(tso,gpt[k],bw,bin)
+
+# Plot
+#v='Ctot L t0'
+#v='Ctot D t0'
+#v='Ctot G Surv'
+#v='Ctot G Recr'
+v='Ctot Mort Nat'
+#v='N Recr (%)'
+it0=np.where(bin<0)[0]
+it1=np.where( (bin>0) & (bin<=15) )[0]
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,6));
+ax.plot([0,0],[0,1.07*np.nanmax(prfl[v]['mu'])],'k-',lw=2,color=[0.75,0.75,0.75])
+ax.plot(bin,prfl[v]['mu'],'ko',ms=3,mfc='k',mec=cl[0,:],label='Live')
+ax.errorbar(bin,prfl[v]['mu'],yerr=prfl[v]['se'],color='k',fmt='none',capsize=1.5,lw=0.5)
+mu0=np.nanmean(prfl[v]['mu'][it0])
+mu1=np.nanmean(prfl[v]['mu'][it1])
+ax.plot(bin[it0],mu0*np.ones(it0.size),'k--',color='k',lw=0.5)
+ax.plot(bin[it1],mu1*np.ones(it1.size),'k-.',color='k',lw=0.5)
+ax.text(np.mean(bin[it1]),1.15*mu1,'Change = ' + str(np.round(mu1-mu0,decimals=1)) + '\n(' + str(np.round( (mu1-mu0)/mu0*100 ,decimals=1)) + '%)',ha='center',fontsize=7,style='normal',color='k')
+ax.set(ylabel='Tree carbon (tC ha$^1$)',xlabel='Time since detection, years',ylim=[0,1.07*np.nanmax(prfl[v]['mu'])])
+#ax[0].legend(loc='upper right',frameon=False,facecolor='w',edgecolor='w')
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+plt.tight_layout()
+#gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\QA_Wildfire_Profiles','png',900)
+
+#%% Mortality regression analysis
+
+# Modelled harvest mortality is too high because salvage harvest is being counted as mortality
+# even though something else killed most of the trees.
+
+gplt2=copy.deepcopy(gplt)
+for k in gplt2.keys():
+    try:
+        gplt2[k]=gplt2[k][(gplt['PTF CNY']==1)]
+    except:
+        pass
+
+# Look at number of occurrences
+print(np.where(gplt2['IBB Occurrence']==1)[0].size)
+print(np.where(gplt2['IBD Occurrence']==1)[0].size)
+print(np.where(gplt2['IBM Occurrence']==1)[0].size)
+print(np.where(gplt2['IBS Occurrence']==1)[0].size)
+print(np.where(gplt2['Wildfire Occurrence']==1)[0].size)
+print(np.where(gplt2['Harv Occurrence']==1)[0].size)
+
+df=pd.DataFrame.from_dict(gplt2)
+df.columns=df.columns.str.replace(' ','_')
+#x=df[['debt_ratio','industry']]
+#y=df['cash_flow']
+
+#frm='Ctot_Mort ~ Age_t0 + C(IBB_Occurrence) + C(IBD_Occurrence) + C(IBM_Occurrence) + C(IBS_Occurrence) + C(IDW_Occurrence) + C(Wildfire_Occurrence) + C(Harv_Occurrence)'
+frm1='Ctot_Mort ~ Ctot_L_t0 + C(IBB_Occurrence) + C(IBM_Occurrence) + C(IBS_Occurrence) + C(IDW_Occurrence) + C(Wildfire_Occurrence) + C(Harv_Occurrence)'
+md1=smf.ols(formula=frm1,data=df)
+mr1=md1.fit()
+print(mr1.summary())
+
+frm2='Mod_C_M_Tot ~ Mod_C_Biomass_Tot_t0 + C(IBB_Occurrence) + C(IBM_Occurrence) + C(IBS_Occurrence) + C(IDW_Occurrence) + C(Wildfire_Occurrence) + C(Harv_Occurrence)'
+md2=smf.ols(formula=frm2,data=df)
+mr2=md2.fit()
+print(mr2.summary())
+
+b1=mr1.params.values
+b2=mr2.params.values
+se1=mr1.bse.values
+se2=mr2.bse.values
+lab=['IBB','IBM','IBS','IDW','Wildfire','Harvest'] #'Int', ,'Initial\nbiomass'
+
+# Correct harvest to account for salvage
+b2[-2]=0.65*b2[-2]
+
+barw=0.32
+cl=np.array([[0.9,0.9,1.0],[0.8,0.9,0.8]])
+
+plt.close('all')
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(11,9))
+ax.plot([-1,b1.size+1],[0,0],'k-',lw=0.5)
+ax.bar(np.arange(b1.size)-barw/2-0.01,b1,barw,facecolor=cl[0,:],label='Observations')
+ax.bar(np.arange(b1.size)+barw/2+0.01,b2,barw,facecolor=cl[1,:],label='Predictions (FCS)')
+ax.errorbar(np.arange(b1.size)-barw/2-0.01,b1,yerr=se1,color=gp['cla'],fmt='none',capsize=1.5,lw=0.25,markeredgewidth=0.5)
+ax.errorbar(np.arange(b1.size)+barw/2+0.01,b2,yerr=se2,color=gp['cla'],fmt='none',capsize=1.5,lw=0.25,markeredgewidth=0.5)
+
+ax.set(position=[0.08,0.12,0.9,0.86],xticks=np.arange(1,b1.size-1,1),xticklabels=lab,
+       ylabel='Regression coefficient (MgC ha$^{-1}$ yr$^{-1}$)',
+       xlim=[-0.5+1,b1.size-1-0.5],ylim=[-4,10.5])
+plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
+#gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\QA_Mortality_Regression','png',900)
+
+#%% Mountain Pine Beetle
+
+# Import AOS data
+ind=gis.GetGridIndexToPoints(zRef,gplt['X'],gplt['Y'])
+tvMPB=np.arange(1999,2022,1)
+ios=np.zeros( (tvMPB.size,ind[0].size) ,dtype='int8')
+for iT in range(tvMPB.size):
+    z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Disturbances\PEST_INFESTATION_POLY_IBM_SeverityClass_' + str(tvMPB[iT]) + '.tif')
+    ios[iT,:]=z['Data'][ind].copy()
+
+# Calculate average outbreak profiles
+
+ios_mx=np.max(ios,axis=0)
+ind=np.where(ios_mx>=2)[0]
+sts={}
+sts['tso']=np.zeros(ind.size)
+for v in gplt.keys():
+    sts[v]=np.zeros(ind.size)
+    for iStand in range(ind.size):
+        indOutbreak=np.where(ios[:,ind[iStand]]>0)[0]
+        sts['tso'][iStand]=gplt['Year t0'][ind[iStand]]-tvMPB[indOutbreak[0]]
+        sts[v][iStand]=gplt[v][ind[iStand]]
+
+bw=4; bin=np.arange(-10,20,bw)
+prfl={}
+for k in sts.keys():
+    prfl[k]={}
+    prfl[k]['N'],prfl[k]['mu'],prfl[k]['med'],prfl[k]['sig'],prfl[k]['se']=gu.discres(sts['tso'],sts[k],bw,bin)
+
+# Plot
+
+it0=np.where(bin<0)[0]
+it1=np.where(bin>=10)[0]
+it2=np.where(bin>0)[0]
+
+# Plot observed profile
+
+plt.close('all')
+fig,ax=plt.subplots(1,2,figsize=gu.cm2inch(15.5,7)); ms=4; cl=np.array([[0.8,0.8,0.8],[0.27,0.49,0.77],[0.75,0,0],[0.67,0.89,0.95],[1,0.6,0.6]])
+ax[0].plot([0,0],[0,130],'k-',lw=2,color=[0.75,0.75,0.75])
+ax[0].plot(bin,prfl['Ctot L t0']['mu']+prfl['Cdw t0']['mu'],'k^',ms=ms,mfc=cl[0,:],mec=cl[0,:],label='Live + dead')
+
+mu0=np.mean(prfl['Ctot L t0']['mu'][it0])
+mu1=np.mean(prfl['Ctot L t0']['mu'][it1])
+ax[0].plot(bin[it0],mu0*np.ones(it0.size),'k-',color=cl[3,:],lw=2)
+ax[0].plot(bin[it1],mu1*np.ones(it1.size),'k-',color=cl[3,:],lw=2)
+ax[0].text(np.mean(bin[it1]),mu1+5,str(np.round(mu1-mu0,decimals=1)) + ' (' + str(np.round( (mu1-mu0)/mu0*100 ,decimals=1)) + '%)',ha='center',fontsize=10,style='normal',weight='bold',color=cl[1,:])
+
+mu0=np.mean(prfl['Cdw t0']['mu'][it0])
+ax[0].plot(bin[it0],mu0*np.ones(it0.size),'k-',color=cl[4,:],lw=2)
+it1b=np.where(prfl['Cdw t0']['mu']==np.max(prfl['Cdw t0']['mu']) )[0]
+mu1=prfl['Cdw t0']['mu'][it1b[0]]
+ax[0].plot(bin[it2],mu1*np.ones(it2.size),'k-',color=cl[4,:],lw=2)
+ax[0].text(np.mean(bin[it2]),mu1+5,str(np.round(mu1-mu0,decimals=1)) + ' (' + str(np.round( (mu1-mu0)/mu0*100 ,decimals=1)) + '%)',ha='center',fontsize=10,style='normal',weight='bold',color=cl[2,:])
+
+ax[0].plot(bin,prfl['Ctot L t0']['mu'],'go',ms=ms,mfc=cl[1,:],mec=cl[1,:],label='Live')
+ax[0].plot(bin,prfl['Cdw t0']['mu'],'rs',ms=ms,mfc='w',mec=cl[2,:],label='Dead')
+
+ax[0].set(ylim=[0,140],ylabel='Tree carbon (MtCO$_2$e yr$^-$$^1$)',xlabel='Time since detection, years')
+ax[0].legend(loc='upper right',frameon=False,facecolor='w',edgecolor='w')
+ax[0].yaxis.set_ticks_position('both'); ax[0].xaxis.set_ticks_position('both'); ax[0].tick_params(length=gp['tickl'])
+
+# Plot modelled profile
+#fig,ax=plt.subplots(1,figsize=gu.cm2inch(8.5,7.5)); ms=4; cl=np.array([[0.8,0.8,0.8],[0.27,0.49,0.77],[0.75,0,0],[0.67,0.89,0.95],[1,0.6,0.6]])
+ax[1].plot([0,0],[0,250],'k-',lw=2,color=[0.75,0.75,0.75])
+ax[1].plot(bin,prfl['Mod C_Biomass_Tot t0']['mu']+prfl['Mod C_DeadWood_Tot t0']['mu'],'k^',ms=ms,mfc=cl[0,:],mec=cl[0,:],label='Live + dead')
+
+mu0=np.mean(prfl['Mod C_Biomass_Tot t0']['mu'][it0])
+mu1=np.mean(prfl['Mod C_Biomass_Tot t0']['mu'][it1])
+ax[1].plot(bin[it0],mu0*np.ones(it0.size),'k-',color=cl[3,:],lw=2)
+ax[1].plot(bin[it1],mu1*np.ones(it1.size),'k-',color=cl[3,:],lw=2)
+ax[1].text(np.mean(bin[it1]),mu1+5,str(np.round(mu1-mu0,decimals=1)) + ' (' + str(np.round( (mu1-mu0)/mu0*100 ,decimals=1)) + '%)',ha='center',fontsize=10,style='normal',weight='bold',color=cl[1,:])
+
+mu0=np.mean(prfl['Mod C_DeadWood_Tot t0']['mu'][it0])
+ax[1].plot(bin[it0],mu0*np.ones(it0.size),'k-',color=cl[4,:],lw=2)
+it1b=np.where(prfl['Mod C_DeadWood_Tot t0']['mu']==np.max(prfl['Mod C_DeadWood_Tot t0']['mu']) )[0]
+mu1=prfl['Mod C_DeadWood_Tot t0']['mu'][it1b[0]]
+ax[1].plot(bin[it2],mu1*np.ones(it2.size),'k-',color=cl[4,:],lw=2)
+ax[1].text(np.mean(bin[it2]),mu1+5,str(np.round(mu1-mu0,decimals=1)) + ' (' + str(np.round( (mu1-mu0)/mu0*100 ,decimals=1)) + '%)',ha='center',fontsize=10,style='normal',weight='bold',color=cl[2,:])
+
+ax[1].plot(bin,prfl['Mod C_Biomass_Tot t0']['mu'],'go',ms=ms,mfc=cl[1,:],mec=cl[1,:],label='Live')
+ax[1].plot(bin,prfl['Mod C_DeadWood_Tot t0']['mu'],'rs',ms=ms,mfc='w',mec=cl[2,:],label='Dead')
+
+ax[1].set(ylim=[0,140],ylabel='Tree carbon (MtCO$_2$e yr$^-$$^1$)',xlabel='Time since detection, years')
+ax[1].legend(loc='upper right',frameon=False,facecolor='w',edgecolor='w')
+ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=gp['tickl'])
+
+gu.axletters(ax,plt,0.045,0.92,FontColor=gp['cla'],LetterStyle='Caps',FontWeight='Bold')
+plt.tight_layout()
+gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\QA_IBM_Profiles','png',900)
+
 
 #%% Plot Stocks by BGC zone
 
@@ -268,7 +499,7 @@ gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_Biomass_ByGBCZone_CNV','png',
 
 #%% Plot net biomass production by BGC zone (CN)
 
-vL=['Ctot G Surv','Ctot G Recr','Ctot Mort+Lost','Ctot Mort+Lost Harv','Ctot Net']
+vL=['Ctot G Surv','Ctot G Recr','Ctot Mort Nat','Ctot Mort Harv','Ctot Net']
 
 u=np.unique(gpt['Ecozone BC L1'])
 u=u[u>0]
@@ -314,32 +545,32 @@ for v in d:
 # Area weighting
 d['Area']=np.zeros(lab.size)
 for i in range(lab.size):
-    ind2=np.where( (zBGCZ['Data']==meta['LUT']['BEC_BIOGEOCLIMATIC_POLY']['ZONE'][lab[i]]) & (zLCC1['Data']==meta['LUT']['Derived']['lcc1']['Forest']) )
+    ind2=np.where( (z['bgcz']['Data']==meta['LUT']['BEC_BIOGEOCLIMATIC_POLY']['ZONE'][lab[i]]) & (z['lcc1_c']['Data']==meta['LUT']['Derived']['lcc1']['Forest']) )
     d['Area'][i]=ind2[0].size/1e6
 
 wa=np.sum(d['Ctot Net']['mu']*d['Area'])/np.sum(d['Area'])
 
 lab2=np.append(lab,'Area\nweighted')
 
-plt.close('all')
-fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,9)); cl=np.array([[0.75,0.75,0.75],[0.5,0.5,0.5],[1,0.5,0],[0.45,0.75,1],[0.6,1,0]])
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,6)); cl=np.array([[0.75,0.75,0.75],[0.5,0.5,0.5],[1,0.5,0],[0.45,0.75,1],[0.6,1,0]])
 ax.bar(np.arange(u.size),d['Ctot Net']['mu'],facecolor=cl[0,:],label='')
 for i in range(u.size):
     ax.errorbar(i,d['Ctot Net']['mu'][i],yerr=d['Ctot Net']['se'][i],color=gp['cla'],fmt='none',capsize=2,lw=0.5)
 ax.bar(u.size,wa,facecolor=cl[1,:],label='Weighted average')
 ax.errorbar(u.size,wa,yerr=np.mean(d['Ctot Net']['se']),color=gp['cla'],fmt='none',capsize=2,lw=0.5)
 ax.plot([-1,20],[0,0],'-k',color=gp['cla'],lw=0.5)
-ax.set(position=[0.08,0.075,0.9,0.91],yticks=np.arange(-5,3.5,0.5),xticks=np.arange(u.size+1),xticklabels=lab2,
+ax.set(yticks=np.arange(-5,3.5,0.5),xticks=np.arange(u.size+1),xticklabels=lab2,
        ylabel='Net biomass production (MgC ha$^{-1}$ yr$^{-1}$)',
        xlim=[-0.5,u.size+1-0.5],ylim=[-1.5,3])
 #plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
 for i in range(u.size):
     if d['Ctot Net']['mu'][i]>0:
-        adj=0.08
+        adj=0.1
     else:
-        adj=-0.08
-    ax.text(i+0.2,d['Ctot Net']['mu'][i]+adj,str(d['Ctot Net']['N'][i].astype(int)),color='k',ha='center',va='center',fontsize=7,fontweight='normal')
+        adj=-0.1
+    ax.text(i+0.24,d['Ctot Net']['mu'][i]+adj,str(d['Ctot Net']['N'][i].astype(int)),color='k',ha='center',va='center',fontsize=5,fontweight='normal')
+plt.tight_layout()
 gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_NetGrowth_ByGBCZone_CN','png',900)
 
 #%% Plot net biomass production by BGC zone (YSM)
@@ -390,7 +621,7 @@ for v in d:
 # Area weighting
 d['Area']=np.zeros(lab.size)
 for i in range(lab.size):
-    ind2=np.where( (zBGCZ['Data']==meta['LUT']['BEC_BIOGEOCLIMATIC_POLY']['ZONE'][lab[i]]) & (zLCC1['Data']==meta['LUT']['Derived']['lcc1']['Forest Land']) )
+    ind2=np.where( (z['bgcz']['Data']==meta['LUT']['BEC_BIOGEOCLIMATIC_POLY']['ZONE'][lab[i]]) & (z['lcc1_c']['Data']==meta['LUT']['Derived']['lcc1']['Forest Land']) )
     d['Area'][i]=ind2[0].size/1e6
 
 wa=np.sum(d['Ctot Net']['mu']*d['Area'])/np.sum(d['Area'])

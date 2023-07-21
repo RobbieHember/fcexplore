@@ -89,6 +89,8 @@ def ImportParameters(meta):
 
     meta['LUT']['GP']['Damage Agents']={}
     for i in range(meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'].size):
+        if meta['LUT']['GP']['Raw Tables']['Damage Agents']['Value'][i]=='nan':
+            continue
         meta['LUT']['GP']['Damage Agents'][ meta['LUT']['GP']['Raw Tables']['Damage Agents']['Value'][i] ]=meta['LUT']['GP']['Raw Tables']['Damage Agents']['ID'][i]
 
     meta['LUT']['GP']['Ecozone BC L1']={}
