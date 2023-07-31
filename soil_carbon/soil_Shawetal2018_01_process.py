@@ -4,7 +4,7 @@ Analyiss of Canadian Upland Forest Soils in British Columbia
 Shaw et al. (2018)
 """
 
-#%% IMPORT MODULES
+#%% Import modules
 
 import sys
 import numpy as np
@@ -29,12 +29,10 @@ import cv2
 
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
-from fcgadgets.macgyver import utilities_inventory as invu
-from fcexplore.psp.Processing import psp_utilities as utl_gp
+import fcgadgets.bc1ha.bc1ha_utilities as u1ha
 
-#%% Set figure properties
-
-#gp=gu.SetGraphics('Presentation Dark')
+#%% Import data
+meta=u1ha.Init()
 gp=gu.SetGraphics('Manuscript')
 
 #%% Import Canadian Upland forest database
@@ -60,70 +58,27 @@ if flg==1:
         ufd[k]=ufd[k][ind]
 
     # Get BC1ha grid coords
-
-    # FAIB standard grid
-    zRef=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Admin\FAIB_Standard.tif')
-
     srs=gis.ImportSRSs()
     ufd['x']=np.zeros(ufd['LOCATION_ID'].size)
     ufd['y']=np.zeros(ufd['LOCATION_ID'].size)
     for i in range(ufd['x'].size):
         ufd['x'][i],ufd['y'][i]=srs['Proj']['BC1ha'](ufd['LONGITUDE'][i],ufd['LATITUDE'][i])
 
-    x=zRef['X'][0,:]
-    y=zRef['Y'][:,0]
-    ix=np.zeros(ufd['LOCATION_ID'].size,dtype=int)
-    iy=np.zeros(ufd['LOCATION_ID'].size,dtype=int)
-    for i in range(ufd['x'].size):
-        ix[i]=np.where( np.abs(ufd['x'][i]-x)==np.min(np.abs(ufd['x'][i]-x)) )[0]
-        iy[i]=np.where( np.abs(ufd['y'][i]-y)==np.min(np.abs(ufd['y'][i]-y)) )[0]
-
-    # Check that it worked
-    flg=0
-    if flg==1:
-        x=zRef['X'][iy,ix]
-        y=zRef['Y'][iy,ix]
-        plt.plot(x,y,'k.')
-
     # Import BC1ha data
-    becz=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
-    lutBGC=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz_lut.xlsx')
-    ufd['becz']=becz['Data'][iy,ix]
-
-    #elev=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Terrain\elevation.tif')
-    #ws=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_ws_gs_norm_1971to2000_comp_hist_v1.tif')
-    #dwf=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Climate\BC1ha_dwf_ann_norm_1971to2000_si_hist_v1.tif')
-    #age1=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\age1.tif')
-    #gsoc=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\Soil\gsoc2010_bc1ha.tif')
-
-    #ufd['elev']=elev['Data'][iy,ix]
-    #ufd['gsoc']=gsoc['Data'][iy,ix]
-    #ufd['ws']=ws['Data'][iy,ix]
-    #ufd['dwf']=dwf['Data'][iy,ix]
-    #ufd['age1']=age1['Data'][iy,ix]
-    #ufd['age1'][np.where(ufd['age1']<=0)[0]]=0
-
-    #del elev,ws,age1,gsoc,becz,dwf
-    #del gsoc
-    garc.collect()
-
-    # Plot
-
-    # ind=np.where(ufd['gsoc']>0)[0]
-    # plt.close('all')
-    # plt.plot(ufd['MIN_C_THA'][ind],ufd['gsoc'][ind],'.')
+    z=u1ha.Import_Raster(meta,[],['bgcz'])
+    ind=gis.GetGridIndexToPoints(z['bgcz'],ufd['x'],ufd['y'])
+    ufd['bgcz']=z['bgcz']['Data'][ind]
 
     # Delete no BGC zone
-
     # Only two
-    ind=np.where( (ufd['becz']==255) )[0]
+    ind=np.where( (ufd['bgcz']==0) )[0]
+    print(ind.size)
 
-    ind=np.where( (ufd['becz']!=255) )[0]
+    ind=np.where( (ufd['bgcz']!=0) )[0]
     for k in ufd.keys():
         ufd[k]=ufd[k][ind]
 
     # Save to pickle
-
     gu.opickle(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.pkl',ufd)
 
 else:
@@ -133,7 +88,7 @@ else:
 #%% Model 1 - BGC zone only
 
 df=pd.DataFrame.from_dict(ufd)
-form="TOT_C_THA ~ C(becz)"
+form="TOT_C_THA ~ C(bgcz)"
 mr1=smf.ols(formula=form, data=df).fit()
 print(mr1.summary())
 dP1=mr1.params.to_dict()
@@ -149,7 +104,7 @@ dP2=mr2.params.to_dict()
 #%% Model 3 - BGC zone + soil type (Subgroup.Greatgroup)
 
 df=pd.DataFrame.from_dict(ufd)
-form="TOT_C_THA ~ C(becz) + C(CSSC_CODE)"
+form="TOT_C_THA ~ C(bgcz) + C(CSSC_CODE)"
 mr3=smf.ols(formula=form,data=df).fit()
 print(mr3.summary())
 dP3=mr3.params.to_dict()
@@ -226,11 +181,11 @@ if flg==1:
     zSOC1['Data']=dP1['Intercept']+0*zSOC1['Data']
 
     # Add BEC
-    u=np.unique(becz['Data'][becz['Data']<255])
+    u=np.unique(bgcz['Data'][bgcz['Data']<255])
     for i in range(u.size):
-        ind1=np.where( becz['Data']==u[i] )
+        ind1=np.where( bgcz['Data']==u[i] )
         for k in dP1:
-            if k=='C(becz)[T.' + str(u[i]) + ']':
+            if k=='C(bgcz)[T.' + str(u[i]) + ']':
                 break
         zSOC1['Data'][ind1]=zSOC1['Data'][ind1]+dP1[k]
 
@@ -268,11 +223,11 @@ if flg==1:
     zSOC3['Data']=dP3['Intercept']+0*zSOC3['Data']
 
     # Add BEC
-    u=np.unique(becz['Data'][becz['Data']<255])
+    u=np.unique(bgcz['Data'][bgcz['Data']<255])
     for i in range(u.size):
-        ind1=np.where( becz['Data']==u[i] )
+        ind1=np.where( bgcz['Data']==u[i] )
         for k in dP3:
-            if k=='C(becz)[T.' + str(u[i]) + ']':
+            if k=='C(bgcz)[T.' + str(u[i]) + ']':
                 break
         zSOC3['Data'][ind1]=zSOC3['Data'][ind1]+dP3[k]
 
@@ -314,7 +269,7 @@ np.sum(zSOC['Data'][iMask])/1e9
 
 #%% Plot by BGC zone
 
-u=np.unique(ufd['becz'])
+u=np.unique(ufd['bgcz'])
 
 lab=np.array(['' for _ in range(u.size)],dtype=object)
 soc={}
@@ -326,7 +281,7 @@ soc['org_mu']=np.zeros(u.size)
 soc['Model A']=np.zeros(u.size)
 soc['Model Soil C']=np.zeros(u.size)
 for i in range(u.size):
-    ind=np.where( (ufd['becz']==u[i]) & (ufd['TOT_C_THA']>0) )[0]
+    ind=np.where( (ufd['bgcz']==u[i]) & (ufd['TOT_C_THA']>0) )[0]
     soc['N'][i]=ind.size
     soc['mu'][i]=np.nanmean(ufd['TOT_C_THA'][ind])
     soc['se'][i]=np.nanstd(ufd['TOT_C_THA'][ind])/np.sqrt(ind.size)
@@ -387,7 +342,7 @@ ax.plot(np.arange(u.size),soc['Model A'],'bo',lw=1,ms=8,mfc='w')
 
 soc['map_mu']=np.zeros(u.size)
 for i in range(u.size):
-    ind=np.where( becz['Data']==u[i] )
+    ind=np.where( bgcz['Data']==u[i] )
     soc['map_mu'][i]=np.nanmean(zSOC['Data'][ind])
 
 # Reorder

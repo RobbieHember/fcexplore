@@ -15,9 +15,9 @@ VRI remeasurements:
 
 import numpy as np
 import matplotlib.pyplot as plt
-import fcgadgets.macgyver.utilities_general as gu
-import fcgadgets.macgyver.utilities_gis as gis
-import fcexplore.psp.Processing.psp_utilities as utl
+import fcgadgets.macgyver.util_general as gu
+import fcgadgets.macgyver.util_gis as gis
+import fcexplore.psp.Processing.psp_util as utl
 from scipy.optimize import curve_fit
 
 #%% Import project info
@@ -177,8 +177,8 @@ u=np.unique(tl0['SPECIES'])
 for i in range(u.size):
     ind0=np.where(tl0['SPECIES']==u[i])[0]
     ind1=np.where(meta['LUT']['GP']['Species Given']['BC']['Code Given']==u[i])[0][0]
-    ind2=np.where(meta['GP']['Param']['Allo B']['Code']==meta['LUT']['GP']['Species Given']['BC']['Code Final'][ind1] )[0]
-    tl['ID Species'][ind0]=meta['GP']['Param']['Allo B']['ID'][ind2]
+    ind2=np.where(meta['Param']['GP']['Allo B']['Code']==meta['LUT']['GP']['Species Given']['BC']['Code Final'][ind1] )[0]
+    tl['ID Species'][ind0]=meta['Param']['GP']['Allo B']['ID'][ind2]
 
 tl['Crown Class']=np.zeros(N_tl,dtype='int16')
 for k in meta['LUT']['GP']['Crown Class'].keys():
@@ -248,7 +248,7 @@ indG=np.where( (tl['DBH']>0) & (tl['H']>0) )[0]
 indG.size/tl['DBH'].size
 
 # Global model
-ikp=np.where( (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['GP']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['GP']['Damage Agents']['None']) & (tl['Stature']==meta['LUT']['GP']['Stature']['Standing']) )[0]
+ikp=np.where( (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['GP']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['GP']['Damage Agents']['No damage']) & (tl['Stature']==meta['LUT']['GP']['Stature']['Standing']) )[0]
 x=tl['DBH'][ikp]
 y=tl['H'][ikp]
 popt_glob0=[26,0.1,0.66,2]
@@ -259,7 +259,7 @@ rs_glob,txt=gu.GetRegStats(x,y)
 uS=np.unique(tl['ID Species'])
 rs=[None]*uS.size
 for iS in range(uS.size):
-    ikp=np.where( (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['GP']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['GP']['Damage Agents']['None']) & (tl['Stature']==meta['LUT']['GP']['Stature']['Standing']) )[0]
+    ikp=np.where( (tl['ID Species']==uS[iS]) & (tl['DBH']>0) & (tl['H']>0) & (tl['Vital Status']==meta['LUT']['GP']['Vital Status']['Live']) & (tl['ID DA1']==meta['LUT']['GP']['Damage Agents']['No damage']) & (tl['Stature']==meta['LUT']['GP']['Stature']['Standing']) )[0]
     x=tl['DBH'][ikp]
     y=tl['H'][ikp]
     #plt.plot(x,y,'b.')

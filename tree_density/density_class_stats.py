@@ -120,49 +120,7 @@ vn='Crown cover from VRI (%)'
 for v2 in vL2:
     ind=np.where( (zLC2['Data']==lut_1ha['lc2']['Treed']) & (zLC5['Data']==lut_1ha['lc5'][v2]) ); d[vn][v2]=np.round(np.nanmean(zCC['Data'][ind]),decimals=0)
 
-#%% PSP stats by tree density class
-
-vn='Tree density from plots (stems/ha)'
-d[vn]={}
-for v2 in vL2:
-    d[vn][v2]=0.0
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==1) )[0]
-d[vn]['Sparse']=np.round(np.nanmean(sl['N L t0'][ind]),decimals=0)
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==2) )[0]
-d[vn]['Open']=np.round(np.nanmean(sl['N L t0'][ind]),decimals=0)
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==3) )[0]
-d[vn]['Dense']=np.round(np.nanmean(sl['N L t0'][ind]),decimals=0)
-
-vn='Tree biomass from plots (MgC/ha)'
-d[vn]={}
-for v2 in vL2:
-    d[vn][v2]=0.0
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==1) )[0]
-d[vn]['Sparse']=np.round(np.nanmean(sl['Ctot L t0'][ind]),decimals=0)
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==2) )[0]
-d[vn]['Open']=np.round(np.nanmean(sl['Ctot L t0'][ind]),decimals=0)
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==3) )[0]
-d[vn]['Dense']=np.round(np.nanmean(sl['Ctot L t0'][ind]),decimals=0)
-
-vn='Net growth from plots (MgC/ha/yr)'
-d[vn]={}
-for v2 in vL2:
-    d[vn][v2]=0.0
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==1) )[0]
-d[vn]['Sparse']=np.round(np.nanmean(sl['Ctot Net'][ind]),decimals=2)
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==2) )[0]
-d[vn]['Open']=np.round(np.nanmean(sl['Ctot Net'][ind]),decimals=2)
-
-ind=np.where( (sl['PTF CN']==1) & (sl['Tree Density Class (VRI)']==3) )[0]
-d[vn]['Dense']=np.round(np.nanmean(sl['Ctot Net'][ind]),decimals=2)
+# PSP stuff moved to PSP summary script
 
 #%% OAF1 (systematic effect
 vn='OAF1 (%)'

@@ -14,28 +14,25 @@ import numpy as np
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
-
 from fcgadgets.macgyver import utilities_general as gu
 from fcgadgets.macgyver import utilities_gis as gis
 from fcexplore.psp.Processing import psp_utilities as ugp
 from fcgadgets.bc1ha import bc1ha_utilities as u1ha
-
-#%% Prep
-
-# Set figure properties
-
 gp=gu.SetGraphics('Manuscript')
 
-# Import Canadian Upland forest database
+#%% Import data
+meta=u1ha.Init()
+meta=u1ha.ImportLUTs(meta)
+meta,gpt=ugp.ImportPlotData(meta,type='Stand')
+
 soc=gu.ipickle(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.pkl')
 
-# Import ground plot data
-metaGP,gplt=ugp.ImportPSPs(type='Stand')
+vList=['refg','lcc1_c','bgcz']
+roi=[] #roi={'points':{'x':gpt['X'],'y':gpt['Y']}}
+z=u1ha.Import_Raster(meta,roi,vList)
 
-# Import Raster grids
-lut_1ha=u1ha.Import_BC1ha_LUTs()
-zBGCZ=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\becz.tif')
-zLCC1=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\LandCoverClass1.tif')
+#zRef=gis.OpenGeoTiff(meta['Paths']['bc1ha Ref Grid'])
+#iGrd=gis.GetGridIndexToPoints(zRef,gpt['X'],gpt['Y'])
 
 #%% Plot mean by BGC zone
 
@@ -66,23 +63,23 @@ for i in range(u.size):
     #ind=np.where(lutBGC['VALUE']==u[i])[0]
     #if ind.size>0:
     #    lab[i]=lutBGC['ZONE'][ind][0]
-    lab[i]=u1ha.lut_n2s(lut_1ha['bgcz'],u[i])[0]
+    lab[i]=u1ha.lut_n2s(meta['LUT']['BEC_BIOGEOCLIMATIC_POLY']['ZONE'],u[i])[0]
 
     # Dead wood and biomass
-    ind=np.where( (gplt['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1'][lab[i]]) & (gplt['PTF CN']==1) & (gplt['Ctot D t0']>=0) & (gplt['Ctot D t0']<2000) & (gplt['Ctot L t0']>=0) & (gplt['Ctot L t0']<2000) )[0]
-    ds['mu Ctot D t0'][i]=np.nanmean(gplt['Ctot D t0'][ind])
-    ds['mu Cbk L t0'][i]=np.nanmean(gplt['Cbk L t0'][ind])
-    ds['mu Cbr L t0'][i]=np.nanmean(gplt['Cbr L t0'][ind])
-    ds['mu Cf L t0'][i]=np.nanmean(gplt['Cf L t0'][ind])
-    ds['mu Cr L t0'][i]=np.nanmean(gplt['Cr L t0'][ind])
-    ds['mu Csw L t0'][i]=np.nanmean(gplt['Csw L t0'][ind])
+    ind=np.where( (gpt['Ecozone BC L1']==meta['LUT']['Ecozone BC L1'][lab[i]]) & (gpt['PTF CN']==1) & (gpt['Ctot D t0']>=0) & (gpt['Ctot D t0']<2000) & (gpt['Ctot L t0']>=0) & (gpt['Ctot L t0']<2000) )[0]
+    ds['mu Ctot D t0'][i]=np.nanmean(gpt['Ctot D t0'][ind])
+    ds['mu Cbk L t0'][i]=np.nanmean(gpt['Cbk L t0'][ind])
+    ds['mu Cbr L t0'][i]=np.nanmean(gpt['Cbr L t0'][ind])
+    ds['mu Cf L t0'][i]=np.nanmean(gpt['Cf L t0'][ind])
+    ds['mu Cr L t0'][i]=np.nanmean(gpt['Cr L t0'][ind])
+    ds['mu Csw L t0'][i]=np.nanmean(gpt['Csw L t0'][ind])
 
 # Total carbon
 
 ds['mu C All']=ds['mu SOC tot']+ds['mu Ctot D t0']+ds['mu Cbk L t0']+ds['mu Cbr L t0']+ds['mu Cf L t0']+ds['mu Cr L t0']+ds['mu Csw L t0']
 
 for i in range(lab.size):
-    ind2=np.where( (zBGCZ['Data']==lut_1ha['bgcz'][lab[i]]) & (zLCC1['Data']==lut_1ha['lcc1']['Forest']) )
+    ind2=np.where( (z['bgcz']['Data']==meta['LUT']['BEC_BIOGEOCLIMATIC_POLY']['ZONE'][lab[i]]) & (z['lcc1_c']['Data']==meta['LUT']['lcc1']['Forest']) )
     ds['Sum TEC'][i]=ds['mu C All'][i]*ind2[0].size/1e9
     ds['Sum Area'][i]=ind2[0].size/1e6
 
@@ -140,7 +137,7 @@ ax.set(position=[0.08,0.1,0.9,0.88],xticks=np.arange(u.size),
        xticklabels=lab,ylabel='Average stock (tC per hectare)',xlim=[-0.5,u.size-0.5],ylim=[0,550])
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\TEC Per-hectare Mean','png',900)
+gu.PrintFig(meta['Paths']['Figs'] + '\\TEC Per-hectare Mean','png',900)
 
 #%% Plot Total Ecosystem Carbon (total)
 
@@ -169,7 +166,7 @@ ax.set(position=[0.08,0.1,0.9,0.88],xticks=np.arange(u.size),
        xticklabels=lab,ylabel='Total stock (billion tonnes C)',xlim=[-0.5,u.size-0.5],ylim=[0,5])
 plt.legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=gp['tickl'])
-gu.PrintFig(metaGP['Paths']['Figs'] + '\\TEC Sum','png',900)
+gu.PrintFig(meta['Paths']['Figs'] + '\\TEC Sum','png',900)
 
 
 #%% Import vector files
@@ -180,15 +177,15 @@ gu.PrintFig(metaGP['Paths']['Figs'] + '\\TEC Sum','png',900)
 # #%% Create geodatabase
 
 # points=[]
-# for i in range(gplt['X'].size):
-#     points.append( Point(gplt['X'][i],gplt['Y'][i]) )
+# for i in range(gpt['X'].size):
+#     points.append( Point(gpt['X'][i],gpt['Y'][i]) )
 # d={'geometry':points}
-# for k in gplt.keys():
-#     d[k]=gplt[k]
-# gdf_gplt=gpd.GeoDataFrame(d)
-# gdf_gplt.crs=gdf_bm.crs
+# for k in gpt.keys():
+#     d[k]=gpt[k]
+# gdf_gpt=gpd.GeoDataFrame(d)
+# gdf_gpt.crs=gdf_bm.crs
 # #gdf_gp.to_file(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB\ground_plots.geojson',driver='GeoJSON')
-# gdf_gplt_og=gpd.overlay(gdf_gplt,gdf_ogsr,how='intersection')
+# gdf_gpt_og=gpd.overlay(gdf_gpt,gdf_ogsr,how='intersection')
 
 # points=[]
 # for i in range(soc['x'].size):
@@ -226,13 +223,13 @@ gu.PrintFig(metaGP['Paths']['Figs'] + '\\TEC Sum','png',900)
 #     ds['mu SOC org'][i]=np.nanmean(gdf_soc_og['ORG_C_THA'][ind])
 
 #     # Dead wood and biomass
-#     ind=np.where( (gdf_gplt_og['Ecozone BC L1']==metaGP['LUT']['Ecozone BC L1'][lab[i]]) & (gdf_gplt_og['pt_ind']==1) & (gdf_gplt_og['Ctot D t0']>=0) & (gdf_gplt_og['Ctot D t0']<2000) & (gdf_gplt_og['Ctot L t0']>=0) & (gdf_gplt_og['Ctot L t0']<2000) )[0]
-#     ds['mu Ctot D t0'][i]=np.nanmean(gdf_gplt_og['Ctot D t0'][ind])
-#     ds['mu Cbk L t0'][i]=np.nanmean(gdf_gplt_og['Cbk L t0'][ind])
-#     ds['mu Cbr L t0'][i]=np.nanmean(gdf_gplt_og['Cbr L t0'][ind])
-#     ds['mu Cf L t0'][i]=np.nanmean(gdf_gplt_og['Cf L t0'][ind])
-#     ds['mu Cr L t0'][i]=np.nanmean(gdf_gplt_og['Cr L t0'][ind])
-#     ds['mu Csw L t0'][i]=np.nanmean(gdf_gplt_og['Csw L t0'][ind])
+#     ind=np.where( (gdf_gpt_og['Ecozone BC L1']==meta['LUT']['Ecozone BC L1'][lab[i]]) & (gdf_gpt_og['pt_ind']==1) & (gdf_gpt_og['Ctot D t0']>=0) & (gdf_gpt_og['Ctot D t0']<2000) & (gdf_gpt_og['Ctot L t0']>=0) & (gdf_gpt_og['Ctot L t0']<2000) )[0]
+#     ds['mu Ctot D t0'][i]=np.nanmean(gdf_gpt_og['Ctot D t0'][ind])
+#     ds['mu Cbk L t0'][i]=np.nanmean(gdf_gpt_og['Cbk L t0'][ind])
+#     ds['mu Cbr L t0'][i]=np.nanmean(gdf_gpt_og['Cbr L t0'][ind])
+#     ds['mu Cf L t0'][i]=np.nanmean(gdf_gpt_og['Cf L t0'][ind])
+#     ds['mu Cr L t0'][i]=np.nanmean(gdf_gpt_og['Cr L t0'][ind])
+#     ds['mu Csw L t0'][i]=np.nanmean(gdf_gpt_og['Csw L t0'][ind])
 
 # # Total carbon
 # ds['mu C All']=ds['mu SOC tot']+ds['mu Ctot D t0']+ds['mu Cbk L t0']+ds['mu Cbr L t0']+ds['mu Cf L t0']+ds['mu Cr L t0']+ds['mu Csw L t0']

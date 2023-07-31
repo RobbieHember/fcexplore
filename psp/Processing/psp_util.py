@@ -3,7 +3,7 @@
 
 import numpy as np
 from scipy.io import loadmat
-from fcgadgets.macgyver import utilities_general as gu
+from fcgadgets.macgyver import util_general as gu
 
 #%% Import data
 
@@ -16,20 +16,13 @@ def ImportPlotData(meta,**kwargs):
     meta['Paths']['GP']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'
     meta['Paths']['GP']['Figures']=r'C:\Users\rhember\OneDrive - Government of BC\Figures\Ground Plots'
 
-    if 'LUT' not in meta:
-        meta['LUT']={}
-
-    # Import parameters
-    if 'GP' not in meta:
-        meta['GP']={}
+    # Import LUTs and parameters
     meta=ImportParameters(meta)
 
-    d=gu.ipickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_BC.pkl')
-    #d=gu.ipickle(meta['Paths']['DB'] + '\\Processed\\L2\\L2_BC_WithLID.pkl')
     if kwargs['type']=='Stand':
-        data=d['sobs']
+        data=gu.ipickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_BC.pkl')['sobs']
     elif kwargs['type']=='Tree':
-        data=d['tobs']
+        data=gu.ipickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_BC.pkl')['tobs']
     elif kwargs['type']=='Just Parameters':
         data=[]
     else:
@@ -42,19 +35,19 @@ def ImportPlotData(meta,**kwargs):
 
 def ImportParameters(meta):
 
-    if 'GP' not in meta.keys():
-        meta['GP']={}
+    if 'Param' not in meta.keys():
+        meta['Param']={}
     if 'LUT' not in meta.keys():
         meta['LUT']={}
 
     # Parameters
-    meta['GP']['Param']={}
+    meta['Param']['GP']={}
 
-    meta['GP']['Param']['Carbon Content']=0.5
+    meta['Param']['GP']['Carbon Content']=0.5
 
     # Allometry
-    meta['GP']['Param']['Allo B']=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters Allometry Biomass.xlsx')
-    meta['GP']['Param']['Allo V Tot Nigh16']=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters Allometry Volume Total BC Nigh 2016.xlsx')
+    meta['Param']['GP']['Allo B']=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters Allometry Biomass.xlsx')
+    meta['Param']['GP']['Allo V Tot Nigh16']=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters Allometry Volume Total BC Nigh 2016.xlsx')
 
     # Look up tables
     meta['LUT']['GP']={}
@@ -71,8 +64,8 @@ def ImportParameters(meta):
     meta['LUT']['GP']['Species Given']['BC']=gu.ReadExcel(meta['Paths']['GP']['DB'] + '\\Parameters\\Parameters Species Codes.xlsx','Key_BC')
 
     meta['LUT']['GP']['Species']={}
-    for i in range(meta['GP']['Param']['Allo B']['ID'].size):
-            meta['LUT']['GP']['Species'][ meta['GP']['Param']['Allo B']['Code'][i] ]=meta['GP']['Param']['Allo B']['ID'][i]
+    for i in range(meta['Param']['GP']['Allo B']['ID'].size):
+            meta['LUT']['GP']['Species'][ meta['Param']['GP']['Allo B']['Code'][i] ]=meta['Param']['GP']['Allo B']['ID'][i]
 
     meta['LUT']['GP']['Source']={}
     for i in range(meta['LUT']['GP']['Raw Tables']['Source']['ID'].size):

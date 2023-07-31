@@ -20,6 +20,7 @@ from sklearn import metrics
 
 import fcgadgets.macgyver.utilities_general as gu
 import fcgadgets.macgyver.utilities_gis as gis
+import fcgadgets.bc1ha.bc1ha_utilities as u1ha
 
 #%% Import paths and look-up-tables
 
