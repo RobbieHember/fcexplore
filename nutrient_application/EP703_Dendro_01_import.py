@@ -18,7 +18,7 @@ import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from scipy import stats, linalg
 from matplotlib.patches import Rectangle
-from fcgadgets.macgyver import utilities_general as gu
+from fcgadgets.macgyver import util_general as gu
 
 #%% Graphics parameters
 
@@ -45,7 +45,7 @@ dPS=gu.ReadExcel(r'C:\Users\rhember\OneDrive - Government of BC\Shared\EP703\Ret
 clm=gu.ImportMat(r'C:\Users\rhember\OneDrive - Government of BC\Shared\EP703\Retrospective Monitoring Study\Data\Given\Climate\Received 20211024 from RHember\EP703_TR_Climate.mat','clm')
 
 # Import EP703 tree-level data
-dEPT=gu.ipickle(r'C:\Users\rhember\Documents\Data\EP703\Processed\EP703_TL.pkl')
+dEPT=gu.ipickle(r'C:\Data\EP703\Processed\EP703_TL.pkl')
 
 #%% Custom functions
 
@@ -292,7 +292,7 @@ uC=np.unique(np.column_stack((dTL['tmean_ann_n'],dTL['prcp_ann_n'])),axis=0)
 
 #%% Get stand-level information from EP703 dataset
 
-sobs=gu.ipickle(r'C:\Users\rhember\Documents\Data\EP703\Processed\EP703_SL.pkl')
+sobs=gu.ipickle(r'C:\Data\EP703\Processed\EP703_SL.pkl')
 sobs['RGR']=(np.log(sobs['Bsw_t1'])-np.log(sobs['Bsw_t0']))/sobs['DT']
 
 dByInst={}

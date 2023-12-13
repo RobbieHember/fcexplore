@@ -27,9 +27,9 @@ from scipy.interpolate import griddata
 import statsmodels.formula.api as smf
 import cv2
 
-import fcgadgets.macgyver.utilities_general as gu
-import fcgadgets.macgyver.utilities_gis as gis
-import fcgadgets.bc1ha.bc1ha_utilities as u1ha
+import fcgadgets.macgyver.util_general as gu
+import fcgadgets.macgyver.util_gis as gis
+import fcgadgets.bc1ha.bc1ha_util as u1ha
 
 #%% Import data
 meta=u1ha.Init()
@@ -84,6 +84,8 @@ if flg==1:
 else:
 
     ufd=gu.ipickle(r'C:\Users\rhember\Documents\Data\Soils\Shaw et al 2018 Database\SITES.pkl')
+
+#%% *** BELOW MODELLING STUFF NEVER WENT ANYWHERE **
 
 #%% Model 1 - BGC zone only
 

@@ -190,3 +190,26 @@ meta['Graphics'][ 'Print Figure Path']=r'C:\Users\rhember\OneDrive - Government 
 #Plot_HarvestAreaTimeSeries(meta,[1990,2023])
 ufcs.Plot_HarvestAreaTimeSeries(meta,[1990,2023])
 
+
+
+#%%
+
+dA=gu.ipickle(r'C:\Users\rhember\Documents\Data\Harvest\Harvest Area\HarvestAreaBC.pkl')
+
+dV=gu.ReadExcel(r'C:\Users\rhember\Documents\Data\Harvest\SummaryDataChangeInTimberHarvest\bctimberharvest.xlsx')
+
+
+dV['A']=np.zeros(dV['Year'].size)
+for y in dV['Year']:
+    iT0=np.where(dV['Year']==y)[0]
+    iT1=np.where(dA['tv']==y)[0]
+    if iT1.size==0:
+        continue
+    dV['A'][iT0]=dA['Area Harv CC'][iT1]
+    
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(20,10))
+plt.plot(dV['A'],dV['Total_harvest_millions_m3'],'-bo')
+
+fig,ax=plt.subplots(1,figsize=gu.cm2inch(20,10))
+plt.plot(dV['A'],(dV['Total_harvest_millions_m3']*1e6)/dV['A'],'-bo')
+    

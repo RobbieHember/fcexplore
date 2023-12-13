@@ -10,7 +10,7 @@ from os import listdir
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from fcgadgets.macgyver import utilities_general as gu
+from fcgadgets.macgyver import util_general as gu
 import scipy.io
 import copy
 from scipy.optimize import curve_fit
@@ -30,7 +30,7 @@ flag_savefigs='Off'
 # *** Run import script ***
 
 # Import EP703 tree-level data
-dEPTL=gu.ipickle(r'C:\Users\rhember\Documents\Data\EP703\Processed\EP703_TL.pkl')
+dEPTL=gu.ipickle(r'C:\Data\EP703\Processed\EP703_TL.pkl')
 ID_FD_EPTL=1
 
 #%% Define reference periods before and after N application
@@ -170,7 +170,7 @@ ax.plot([-1,11],[0,0],'k-')
 ax.bar(np.arange(uInst.size),dBM[var]['R'][stat],0.75,fc=[0.65,0.65,0.65])
 ax.bar(uInst.size,np.mean(dBM[var]['R'][stat]),0.75,fc=[0,0,0])
 ax.set(position=[0.155,0.15,0.82,0.8],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'), \
-       yticks=np.arange(-0.6,0.6,0.1),ylabel='$\Delta$$\it{w}$$_{t1-10}$ (mm yr$^{-1}$)',xlabel='Installation',ylim=[-0.5,0.5])
+       yticks=np.arange(-0.6,0.6,0.1),ylabel='$\Delta$$\it{w}$$_{t1-10}$ (mm yr$^{-1}$)',xlabel='Site',ylim=[-0.5,0.5])
 ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=1.5)
 if flag_savefigs=='On':
     gu.PrintFig(meta['Paths']['Figures'] + '\\Fig3 Response_BM84' + var,'png',900)
@@ -400,7 +400,7 @@ ax[1].bar(np.arange(uInst.size+1),dr_be,0.5,fc=cl3)
 ax[1].errorbar(np.arange(uInst.size+1),dr_be,yerr=[ dr_be-dr_lo, dr_hi-dr_be ],color='k',ls='',capsize=2,lw=gp['lw1'])
 #ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both')
 ax[1].set(position=[0.16,0.09,0.8,0.425],xlim=[-0.5,uInst.size+0.5],xticks=np.arange(uInst.size+1),xticklabels=np.append(uInst,'All'), \
-  yticks=np.arange(-10,50,10),ylabel='$\it{I}$$_{r,t1-10}$ (%)',xlabel='Installation',ylim=[-15,45])
+  yticks=np.arange(-10,50,10),ylabel='$\it{I}$$_{r,t1-10}$ (%)',xlabel='Site',ylim=[-15,45])
 ax[1].yaxis.set_ticks_position('both'); ax[1].xaxis.set_ticks_position('both'); ax[1].tick_params(length=1.5)
 gu.axletters(ax,plt,0.0185,0.91,FontWeight='Bold') # ,LetterStyle='Caps'
 if flag_savefigs=='On':

@@ -40,25 +40,19 @@ from shapely import geometry
 import fcgadgets.macgyver.util_general as gu
 import fcgadgets.macgyver.util_gis as gis
 import fcgadgets.macgyver.util_query_gdb as qgdb
-import fcexplore.psp.Processing.psp_util as utl
+import fcexplore.field_plots.Processing.psp_util as ugp
 import fcgadgets.bc1ha.bc1ha_util as u1ha
-
 warnings.filterwarnings("ignore")
 
 #%% Import project info
 
-# Initialize
 meta=u1ha.Init()
-meta=u1ha.ImportLUTs(meta)
+meta=ugp.ImportParameters(meta)
 
-meta=utl.ImportParameters(meta)
+# Select source databases to run
+SourceL=['BC']
 
-#%% Select source databases to run
-
-jurL=['BC']
-
-#%% QA flags
-
+# QA flags
 QA_Flag1=[]
 
 #%% Import raster data
@@ -67,10 +61,10 @@ zRef=gis.OpenGeoTiff(meta['Paths']['bc1ha Ref Grid'])
 
 #%% Loop through each source database
 
-for iJur in range(len(jurL)):
+for iSource in range(len(SourceL)):
 
     # Import Level 1 tree and plot data structures, TL and PLT
-    d=gu.ipickle(meta['Paths']['GP']['DB'] + '\\Processed\\L1\\L1_' + jurL[iJur] + '.pkl')
+    d=gu.ipickle(meta['Paths']['GP']['DB'] + '\\Processed\\L1\\L1_' + SourceL[iSource] + '.pkl')
     tl=d['tl']
     pl=d['pl']
     del d
@@ -85,8 +79,8 @@ for iJur in range(len(jurL)):
     tl['ID PFT']=np.zeros(tl['ID Species'].size,dtype=int)
     for iU in range(uSpc.size):
         ind_all0=np.where(tl['ID Species']==uSpc[iU])[0]
-        ind_all1=np.where(meta['Param']['GP']['Allo B']['ID']==uSpc[iU])[0]
-        tl['ID PFT'][ind_all0]=meta['Param']['GP']['Allo B']['PFT'][ind_all1]
+        ind_all1=np.where(meta['Param']['GP']['Raw Tables']['Biomass Allometry']['ID']==uSpc[iU])[0]
+        tl['ID PFT'][ind_all0]=meta['Param']['GP']['Raw Tables']['Biomass Allometry']['PFT'][ind_all1]
 
     # Volume based on DBH+H (Nigh et al. 2016)
     # *** Using volume provided with dataset ***
@@ -99,15 +93,15 @@ for iJur in range(len(jurL)):
 
     for iU in range(uSpc.size):
         ind_all0=np.where(tl['ID Species']==uSpc[iU])[0]
-        ind_all1=np.where(meta['Param']['GP']['Allo B']['ID']==uSpc[iU])[0]
+        ind_all1=np.where(meta['Param']['GP']['Raw Tables']['Biomass Allometry']['ID']==uSpc[iU])[0]
 
-        if np.isnan(meta['Param']['GP']['Allo B']['GapFillCode'][ind_all1])==False:
+        if np.isnan(meta['Param']['GP']['Raw Tables']['Biomass Allometry']['GapFillCode'][ind_all1])==False:
             # Missing equaiton, using an alternative species
-            ind_all1=np.where(meta['Param']['GP']['Allo B']['ID']==meta['Param']['GP']['Allo B']['GapFillCode'][ind_all1])[0]
+            ind_all1=np.where(meta['Param']['GP']['Raw Tables']['Biomass Allometry']['ID']==meta['Param']['GP']['Raw Tables']['Biomass Allometry']['GapFillCode'][ind_all1])[0]
 
         for tissue in tissueL:
             for iP in range(3):
-                beta[tissue][ind_all0,iP]=meta['Param']['GP']['Allo B'][tissue + str(iP+1)][ind_all1]
+                beta[tissue][ind_all0,iP]=meta['Param']['GP']['Raw Tables']['Biomass Allometry'][tissue + str(iP+1)][ind_all1]
 
     # Carbon (kgC tree-1)
     for tissue in tissueL:
@@ -165,8 +159,8 @@ for iJur in range(len(jurL)):
          'Conifer L %BA t0','Conifer L %N t0','Deciduous L %BA t0','Deciduous L %N t0',
          'N L t0','N L t1','N D t0','N D t1',
          'N Recr','N Mort','N Lost','N Mort+Lost','N Mort Nat','N Mort Harv','N Net',
-         'N Mort+Lost No damage','N Mort+Lost Insect','N Mort+Lost Disease','N Mort+Lost Plant competition','N Mort+Lost Animal browsing','N Mort+Lost Fire','N Mort+Lost Frost, snow, ice, hail',
-         'N Mort+Lost Water stress','N Mort+Lost Wind','N Mort+Lost Silviculture','N Mort+Lost Defects','N Mort+Lost Flooding, lightning, slides','N Mort+Lost Unknown',
+         'N Mort+Lost No damage','N Mort+Lost Beetles','N Mort+Lost Defoliators','N Mort+Lost Diseases','N Mort+Lost Plant competition','N Mort+Lost Animal browsing','N Mort+Lost Fire','N Mort+Lost Frost, snow, ice, hail',
+         'N Mort+Lost Water stress','N Mort+Lost Wind','N Mort+Lost Silviculture','N Mort+Lost Defects and breakage','N Mort+Lost Flooding, lightning, slides','N Mort+Lost Unknown',
          'N Recr (%)','N Mort (%)','N Lost (%)','N Mort+Lost (%)','N Net (%)',
          'N L PL t0','N L PL t1',
          'N D Lost','N D PL t0','N D PL t1',
@@ -180,8 +174,8 @@ for iJur in range(len(jurL)):
          'Vntwb L t0','Vntwb D t0',
          'Ctot L t0','Ctot L t1','Ctot L Resid t0',
          'Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot Lost','Ctot Mort+Lost','Ctot Mort Nat','Ctot Mort Harv','Ctot Net','Ctot Litf',
-         'Ctot Mort+Lost No damage','Ctot Mort+Lost Insect','Ctot Mort+Lost Disease','Ctot Mort+Lost Plant competition','Ctot Mort+Lost Animal browsing','Ctot Mort+Lost Fire','Ctot Mort+Lost Frost, snow, ice, hail',
-         'Ctot Mort+Lost Water stress','Ctot Mort+Lost Wind','Ctot Mort+Lost Silviculture','Ctot Mort+Lost Defects','Ctot Mort+Lost Flooding, lightning, slides','Ctot Mort+Lost Unknown',
+         'Ctot Mort+Lost No damage','Ctot Mort+Lost Beetles','Ctot Mort+Lost Defoliators','Ctot Mort+Lost Diseases','Ctot Mort+Lost Plant competition','Ctot Mort+Lost Animal browsing','Ctot Mort+Lost Fire','Ctot Mort+Lost Frost, snow, ice, hail',
+         'Ctot Mort+Lost Water stress','Ctot Mort+Lost Wind','Ctot Mort+Lost Silviculture','Ctot Mort+Lost Defects and breakage','Ctot Mort+Lost Flooding, lightning, slides','Ctot Mort+Lost Unknown',
          'Ctot D t0','Ctot D t1','Ctot D Fallen t0','Ctot D Lost',
          'Ctot L PL t0','Ctot D PL t0','Ctot L PL t1','Ctot D PL t1',
          'Ctot L FD t0','Ctot D FD t0',
@@ -299,7 +293,7 @@ for iJur in range(len(jurL)):
                     continue
 
             # Populate stand-level site variables
-            sobs['ID Source'][cnt]=meta['LUT']['GP']['Source'][jurL[iJur]]
+            sobs['ID Source'][cnt]=meta['LUT']['GP']['Source'][SourceL[iSource]]
             sobs['ID Plot'][cnt]=pl['ID Plot'][iPlot_t0]
             sobs['ID Visit'][cnt]=uVisit[iVisit]
             sobs['Lat'][cnt]=np.round(pl['Lat'][iPlot_t0],decimals=4)
@@ -450,14 +444,14 @@ for iJur in range(len(jurL)):
 
                 # Index to trees that died during interval
                 ind_mort_da={}
-                for k in meta['LUT']['GP']['Damage Agents'].keys():
-                    id=meta['LUT']['GP']['Damage Agents'][k]
+                for k in meta['LUT']['GP']['Damage Agent'].keys():
+                    id=meta['LUT']['GP']['Damage Agent'][k]
                     ind_mort_da[k]=np.where( (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Dead']) & (da0_all[ia1]==id) |
                         (vital_status0_all[ia1]==meta['LUT']['GP']['Vital Status']['Live']) & (vital_status1_all[ib1]==meta['LUT']['GP']['Vital Status']['Dead']) & (da1_all[ib1]==id) )[0]
 
                 ind_lost_da={}
-                for k in meta['LUT']['GP']['Damage Agents'].keys():
-                    id=meta['LUT']['GP']['Damage Agents'][k]
+                for k in meta['LUT']['GP']['Damage Agent'].keys():
+                    id=meta['LUT']['GP']['Damage Agent'][k]
                     ind_lost_da[k]=np.where( (vital_status0_all==meta['LUT']['GP']['Vital Status']['Live']) & (np.isin(id0_all,id1_all)==False) & (da0_all==id) )[0]
 
                 # Mortality due to IBM
@@ -648,7 +642,7 @@ for iJur in range(len(jurL)):
             sobs['Ctot L SE t0'][cnt]=np.round(np.nansum(aef0_all[ind_live_se0]*0.001*Ctot0_all[ind_live_se0])/sobs['Num Plots'][cnt],decimals=0)
             sobs['Ctot D SE t0'][cnt]=np.round(np.nansum(aef0_all[ind_dead_se0]*0.001*Ctot0_all[ind_dead_se0])/sobs['Num Plots'][cnt],decimals=0)
 
-            if (flg_PSP==1) & (sobs['Plot Type'][cnt]!=meta['LUT']['GP']['Plot Type BC']['VRI']) & (dt>0):
+            if (flg_PSP==1) & (sobs['Plot Type'][cnt]!=meta['LUT']['GP']['Plot Type']['VRI']) & (dt>0):
 
                 # Stand density (stems ha-1)
                 sobs['N L t1'][cnt]=np.round(np.nansum(aef1_all[ind_live1])/sobs['Num Plots'][cnt],decimals=0)
@@ -959,7 +953,7 @@ for iJur in range(len(jurL)):
                     sobs['Ctot Mort'][cnt]=np.round(Ctot1_dying/dt/sobs['Num Plots'][cnt],decimals=2)
 
                 # Total mortality due to damage agents (Mg C ha-1 yr-1)
-                for k in meta['LUT']['GP']['Damage Agents'].keys():
+                for k in meta['LUT']['GP']['Damage Agent'].keys():
                     ind_mort_da0=ind_mort_da[k]
                     if ind_mort_da0.size==0:
                         sobs['Ctot Mort+Lost ' + k][cnt]=np.round(0.0,decimals=2)
@@ -1058,12 +1052,12 @@ for iJur in range(len(jurL)):
 
                 sobs['Csw Lost'][cnt]=np.round(np.nansum(aef0_all[ind_live_lost1]*0.001*Csw0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
 
-                #nam=meta['LUT']['GP']['Raw Tables']['Damage Agents']['Value'][iDA]
+                #nam=meta['LUT']['GP']['Raw Tables']['Damage Agent']['Value'][iDA]
                 #ind_mort_da0=ind_mort_da[iDA]
 
                 # Add lost carbon to mortality
                 sobs['Ctot Mort+Lost'][cnt]=np.round(sobs['Ctot Mort'][cnt]+np.nansum(aef0_all[ind_live_lost1]*0.001*Ctot0_all[ind_live_lost1])/dt/sobs['Num Plots'][cnt],decimals=1)
-                for k in meta['LUT']['GP']['Damage Agents'].keys():
+                for k in meta['LUT']['GP']['Damage Agent'].keys():
                     ind_lost_da0=ind_lost_da[k]
                     sobs['Ctot Mort+Lost ' + k][cnt]=np.round(sobs['Ctot Mort+Lost ' + k][cnt]+np.nansum(aef0_all[ind_lost_da0]*0.001*Ctot0_all[ind_lost_da0])/dt/sobs['Num Plots'][cnt],decimals=1)
                     sobs['N Mort+Lost ' + k][cnt]=np.round(sobs['N Mort+Lost ' + k][cnt]+np.nansum(aef0_all[ind_lost_da0])/dt/sobs['Num Plots'][cnt],decimals=1)
@@ -1347,63 +1341,217 @@ for iJur in range(len(jurL)):
 
     # Save
     d1={'tobs':tobs,'sobs':sobs}
-    gu.opickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_' + jurL[iJur] + '.pkl',d1)
+    gu.opickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_' + SourceL[iSource] + '.pkl',d1)
 
     # Export to spreadsheet
     flg=0
     if flg==1:
         df=pd.DataFrame(sobs)
-        df.to_excel(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
+        df.to_excel(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_sobs_' + SourceL[iSource] + '.xlsx',index=False)
 
 #%% Plot type filter (CMI, NFI, and VRI)
 
 # Stand level
 
 sobs['PTF CNV']=np.zeros(sobs['ID Plot'].size)
-ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) |
-             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) |
-             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['VRI']) )[0]
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['CMI']) |
+             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['NFI']) |
+             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['VRI']) )[0]
 sobs['PTF CNV'][ind]=1
 np.sum(sobs['PTF CNV'])
 
 sobs['PTF CN']=np.zeros(sobs['ID Plot'].size)
-ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) | (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) )[0]
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['CMI']) | (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['NFI']) )[0]
 sobs['PTF CN'][ind]=1
 
 sobs['PTF CNY']=np.zeros(sobs['ID Plot'].size)
-ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) |
-             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) |
-             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['YSM']) )[0]
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['CMI']) |
+             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['NFI']) |
+             (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['YSM']) )[0]
 sobs['PTF CNY'][ind]=1
 
 sobs['PTF YSM']=np.zeros(sobs['ID Plot'].size)
-ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['YSM']) )[0]
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['YSM']) )[0]
 sobs['PTF YSM'][ind]=1
+
+sobs['PTF VRI']=np.zeros(sobs['ID Plot'].size)
+ind=np.where( (sobs['Plot Type']==meta['LUT']['GP']['Plot Type']['VRI']) )[0]
+sobs['PTF VRI'][ind]=1
 
 # Tree level
 
 tobs['PTF CNV']=np.zeros(tobs['ID Plot'].size)
-ind=np.where( (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) |
-             (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) |
-             (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['VRI']) )[0]
+ind=np.where( (tobs['Plot Type']==meta['LUT']['GP']['Plot Type']['CMI']) |
+             (tobs['Plot Type']==meta['LUT']['GP']['Plot Type']['NFI']) |
+             (tobs['Plot Type']==meta['LUT']['GP']['Plot Type']['VRI']) )[0]
 tobs['PTF CNV'][ind]=1
 np.sum(tobs['PTF CNV'])
 
 tobs['PTF CN']=np.zeros(tobs['ID Plot'].size)
-ind=np.where( (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['CMI']) | (tobs['Plot Type']==meta['LUT']['GP']['Plot Type BC']['NFI']) )[0]
+ind=np.where( (tobs['Plot Type']==meta['LUT']['GP']['Plot Type']['CMI']) | (tobs['Plot Type']==meta['LUT']['GP']['Plot Type']['NFI']) )[0]
 tobs['PTF CN'][ind]=1
 
+tobs['PTF CNY']=np.zeros(tobs['ID Plot'].size)
+ind=np.where( (tobs['Plot Type']==meta['LUT']['GP']['Plot Type']['CMI']) |
+             (tobs['Plot Type']==meta['LUT']['GP']['Plot Type']['NFI']) |
+             (tobs['Plot Type']==meta['LUT']['GP']['Plot Type']['YSM']) )[0]
+tobs['PTF CNY'][ind]=1
+
+#%% Overlay with vector harvest
+
+ind=np.where( (np.isnan(sobs['X']+sobs['Y'])==True) )[0]
+sobs['X'][ind]=0
+sobs['Y'][ind]=0
+points=[]
+for i in range(sobs['X'].size):
+    points.append(Point(sobs['X'][i],sobs['Y'][i]))
+gdf=gpd.GeoDataFrame({'geometry':points,'ID_Admin':sobs['ID Plot']})
+gdf.crs=meta['Geos']['crs']
+#gdf.to_file(meta['Paths'][pNam]['Data'] + '\\geos.geojson',driver='GeoJSON')
+
+#%% Harvest from CC database
+# lNam='VEG_CONSOLIDATED_CUT_BLOCKS_SP'
+# vNam='HARVEST_YEAR'
+# ind=np.where( (meta['Geos']['Variable Info']['Layer Name']==lNam) & (meta['Geos']['Variable Info']['Variable Name']==vNam) )[0]
+# pthin=meta['Paths']['GDB'][ meta['Geos']['Variable Info']['Geodatabase Name'][ind[0]] ]
+# df=gpd.read_file(pthin,layer=lNam)
+# df=df[df.geometry!=None]
+# df=df.reset_index()
+
+# gin=gpd.sjoin(gdf,df,op='within')
+
+# Occ_Harv_New=np.zeros(sobs['Occ_Harv'].size)
+# for i in range(len(gin)):
+#     ind=np.where( (sobs['ID Plot']==gin['ID_Admin'].iloc[i]) )[0]
+#     for j in range(ind.size):
+#         if (gin['HARVEST_YEAR'].iloc[i]>=sobs['Year t0'][ind[j]]-2) & (gin['HARVEST_YEAR'].iloc[i]<=sobs['Year t0'][ind[j]]+1):
+#             Occ_Harv_New[ind[j]]=1
+
+# ind=np.where( (sobs['PTF CN']==1) )[0]
+# print(ind.size)
+
+# ind=np.where( (Occ_Harv_New==1) & (sobs['PTF CN']==1) )[0]
+# print(ind.size)
+
+# # Using raster data (N=11)
+# ind=np.where( (sobs['Occ_Harv']==1) & (sobs['PTF CN']==1) )[0]
+# print(ind.size)
+
+#%% Vector harvest from results
+
+flg=0
+if flg==1:
+    op={}
+    op['Path']=meta['Paths']['GDB']['Results']
+    op['Layer']='RSLT_OPENING_SVW'; # fiona.listlayers(op['Path'])
+    op['crs']=meta['Geos']['crs']
+    op['Keep Geom']='On'
+    op['Select Openings']=np.array([])
+    op['SBC']=np.array([])
+    op['STC']=np.array([])
+    op['SMC']=np.array([])
+    op['SOC1']=np.array([])
+    op['FSC']=np.array([])
+    op['gdf']=qgdb.Query_Openings(op,[])
+    #op['gdf'].keys()
+    gin2=gpd.sjoin(gdf,op['gdf'],op='within')
+    gin2.to_file(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\op.geojson', driver='GeoJSON')
+else:
+    gin2=gpd.read_file(r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2\op.geojson')
+
+#%%
+
+Occ_Harv_New=np.zeros(sobs['ID Plot'].size)
+for i in range(len(gin2)):
+    ind=np.where( (sobs['ID Plot']==gin2['ID_Admin'].iloc[i]) )[0]
+    try:
+        date1=int(gin2['DENUDATION_1_COMPLETION_DATE'].iloc[i][0:4])
+    except:
+        date1=int(0)
+    try:
+        date2=int(gin2['DENUDATION_2_COMPLETION_DATE'].iloc[i][0:4])
+    except:
+        date2=int(0)
+    for j in range(ind.size):
+        if (gin2['DENUDATION_1_DISTURBANCE_CODE'].iloc[i]=='L') & (date1>=sobs['Year t0'][ind[j]]-1) & (date1<=sobs['Year t0'][ind[j]]+2):
+            Occ_Harv_New[ind[j]]=1
+    for j in range(ind.size):
+        if (gin2['DENUDATION_2_DISTURBANCE_CODE'].iloc[i]=='L') & (date2>=sobs['Year t0'][ind[j]]-1) & (date2<=sobs['Year t0'][ind[j]]+2):
+            Occ_Harv_New[ind[j]]=1
+    for j in range(ind.size):
+        if (gin2['DENUDATION_1_DISTURBANCE_CODE'].iloc[i]=='S') & (date1>=sobs['Year t0'][ind[j]]-1) & (date1<=sobs['Year t0'][ind[j]]+2):
+            Occ_Harv_New[ind[j]]=1
+    for j in range(ind.size):
+        if (gin2['DENUDATION_2_DISTURBANCE_CODE'].iloc[i]=='S') & (date2>=sobs['Year t0'][ind[j]]-1) & (date2<=sobs['Year t0'][ind[j]]+2):
+            Occ_Harv_New[ind[j]]=1  
+    # try:
+    #     dateS=int(gin2['DISTURBANCE_START_DATE'].iloc[i][0:4])
+    #     dateE=int(gin2['DISTURBANCE_END_DATE'].iloc[i][0:4])
+    # except:
+    #     dateS=0
+    #     dateE=0
+    # for j in range(ind.size):
+    #     if (gin2['DENUDATION_1_DISTURBANCE_CODE'].iloc[i]=='L') & (dateS>=sobs['Year t0'][ind[j]]-0) & (dateE<=sobs['Year t0'][ind[j]]+5):
+    #         Occ_Harv_New[ind[j]]=1
+    # for j in range(ind.size):
+    #     if (gin2['DENUDATION_2_DISTURBANCE_CODE'].iloc[i]=='L') & (dateS>=sobs['Year t0'][ind[j]]-0) & (dateE<=sobs['Year t0'][ind[j]]+5):
+    #         Occ_Harv_New[ind[j]]=1
+
+ind=np.where( (sobs['PTF CN']==1) )[0]
+print(ind.size)
+
+ind=np.where( (Occ_Harv_New==1) & (sobs['PTF CN']==1) )[0]
+print(ind.size)
+
+# Using raster data (N=11)
+ind=np.where( (sobs['Occ_Harv']==1) & (sobs['PTF CN']==1) )[0]
+print(ind.size)
+
+# Range=np.zeros((len(gin2),2))
+# for i in range(len(gin2)):
+#     if (gin2['DENUDATION_1_DISTURBANCE_CODE'].iloc[i]=='L'):
+#         try:
+#             dateS=int(gin2['DISTURBANCE_START_DATE'].iloc[i][0:4])
+#             dateE=int(gin2['DISTURBANCE_END_DATE'].iloc[i][0:4])
+#             dateC=int(gin2['DENUDATION_1_COMPLETION_DATE'].iloc[i][0:4])
+#         except:
+#             dateS=0
+#             dateE=0
+#             dateC=0
+#         Range[i,0]=dateE-dateS
+#         Range[i,1]=dateC-dateE
 #%% Disturbance indicators
 # *** Harvest indicator not working for CNY plots in BC. Using overlay analysis with harvest year. ***
 
-vList=['harv_yr_con1','fire_yr','ibm_yr'] #'lcc1_c','gfcly','gfcly_filt',
+ind=np.where( (sobs['PTF CN']==1) )[0]; print(ind.size)
+ind=np.where( (sobs['PTF CN']==1) & (Occ_Harv_New==1) )[0]; print(ind.size)
+
+ind=np.where( (sobs['PTF CN']==1) & (sobs['Year t1']>0) )[0]; print(ind.size)
+ind=np.where( (sobs['PTF CN']==1) & (sobs['Year t1']>0) & (Occ_Harv_New==1) )[0]; print(ind.size)
+
+indH=np.where( (sobs['PTF CN']==1) & (sobs['Year t1']>0) & (Occ_Harv_New==1) )[0]
+indH=np.where( (sobs['PTF CN']==1) & (sobs['Year t1']>0) & (Occ_Harv_New==1) )[0]
+sobs['Ctot Mort+Lost'][indH]
+sobs['Age Mean t0'][indH]
+sobs['H L t0'][indH]
+sobs['N L t0'][indH]
+sobs['N L t1'][indH]
+sobs['Vws L t0'][indH]
+sobs['Vws L t1'][indH]
+sobs['Ctot L t0'][indH]
+sobs['Ctot L t1'][indH]
+
+#%%
+
+vList=['harv_yr_comp1','fire_yr','ibm_yr'] #'lcc1_c','gfcly','gfcly_filt',
 roi={'points':{'x':sobs['X'],'y':sobs['Y']}}
 z=u1ha.Import_Raster(meta,roi,vList)
 
-sobs['Year Harv']=z['harv_yr_con1']
+sobs['Year Harv']=z['harv_yr_comp1']
 sobs['Year Wildfire']=z['fire_yr']
 sobs['Year IBM']=z['ibm_yr']
 
+#indH=np.where( (sobs['PTF CNY']==1) & (Occ_Harv_New==1) )[0]
 indH=np.where( (sobs['PTF CNY']==1) & (sobs['Year Harv']>=sobs['Year t0']) & (sobs['Year Harv']<=sobs['Year t1']) )[0]
 indF=np.where( (sobs['PTF CNY']==1) & (sobs['Year Wildfire']>=sobs['Year t0']) & (sobs['Year Wildfire']<=sobs['Year t1']) )[0]
 indIBM=np.where( (sobs['PTF CNY']==1) & (sobs['Year IBM']>=sobs['Year t0']) & (sobs['Year IBM']<=sobs['Year t1']) )[0]
@@ -1430,7 +1578,7 @@ sobs['Ctot Mort Harv'][indH]=sobs['Ctot Mort+Lost'][indH]
 sobs['Ctot Mort Nat'][indH]=0
 
 # sobs['Ctot Mort+Lost Harv'][indH]=sobs['Ctot Mort+Lost'][indH]
-# for k in meta['LUT']['GP']['Damage Agents'].keys():
+# for k in meta['LUT']['GP']['Damage Agent'].keys():
 #     sobs['Ctot Mort+Lost ' + k][indH]=0
 # sobs['Ctot Mort+Lost No damage'][indH]=0
 
@@ -1454,7 +1602,7 @@ flg=1
 if flg==1:
     iGrd=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
     tv=np.arange(1990,2022,1)
-    vL=['IBM','IBB','IBD','IBS','IDW']
+    vL=['IBM'] # ,'IBB','IBD','IBS','IDW'
     for v in vL:
         z1=np.zeros( (tv.size,iGrd[0].size) ,dtype='int8')
         for iT in range(tv.size):
@@ -1469,17 +1617,21 @@ if flg==1:
 
 #%% Add VRI variables
 
+iGrd=gis.GetGridIndexToPoints(zRef,sobs['X'],sobs['Y'])
+
+# Harvest mask
+z=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\VEG_CONSOLIDATED_CUT_BLOCKS_SP\\HARVEST_YEAR_MaskAll.tif')
+sobs['Harvest Mask']=z['Data'][iGrd]
+
+# Tree Density Class
+z=gis.OpenGeoTiff(meta['Paths']['bc1ha'] + '\\LandCoverUse\\TreeDensityClass_Current.tif')
+sobs['Tree Density Class (VRI)']=z['Data'][iGrd]
+
 # # Crown closure
 # z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\VRI\crownc.tif')
 # ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
 # z0=z['Data'][ind]
 # sobs['Crown Closure (VRI)']=z0
-
-# # Tree Density Class
-# z=gis.OpenGeoTiff(r'C:\Users\rhember\Documents\Data\BC1ha\LandUseLandCover\ForestDensityClass.tif')
-# ind=gis.GetGridIndexToPoints(z,sobs['X'],sobs['Y'])
-# z0=z['Data'][ind]
-# sobs['Tree Density Class (VRI)']=z0
 
 # #%% Add climate data
 
@@ -1522,7 +1674,7 @@ if flg==1:
 #%% Save
 
 df=pd.DataFrame(sobs)
-df.to_excel(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_sobs_' + jurL[iJur] + '.xlsx',index=False)
+df.to_excel(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_sobs_' + SourceL[iSource] + '.xlsx',index=False)
 
 d1={'tobs':tobs,'sobs':sobs}
-gu.opickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_' + jurL[iJur] + '.pkl',d1)
+gu.opickle(meta['Paths']['GP']['DB'] + '\\Processed\\L2\\L2_' + SourceL[iSource] + '.pkl',d1)
