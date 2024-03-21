@@ -16,14 +16,14 @@ plt.plot(tva,y0,'-bo')
 
 y1=np.zeros(tva.size)
 for iT in range(tva.size):
-    ind=np.where( (dGF['Year']==tva[iT]) & (dGF['Treatment']!='F1') & (dGF[vr]>0) & (dGF[vr]<5000) & (dGF['QA Summary']==1) )[0]
-    y1[iT]=np.mean(dGF[vr][ind])
+    ind=np.where( (dTL['Year']==tva[iT]) & (dTL['Treatment']!='F1') & (dTL[vr]>0) & (dTL[vr]<5000) & (dTL['QA Summary']==1) )[0]
+    y1[iT]=np.mean(dTL[vr][ind])
     
 plt.plot(tva,y1,'-gs')    
 
 
 plt.close('all')
-plt.plot(dGF['Year'],dGF['Time since first ring'],'ko')
+plt.plot(dTL['Year'],dTL['Age'],'ko')
 
 #%% Time response (by installations)
 
@@ -51,7 +51,7 @@ for iI in range(uInst.size):
 
 #%%
  
-vn='Time since first ring'
+vn='Age'
 iI=0
 plt.close('all'); ms=3
 plt.plot(tva,datT[iI][0][vn],'-ko',ms=ms)
@@ -88,7 +88,7 @@ for iI in range(uInst.size):
             d0[k]=np.zeros(Age.size)
             for iT in range(Age.size):
                 try:
-                    ind=np.where( (dGF['ID_Inst']==uInst[iI]) & (dGF['Time since first ring']==Age[iT]) & (dGF['BGC SS']==uSS[iSS]) & (dGF['Treatment']!='F1') & (dGF[k]>0) & (dGF[k]<5000) & (dGF['QA Summary']==1) )[0]
+                    ind=np.where( (dGF['ID_Inst']==uInst[iI]) & (dGF['Age']==Age[iT]) & (dGF['BGC SS']==uSS[iSS]) & (dGF['Treatment']!='F1') & (dGF[k]>0) & (dGF[k]<5000) & (dGF['QA Summary']==1) )[0]
                 except:
                     continue
                 if ind.size>0:
@@ -115,32 +115,32 @@ plt.plot(Age,datA[iI][3][vn],'-gs',ms=ms)
 
 vd='Dib'
 
-ind0=np.where( (dGF['Treatment']=='C') & (dGF[vd]>0) & (dGF[vd]<5000) & (dGF['QA Summary']==1) )[0]
+ind0=np.where( (dTL['Treatment']=='C') & (dTL[vd]>0) & (dTL[vd]<5000) & (dTL['QA Summary']==1) )[0]
 
-u=np.unique(dGF['ID_Tree Unique'][ind0])
+u=np.unique(dTL['ID_Tree_Unique'][ind0])
 
-ind=np.where( (dGF['ID_Tree Unique']==u[33]) & (dGF[vd]>0) & (dGF[vd]<5000) & (dGF['QA Summary']==1) )[0]
-Inst=dGF['ID_Inst'][ind[0]]
+ind=np.where( (dTL['ID_Tree_Unique']==u[33]) & (dTL[vd]>0) & (dTL[vd]<5000) & (dTL['QA Summary']==1) )[0]
+Inst=dTL['ID_Inst'][ind[0]]
 print(Inst)
-print(dGF['Pith_status'][ind[0]])
-print(dGF['Est/mm'][ind[0]]/10)
-iInst=np.where( (dGF['ID_Inst']==Inst) & (dGF[vd]>0) & (dGF[vd]<5000) & (dGF['QA Summary']==1) )[0]
+print(dTL['Pith_status'][ind[0]])
+print(dTL['Est/mm'][ind[0]]/10)
+iInst=np.where( (dTL['ID_Inst']==Inst) & (dTL[vd]>0) & (dTL[vd]<5000) & (dTL['QA Summary']==1) )[0]
 
 plt.close('all')
-plt.plot(dGF['Year'][iInst],dGF[vd][iInst],'k.',mec=[0.88,0.88,0.88],mfc=[0.88,0.88,0.88])
-plt.plot(dGF['Year'][ind],dGF[vd][ind],'-ko')
-plt.plot(2020,dGF['Dob 2020'][ind[0]],'gs')
+plt.plot(dTL['Year'][iInst],dTL[vd][iInst],'k.',mec=[0.88,0.88,0.88],mfc=[0.88,0.88,0.88])
+plt.plot(dTL['Year'][ind],dTL[vd][ind],'-ko')
+plt.plot(2020,dTL['Dob 2020'][ind[0]],'gs')
 
 
 #%% Mixed model
 
-dGF['SS']=dGF['BGC SS']
-dGF['Age']=dGF['Time since first ring']
-dGF['Age2']=dGF['Time since first ring']**2
-dGF['LnGsw']=np.log(dGF['Gsw'])
-dGF['LnBsw']=np.log(dGF['Bsw'])
+dTL['SS']=dTL['BGC SS']
+dTL['Age']=dTL['Age']
+dTL['Age2']=dTL['Age']**2
+dTL['LnGsw']=np.log(dTL['Gsw'])
+dTL['LnBsw']=np.log(dTL['Bsw'])
 
-d0=copy.deepcopy(dGF)
+d0=copy.deepcopy(dTL)
 ikp=np.where( (d0['Year']>1970) & (d0['QA Summary']==1) & \
              (d0['BAI']>0) & (d0['BAI']<5000) & \
              (d0['LnGsw']>-2) & (d0['LnGsw']<20) & (d0['Age']>0) & (d0['Age']<200) & \

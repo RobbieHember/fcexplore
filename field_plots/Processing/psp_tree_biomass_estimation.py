@@ -1,7 +1,6 @@
 
 """
 TREE BIOMASS ESTIMATION
-
 """
 
 #%% IMPORT MODULES
@@ -33,11 +32,9 @@ import fcgadgets.macgyver.utilities_gis as gis
 from fcexplore.psp.Processing import psp_utilities as utl
 
 #%% Set figure properties
-
 gp=gu.SetGraphics('Manuscript')
 
 #%% Import data
-
 meta={}
 meta['Paths']={}
 meta['Paths']['DB']=r'C:\Users\rhember\Documents\Data\GroundPlots\PSP-NADB2'

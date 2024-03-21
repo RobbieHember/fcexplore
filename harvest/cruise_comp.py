@@ -1,23 +1,18 @@
-
 '''
 TIMBER CRUISE COMPILIATION
 '''
-
 #%% Import modules
-
 import numpy as np
 import matplotlib.pyplot as plt
-from fcgadgets.macgyver import utilities_general as gu
+import fcgadgets.macgyver.util_general as gu
 
 #%% Import data
-
 gp=gu.SetGraphics('Manuscript')
-dI=gu.ReadCSV(r'C:\Users\rhember\Documents\Data\ECAS\Received 2023-04-04\rh_COMP_DATA_INTERIOR.csv')
-dC=gu.ReadCSV(r'C:\Users\rhember\Documents\Data\ECAS\Received 2023-04-04\rh_COMP_DATA_COAST.csv')
-dAge=gu.ReadCSV(r'C:\Users\rhember\Documents\Data\ECAS\Received 2023-04-04\rh_DAT_PLOT_AGES.csv')
+dI=gu.ReadCSV(r'C:\Data\ECAS\Received 2023-04-04\rh_COMP_DATA_INTERIOR.csv')
+dC=gu.ReadCSV(r'C:\Data\ECAS\Received 2023-04-04\rh_COMP_DATA_COAST.csv')
+dAge=gu.ReadCSV(r'C:\Data\ECAS\Received 2023-04-04\rh_DAT_PLOT_AGES.csv')
 
 #%% Combine coast and interior
-
 d={}
 for k in dI.keys():
     try:
@@ -40,7 +35,6 @@ list(d.keys())
 #    print(d[k].size)
 
 #%% Clean variables with mixed strings
-
 vL=['PCT_DIST','PCT_DECAY','PCT_WASTE','PCT_WASTE_BILL','PCT_BREAK','PCT_DWB','PCT_NET_2NDGROWTH','PCT_INSECT_VOL','PCT_NO_INSECT_M3','PCT_GREEN_INSECT_M3', \
     'PCT_RED_INSECT_M3','PCT_GREY_INSECT_M3','PCT_OTHER_INSECT_M3','X_DEFOLIATOR_LIVE_CAMB_PCT','Y_DEFOLIATOR_DEAD_CAMB_PCT']
 for v in vL:

@@ -5,6 +5,8 @@ import time
 import matplotlib.pyplot as plt
 import geopandas as gpd
 import pandas as pd
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
 import scipy.io as spio
 import cv2
 import copy
@@ -26,14 +28,159 @@ gp=gu.SetGraphics('Manuscript')
 #%% Import paths and look-up-tables
 meta=u1ha.Init()
 
-#%% Burn severity analysis
-zRef=gis.OpenGeoTiff(meta['Paths']['bc1ha Ref Grid'])    
-
-vList=['height','ibm_yr','bsr_yr','bsr_sc','harv_yr_comp1','age_vri','tdc'] 
+#%% Import data
+vList=['refg','lc_comp1_2019','bsr_yr','bsr_sc','h_vri15','age_vri15','tdc_vri15','spc1_vri15','prcp_ann_n'] # ,'ibm_yr','harv_yr_comp1','geomorph','pdead_vri23'
 z0=u1ha.Import_Raster(meta,[],vList,'Extract Grid')
-
 #plt.matshow(z0['bsr_sc'],clim=[0,5])
 #plt.matshow(z0['twi'],clim=[0,400])
+
+#%% Regression
+ikp=np.where( (z0['lc_comp1_2019']==meta['LUT']['Derived']['lc_comp1']['Forest']) & (z0['bsr_yr']>0) & (z0['bsr_sc']>=1) & (z0['bsr_sc']<=4) )
+#plt.hist(z0['bsr_sc'][ikp][0::1000])
+ivl=50
+z1={}
+for k in z0.keys():
+	z1[k]=z0[k][ikp][0::ivl]
+
+z1['tdc2']=(z1['tdc_vri15']==2).astype(int)
+z1['tdc3']=(z1['tdc_vri15']==3).astype(int)
+
+z1['SW']=(z1['spc1_vri15']==meta['LUT']['VEG_COMP_LYR_R1_POLY']['SPECIES_CD_1']['SW']).astype(int)
+z1['PL']=(z1['spc1_vri15']==meta['LUT']['VEG_COMP_LYR_R1_POLY']['SPECIES_CD_1']['PL']).astype(int)
+z1['BL']=(z1['spc1_vri15']==meta['LUT']['VEG_COMP_LYR_R1_POLY']['SPECIES_CD_1']['BL']).astype(int)
+z1['AT']=(z1['spc1_vri15']==meta['LUT']['VEG_COMP_LYR_R1_POLY']['SPECIES_CD_1']['AT']).astype(int)
+z1['EP']=(z1['spc1_vri15']==meta['LUT']['VEG_COMP_LYR_R1_POLY']['SPECIES_CD_1']['EP']).astype(int)
+#z1['AC']=(z1['spc1_vri15']==meta['LUT']['VEG_COMP_LYR_R1_POLY']['SPECIES_CD_1']['AC']) | (z1['spc1_vri15']==meta['LUT']['VEG_COMP_LYR_R1_POLY']['SPECIES_CD_1']['ACT']).astype(int)
+z1['AC']=(z1['spc1_vri15']==meta['LUT']['VEG_COMP_LYR_R1_POLY']['SPECIES_CD_1']['AC']).astype(int)
+
+#%%
+y=z1['bsr_sc']
+#x=np.column_stack([z1['age_vri'],z1['height'],z1['tdc2'],z1['tdc3'],z1['gm2'],z1['gm3'],z1['gm5'],z1['gm6'],z1['gm7'],z1['gm9'],z1['gm10'] ])
+x=np.column_stack([z1['age_vri15'],z1['h_vri15'],z1['prcp_ann_n'],z1['tdc2'],z1['tdc3'],z1['AT'],z1['BL'] ])
+#x,mu,sig=gu.zscore(x)
+x=sm.add_constant(x)
+
+#%%
+md=sm.MNLogit(y,x)
+rs=md.fit()
+print(rs.summary())
+
+# Indices
+iA=1
+iH=2
+iP=3
+iD2=4
+iD3=5
+iAT=6
+iBL=7
+
+#%% Plot tree density class
+plt.close('all')
+fig,ax=plt.subplots(1,2,figsize=gu.cm2inch(22,8));
+
+x1=np.ones(x.shape[1])
+x1[iA]=50
+x1[iH]=15
+x1[iP]=500
+x1[iD2]=0
+x1[iD3]=0
+x1[iAT]=0
+x1[iBL]=0
+yhat0=rs.predict(x1)
+ax[0].plot(yhat0[0,:],'-bo')
+
+x1=np.ones(x.shape[1])
+x1[iA]=50
+x1[iH]=15
+x1[iP]=2000
+x1[iD2]=1
+x1[iD3]=0
+x1[iAT]=0
+x1[iBL]=0
+yhat1=rs.predict(x1)
+ax[0].plot(yhat1[0,:],'-rs')
+
+ax[1].plot(yhat1[0,:]-yhat0[0,:],'ob-')
+
+#%% Plot tree density class
+plt.close('all')
+fig,ax=plt.subplots(1,2,figsize=gu.cm2inch(22,8));
+
+x1=np.ones(x.shape[1])
+x1[iA]=50
+x1[iH]=15
+x1[iP]=800
+#x1[iPD]=5
+x1[iD2]=0
+x1[iD3]=0
+x1[iAT]=0
+x1[iBL]=0
+yhat0=rs.predict(x1)
+ax[0].plot(yhat0[0,:],'-bo')
+
+x1=np.ones(x.shape[1])
+x1[iA]=50
+x1[iH]=15
+x1[iP]=800
+#x1[iPD]=5
+x1[iD2]=1
+x1[iD3]=0
+x1[iAT]=0
+x1[iBL]=0
+yhat1=rs.predict(x1)
+ax[0].plot(yhat1[0,:],'-gs')
+
+x1=np.ones(x.shape[1])
+x1[iA]=50
+x1[iH]=15
+x1[iP]=800
+#x1[iPD]=5
+x1[iD2]=0
+x1[iD3]=1
+x1[iAT]=0
+x1[iBL]=0
+yhat2=rs.predict(x1)
+ax[0].plot(yhat2[0,:],'-r^')
+
+ax[1].plot(yhat2[0,:]-yhat0[0,:],'ob-')
+
+#%% Plot species
+iA=1;
+iH=2;
+iD2=3;
+iD3=4
+iAT=5
+iBL=6
+
+x1=np.ones(x.shape[1])
+x1[iA]=50
+x1[iH]=15
+#x1[iPD]=5
+x1[iD2]=0
+x1[iD3]=0
+x1[iAT]=0
+x1[iBL]=1
+yhat0=rs.predict(x1)
+plt.close('all')
+fig,ax=plt.subplots(1,2,figsize=gu.cm2inch(22,8));
+ax[0].plot(yhat0[0,:],'or-')
+
+x1=np.ones(x.shape[1])
+x1[iA]=50
+x1[iH]=15
+#x1[iPD]=5
+x1[iD2]=0
+x1[iD3]=0
+x1[iAT]=1
+x1[iBL]=0
+yhat1=rs.predict(x1)
+ax[0].plot(yhat1[0,:],'og--')
+
+ax[1].plot(yhat1[0,:]-yhat0[0,:],'ob-')
+
+
+#%%
+
 
 #%% Compare distributions from national and provincial datasets
 plt.close('all'); fig,ax=plt.subplots(2,1)

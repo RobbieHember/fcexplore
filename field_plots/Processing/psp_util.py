@@ -120,9 +120,9 @@ def Read_L3_TL_BySpc(spp):
 
 #%%
 def CalcStatsByBGCZone(meta,gpt,soc):
-    vL=['Ctot L t0','Ctot D t0','Cbk L t0','Cbr L t0','Cf L t0','Cr L t0','Csw L t0',
-        'Ctot G Surv','Ctot G Recr','Ctot Mort Nat','Ctot Mort Harv','Ctot Net',
-        'Vws G Surv','Vws G Recr','Vws Mort Nat','Vws Mort Harv','Vws Net','Area']
+    vL=['Ctot L t0','Ctot D t0','Ctot D Fallen t0','Cbk L t0','Cbr L t0','Cf L t0','Cr L t0','Csw L t0',
+        'Ctot G Surv','Ctot G Recr','Ctot Mort Nat','Ctot Mort Harv','Ctot Net','Ctot Litf',
+        'Vws G Surv','Vws G Recr','Vws Mort Nat','Vws Mort Harv','Vws Net','Area','Age Mean t0']
     
     uZ=np.unique(gpt['Ecozone BC L1'])
     uZ=uZ[uZ>0]
@@ -151,9 +151,8 @@ def CalcStatsByBGCZone(meta,gpt,soc):
                 d[k][v]['mu'][iU]=np.nanmean(gpt[v][ind])
                 d[k][v]['sd'][iU]=np.nanstd(gpt[v][ind])
                 d[k][v]['se'][iU]=np.nanstd(gpt[v][ind])/np.sqrt(ind.size)
-            ind2=np.where(meta['Param']['BE']['BGC Zone Averages']['Name']==lab[iU])[0]
-            d[k]['Area']['sum'][iU]=1e6*meta['Param']['BE']['BGC Zone Averages']['Area Treed (Mha)'][ind2]
-    
+            d[k]['Area']['sum'][iU]=1e6*meta['Param']['BE']['ByBGCZ'][lab[iU]]['Area Treed (Mha)']
+
     d['CN']['Ctot L t0']['mu']
     
     # Add soils
@@ -171,8 +170,8 @@ def CalcStatsByBGCZone(meta,gpt,soc):
             d['Soil'][v]['mu'][iU]=np.nanmean(soc[v][ind])
             d['Soil'][v]['sd'][iU]=np.nanstd(soc[v][ind])
             d['Soil'][v]['se'][iU]=np.nanstd(soc[v][ind])/np.sqrt(ind.size)
-        #ind2=np.where(meta['Param']['BE']['BGC Zone Averages']['Name']==lab[iU])[0]
-        #d['Soil']['Area']['sum'][iU]=1e6*meta['Param']['BE']['BGC Zone Averages']['Area Treed (Mha)'][ind2]
+        #ind2=np.where(meta['Param']['BE']['ByBGCZ']['Name']==lab[iU])[0]
+        #d['Soil']['Area']['sum'][iU]=1e6*meta['Param']['BE']['ByBGCZ']['Area Treed (Mha)'][ind2]
     
     for k in d.keys():
         for v in d[k].keys():
@@ -212,3 +211,19 @@ def CalcStatsByAgeClass(meta,gpt):
 	d1={'bin':bin,'bw':bw,'data':d}
 	return d1
 
+#%%
+def CalcStatsByAgeClassForZone(meta,gpt,zone):
+	bw=25; bin=np.arange(bw,250+bw,bw)
+	ptfL=['PTF CN','PTF CNY','PTF YSM','PTF VRI']
+	vL=['Ctot L t0','Ctot G Surv','Ctot G Recr','Ctot Mort','Ctot Net','Ctot Mort Nat','Ctot Mort Harv']
+	d={}
+	for ptf in ptfL:
+		d[ptf]={'Coast':{},'Interior':{}}
+		for v in vL:
+			ind=np.where( (gpt[ptf]==1) & (gpt['Ecozone BC L1']==meta['LUT']['GP']['Ecozone BC L1'][zone]) )[0]
+			x=gpt['Age Med t0'][ind]
+			y=gpt[v][ind]
+			N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+			d[ptf][v]={'N':N,'mu':mu,'se':se}
+	d1={'bin':bin,'bw':bw,'data':d}
+	return d1

@@ -20,14 +20,14 @@ meta=u1ha.Init()
 meta,gpt,soc=ugp.ImportGroundPlotData(meta,type='Stand',include_soil='True')
 
 #%% Import Raster grids
-vList=['tdc','refg','lc_comp1_2019','bgcz','harv_yr_comp1','fire_yr','ibm_yr','age_vri','bsr_yr','bsr_sc'] #'lc_comp1_2019','gfcly','gfcly_filt',
+vList=['tdc_vri15','refg','lc_comp1_2019','bgcz','harv_yr_comp1','fire_yr','ibm_yr','age_vri15','bsr_yr','bsr_sc'] #'lc_comp1_2019','gfcly','gfcly_filt',
 roi={'points':{'x':gpt['X'],'y':gpt['Y']}}
 z=u1ha.Import_Raster(meta,roi,vList)
 
 zRef=gis.OpenGeoTiff(meta['Paths']['bc1ha Ref Grid'])
 iGrd=gis.GetGridIndexToPoints(zRef,gpt['X'],gpt['Y'])
 
-vList=['tdc','lc_comp1_2019','bgcz']
+vList=['tdc_vri15','lc_comp1_2019','bgcz']
 roi={'points':{'x':soc['x'],'y':soc['y']}}
 zS=u1ha.Import_Raster(meta,roi,vList)
 
@@ -55,39 +55,6 @@ pgp.GP_QA_Age_vs_Age(meta,gpt)
 #%% Age class distribution
 pgp.GP_AgeClassDistribution(meta,gpt)
 
-#%% Age class distribution (by BGC Zone)
-def QA_FullComparisonAgeDistribution_CN(meta,gpt):
-	x=np.arange(0,501,1); lw=1.25; yt=np.arange(0,2,0.1)
-	ord=np.flip(np.argsort(meta['Param']['BE']['BGC Zone Averages']['Area Treed (Mha)']))
-	lab=np.array(['' for _ in range(ord.size)],dtype=object)
-	plt.close('all'); fig,ax=plt.subplots(3,3,figsize=gu.cm2inch(22,11)); cnt=0
-	for j in range(3):
-		for i in range(3):
-			zone=meta['Param']['BE']['BGC Zone Averages']['Name'][ord[cnt]]
-			#ind=np.where( (gpt['Ecozone BC L1']==meta['LUT']['GP']['Ecozone BC L1'][zone]) & (gpt['Plot Type']==meta['LUT']['GP']['Plot Type']['VRI']) & (gpt['Age Mean t0']>=0) )[0]
-			#kde=stats.gaussian_kde(gpt['Age Mean t0'][ind])
-			#p=kde(x); y1=p/np.sum(p)*100
-			#ax[i,j].plot(x,y1,'k-',lw=0.75,color=[0.5,0,1],label='VRI ground plots')
-	
-			ind=np.where( (gpt['Ecozone BC L1']==meta['LUT']['GP']['Ecozone BC L1'][zone]) & (gpt['PTF CN']==1) & (gpt['Age Mean t0']>=0) )[0]
-			kde=stats.gaussian_kde(gpt['Age Mean t0'][ind])
-			p=kde(x); y2=p/np.sum(p)*100
-			ax[i,j].fill_between(x,y2,alpha=0.15)
-			ax[i,j].plot(x,y2,'b-',lw=0.75,color=[0.27,0.44,0.79],label='CMI + NFI network\ntree cores')
-			#ym=np.maximum(np.max(y1),np.max(y2)); indYT=np.where(yt>ym)[0]
-			ym=np.max(y2); indYT=np.where(yt>ym)[0]
-			mu=np.mean(gpt['Age Mean t0'][ind])
-			ax[i,j].plot([mu,mu],[0,20],'b--',color=[0.27,0.44,0.79],label='Mean')
-			ax[i,j].set(ylabel='Frequency (%)',xlabel='Stand age, years',xlim=[0,500],ylim=[0,yt[indYT[1]]])
-			if (i==0) & (j==0):
-				ax[i,j].legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
-			ax[i,j].yaxis.set_ticks_position('both'); ax[i,j].xaxis.set_ticks_position('both'); ax[i,j].tick_params(length=meta['Graphics']['gp']['tickl'])
-			plt.tight_layout()
-			lab[cnt]=zone
-			cnt=cnt+1
-	gu.axletters(ax,plt,0.025,0.89,FontColor=meta['Graphics']['gp']['cla'],LetterStyle='NoPar',FontWeight='Bold',Labels=lab,LabelSpacer=0.035)
-	return
-
 #%% Calculate statisics for BGC zone
 dBGC=ugp.CalcStatsByBGCZone(meta,gpt,soc)
 #dZ,dBGC['id'],dBGC['code']=ugp.StatsByBGCZone(meta,gpt,soc)
@@ -97,6 +64,16 @@ pgp.GP_TEC_ByBGC_CN(meta,gpt,dBGC)
 
 #%% Plot biomass by BGC zone
 pgp.GP_BiomassByBGC_CNV(meta,gpt,dBGC)
+
+#%% Plot average biomass dynammics
+pgp.GP_BiomassDynamics_Mean_CN(meta,gpt,dBGC)
+
+#%% Age responses of biomass and net growth
+dAC=ugp.CalcStatsByAgeClass(meta,gpt)
+pgp.GP_AgeResponsesByRegion(meta,dAC)
+
+#%%
+pgp.GP_DeadWoodByBGC_CNV(meta,gpt,dBGC)
 
 #%% Plot net growth by BGC zone (CN and YSM side by side)
 # def GP_GrowthNet_ByBGC_CN(meta,dBGC):
@@ -198,45 +175,6 @@ ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tic
 #     ax.text(i+0.24,d0[typ]['Ctot Net']['mu'][i]+adj,str(d0[typ]['Ctot Net']['N'][i].astype(int)),color='k',ha='center',va='center',fontsize=5,fontweight='normal')
 plt.tight_layout()
 gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_NetGrowth_ByGBCZone_YSM','png',900)
-
-#%% Plot average biomass dynammics
-pgp.GP_BiomassDynamics_Mean_CN(meta,gpt,dBGC)
-
-# #%% Average volume dynammics
-# typ='CN'
-# d2=copy.deepcopy(d[typ])
-
-# mu={}
-# se={}
-# for v in d2.keys():
-#     mu[v]=np.nansum(d0[typ][v]['mu']*d0[typ]['Area']['sum'])/np.sum(d0[typ]['Area']['sum'])
-#     se[v]=np.nansum(d0[typ][v]['se']*d0[typ]['Area']['sum'])/np.sum(d0[typ]['Area']['sum'])
-
-# cl=np.array([[0.75,0.75,0.75],[0.24,0.49,0.77],[0.6,1,0]])
-# cle=[0,0,0]#[0.05,0.2,0.45]
-# barw=0.6
-# lab=['Survivor\ngrowth','Recruitment\ngrowth','Natural\nmortality','Harvest\nmortality','Net\ngrowth'] #
-
-# plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(7.8,6)); yt=np.arange(-1.5,2.5,0.5)
-# ax.plot([0,6],[0,0],'-k',color=gp['cla'],lw=0.5)
-# ax.bar(1,mu['Vws G Surv'],barw,facecolor=clf,label='Growth survivors')
-# ax.bar(2,mu['Vws G Recr'],barw,facecolor=clf,label='Growth recruitment')
-# ax.bar(3,-mu['Vws Mort Nat'],barw,facecolor=clf,label='Natural\nmortality')
-# ax.bar(4,-mu['Vws Mort Harv'],barw,facecolor=clf,label='Harvest')
-# ax.bar(5,mu['Vws Net'],barw,facecolor=clf,label='Net')
-# ax.errorbar(1,mu['Vws G Surv'],yerr=se['Vws G Surv'],color=cle,fmt='none',capsize=2,lw=0.5)
-# ax.errorbar(2,mu['Vws G Recr'],yerr=se['Vws G Recr'],color=cle,fmt='none',capsize=2,lw=0.5)
-# ax.errorbar(3,-mu['Vws Mort Nat'],yerr=se['Vws Mort Nat'],color=cle,fmt='none',capsize=2,lw=0.5)
-# ax.errorbar(4,-mu['Vws Mort Harv'],yerr=se['Vws Mort Harv'],color=cle,fmt='none',capsize=2,lw=0.5)
-# ax.errorbar(5,mu['Vws Net'],yerr=se['Vws Net'],color=cle,fmt='none',capsize=2,lw=0.5)
-# ax.set(xticks=np.arange(1,len(lab)+1),xticklabels=lab,ylabel='Whole stem volume periodic increment (m$^{3}$ ha$^{-1}$ yr$^{-1}$)',xlim=[0.5,5.5],ylim=[-4,6])
-# ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=meta['Graphics']['gp']['tickl'])
-# plt.tight_layout()
-# gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_VolumDynamics_Mean_CN','png',900)
-
-#%% Age responses of biomass and net growth
-dAC=ugp.CalcStatsByAgeClass(meta,gpt)
-pgp.GP_AgeResponsesByRegion(meta,dAC)
 
 #%% Age responses of gross growth and mortality
 bw=25; bin=np.arange(bw,250+bw,bw)
@@ -372,6 +310,36 @@ ax1.legend(loc='best',frameon=False,facecolor='w',edgecolor='w')
 ax1.yaxis.set_ticks_position('both'); ax1.xaxis.set_ticks_position('both'); ax1.tick_params(length=meta['Graphics']['gp']['tickl'])
 plt.tight_layout()
 gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_AgeResponseGrossGrowthAndAdvancedRegenContribution','png',900)
+
+#%%
+def MortalityRelativeVsAgeByBGC_CNY(meta,gpt):
+	ord=np.flip(np.argsort(meta['Param']['BE']['BGC Zone Averages']['Area Treed (Mha)']))
+	lab=np.array(['' for _ in range(ord.size)],dtype=object)
+	plt.close('all'); fig,ax=plt.subplots(3,3,figsize=gu.cm2inch(22,11)); cnt=0
+	for i in range(3):
+		for j in range(3):
+			zone=meta['Param']['BE']['BGC Zone Averages']['Name'][ord[cnt]]
+			lab[cnt]=zone
+			ind=np.where( (gpt['PTF CNY']==1) & (gpt['Ecozone BC L1']==meta['LUT']['GP']['Ecozone BC L1'][zone]) )[0]
+			x=gpt['Age Mean t0'][ind]
+			y=gpt['Ctot Mort'][ind]/gpt['Ctot L t0'][ind]*100
+			bw=50; bin=np.arange(25,400,bw)
+			N,mu,med,sig,se=gu.discres(x,y,bw,bin)
+			mu[mu==np.inf]=np.nan
+			se[se==np.inf]=np.nan
+			ax[i,j].plot(bin,mu,'ko',lw=0.5,ms=3,mec=[0.27,0.44,0.79],mfc=[0.27,0.44,0.79])
+			ax[i,j].errorbar(bin,mu,yerr=se,color=[0.27,0.44,0.79],ls='none',lw=1,capsize=2)
+			ax[i,j].set(ylabel='Mortality rate (%)',xlabel='Stand age, years',xlim=[0,400],ylim=[0,np.nanmax(mu)+np.nanmax(se)+0.2])
+			if (i==0) & (j==0):
+				ax[i,j].legend(frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+			ax[i,j].yaxis.set_ticks_position('both'); ax[i,j].xaxis.set_ticks_position('both'); ax[i,j].tick_params(length=meta['Graphics']['gp']['tickl'])
+			plt.tight_layout()
+			cnt=cnt+1
+	gu.axletters(ax,plt,0.025,0.89,FontColor=meta['Graphics']['gp']['cla'],LetterStyle='NoPar',FontWeight='Bold',Labels=lab,LabelSpacer=0.035)
+	#if meta['Graphics']['Print Figures']=='On':
+	#	gu.PrintFig(meta['Graphics']['Print Figure Path'] + '\\QA_FullCompareAgeDistByBGC_CN_' + str(iScn+1),'png',900)
+	return
+MortalityRelativeVsAgeByBGC_CNY(meta,gpt)
 
 #%% Biomass loss by burn severity class analysis
 
@@ -626,68 +594,8 @@ plt.tight_layout()
 gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\QA_Disturbance_Profiles','png',900)
 
 #%% Mortality associations
+gpg.GP_MortalityAssociations(meta,gpt)
 
-# Estimate harvest mortality
-gpt['Ctot Mort+Lost Harv']=np.zeros(gpt['PTF CN'].size)
-ind=np.where( (gpt['Occ_Harv']==1) )[0]
-gpt['Ctot Mort+Lost Harv'][ind]=gpt['Ctot Mort+Lost'][ind]
-
-gpt['N Mort+Lost Harv']=np.zeros(gpt['PTF CN'].size)
-ind=np.where( (gpt['Occ_Harv']==1) )[0]
-gpt['N Mort+Lost Harv'][ind]=gpt['N Mort+Lost'][ind]
-
-daL=['No damage','Beetles','Defoliators','Diseases','Plant competition','Animal browsing','Fire','Frost, snow, ice, hail','Water stress','Wind','Silviculture','Defects and breakage','Flooding, lightning, slides','Unknown','Harv']
-daL_lab=['No\ndamage\ndetected','Beetles','Defoliators','Diseases','Plant\ncompetition','Animal\nbrowsing','Fire','Frost,\nsnow, ice\n and hail','Water\nstress','Wind', 'Silvi-\nculture','Defects\nand\nbreakage','Flooding\nlightning\nslides','Damage\nof uknown\ncause','Harvest']
-
-# Make sure that all mortality is accounted for by damage agents, assign unaccounted mortality to no damage
-ind=np.where( (gpt['PTF CN']==1) & (gpt['Ctot Mort+Lost']>0) & (gpt['Ctot Mort+Lost No damage']==0) & (gpt['Ctot Mort+Lost Beetles']==0) & (gpt['Ctot Mort+Lost Defoliators']==0) & \
-              (gpt['Ctot Mort+Lost Diseases']==0) & (gpt['Ctot Mort+Lost Plant competition']==0) & (gpt['Ctot Mort+Lost Animal browsing']==0) & \
-              (gpt['Ctot Mort+Lost Fire']==0) & (gpt['Ctot Mort+Lost Frost, snow, ice, hail']==0) & (gpt['Ctot Mort+Lost Water stress']==0) & \
-              (gpt['Ctot Mort+Lost Silviculture']==0) & (gpt['Ctot Mort+Lost Defects and breakage']==0) & (gpt['Ctot Mort+Lost Flooding, lightning, slides']==0) & \
-              (gpt['Ctot Mort+Lost Unknown']==0) & (gpt['Ctot Mort+Lost Harv']==0) )[0]
-gpt['Ctot Mort+Lost No damage'][ind]=gpt['Ctot Mort+Lost'][ind]
-
-# Make sure that all mortality is accounted for by damage agents, assign unaccounted mortality to no damage
-ind=np.where( (gpt['PTF CN']==1) & (gpt['N Mort+Lost']>0) & (gpt['N Mort+Lost No damage']==0) & (gpt['N Mort+Lost Beetles']==0) & (gpt['N Mort+Lost Defoliators']==0) & \
-              (gpt['N Mort+Lost Diseases']==0) & (gpt['N Mort+Lost Plant competition']==0) & (gpt['N Mort+Lost Animal browsing']==0) & \
-              (gpt['N Mort+Lost Fire']==0) & (gpt['N Mort+Lost Frost, snow, ice, hail']==0) & (gpt['N Mort+Lost Water stress']==0) & \
-              (gpt['N Mort+Lost Silviculture']==0) & (gpt['N Mort+Lost Defects and breakage']==0) & (gpt['N Mort+Lost Flooding, lightning, slides']==0) & \
-              (gpt['N Mort+Lost Unknown']==0) & (gpt['N Mort+Lost Harv']==0) )[0]
-gpt['N Mort+Lost No damage'][ind]=gpt['N Mort+Lost'][ind]
-
-d={}
-ikp=np.where( (gpt['PTF CN']==1) )[0]
-d['Mean All']=np.nanmean(gpt['Ctot Mort+Lost'][ikp])
-d['Sum All']=np.nansum(gpt['Ctot Mort+Lost'][ikp])
-d['Mean']=np.zeros(len(daL))
-d['Sum']=np.zeros(len(daL))
-d['N Mean All']=np.nanmean(gpt['N Mort+Lost'][ikp])
-d['N Sum All']=np.nansum(gpt['N Mort+Lost'][ikp])
-d['N Mean']=np.zeros(len(daL))
-d['N Sum']=np.zeros(len(daL))
-for i in range(len(daL)):
-    d['Mean'][i]=np.nanmean(np.nan_to_num(gpt['Ctot Mort+Lost ' + daL[i]][ikp]))
-    d['Sum'][i]=np.nansum(np.nan_to_num(gpt['Ctot Mort+Lost ' + daL[i]][ikp]))
-    d['N Mean'][i]=np.nanmean(np.nan_to_num(gpt['N Mort+Lost ' + daL[i]][ikp]))
-    d['N Sum'][i]=np.nansum(np.nan_to_num(gpt['N Mort+Lost ' + daL[i]][ikp]))
-print(np.sum(d['Sum'])/d['Sum All'])
-
-mup=d['Mean']/np.sum(d['Mean'])*100
-mup2=d['N Mean']/np.sum(d['N Mean'])*100
-#mup=d['Sum']#/np.sum(d['Mean'])*100
-ord=np.flip(np.argsort(mup))
-mup=mup[ord]
-mup2=mup2[ord]
-lab=np.array(daL_lab)[ord]
-
-plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(15.5,5.5)); barw=0.35
-ax.bar(np.arange(len(daL))-barw/1.85,mup,barw,fc=[0.75,0.85,1],ec=None,label='Gravimetric (biomass loss due to mortality)')
-ax.bar(np.arange(len(daL))+barw/1.85,mup2,barw,fc=[0.85,1,0.5],ec=None,label='Demographic (number of trees)')
-ax.set(xticks=np.arange(0,len(lab)),xticklabels=lab,ylabel='Frequency (%)',xlim=[-0.5,len(lab)-1+0.5])# ,ylim=[0,35]
-ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=meta['Graphics']['gp']['tickl'])
-plt.legend(loc='upper right',frameon=False,facecolor=[1,1,1],labelspacing=0.25)
-plt.tight_layout()
-gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_MortalityAssociations_CN','png',900)
 
 #%% Age response of mortality
 
@@ -914,6 +822,55 @@ ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tic
 plt.tight_layout()
 gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_ProportionWithDeciduousTrees_CN','png',900)
 
+#%% Deciduousness on harvested vs. non-harvested stands
+
+u=np.unique(gpt['Ecozone BC L1'][gpt['Ecozone BC L1']>0])
+lab=np.array(['' for _ in range(u.size)],dtype=object)
+for iU in range(u.size):
+	lab[iU]=ugp.lut_id2cd(meta['LUT']['GP']['Ecozone BC L1'],u[iU])
+
+d={}
+d['SS']={'sum':np.zeros(u.size)}
+d['Pct H']={'mu':np.zeros(u.size)}
+d['Pct NH']={'mu':np.zeros(u.size)}
+for iU in range(u.size):
+	ind=np.where( (gpt['PTF CNY']==1) & (gpt['Ecozone BC L1']==u[iU]) & (gpt['Harvest Mask']==0) )[0]
+	d['Pct NH']['mu'][iU]=np.nanmean(gpt['Deciduous L %N t0'][ind])
+	d['SS']['sum'][iU]=ind.size
+	ind=np.where( (gpt['PTF CNY']==1) & (gpt['Ecozone BC L1']==u[iU]) & (gpt['Harvest Mask']==1) )[0]
+	d['Pct H']['mu'][iU]=np.nanmean(gpt['Deciduous L %N t0'][ind])
+
+# Plot proportion with deciduous
+d0=copy.deepcopy(d)
+lab0=lab.copy()
+
+# Remove zones with too few data
+ind=np.where(d0['SS']['sum']>5)[0]
+u0=u[ind]
+for k in d0.keys():
+	for v in d0[k].keys():
+		d0[k][v]=d0[k][v][ind]
+lab0=lab[ind]
+
+ord=np.argsort(d0['Pct NH']['mu'])
+for k in d0.keys():
+	for v in d0[k].keys():
+		d0[k][v]=np.flip(d0[k][v][ord])
+lab0=np.flip(lab0[ord])
+
+cl=np.array([ [0.3,0.45,0.76],[0.85,1,0.5] ])
+bw=0.3
+
+plt.close('all'); fig,ax=plt.subplots(1,figsize=gu.cm2inch(15,5))
+#ax.bar(np.arange(u0.size),d0['Pct NH']['mu'],facecolor=cl[0,:],label='')
+ax.bar(np.arange(u0.size)-bw/2,d0['Pct NH']['mu'],bw,facecolor=cl[0,:],label='Stands with no recorded harvest')
+ax.bar(np.arange(u0.size)+bw/2,d0['Pct H']['mu'],bw,facecolor=cl[1,:],label='Stands that have been harvested')
+ax.set(xticks=np.arange(u0.size),xticklabels=lab0,ylabel='Mean proportion of broadleaf\ndeciduous trees (%)',yticks=np.arange(0,110,5),xlim=[-0.5,u0.size-0.5],ylim=[0,50])
+ax.legend(loc='upper right',frameon=False,facecolor=[1,1,1],labelspacing=0.25)
+ax.yaxis.set_ticks_position('both'); ax.xaxis.set_ticks_position('both'); ax.tick_params(length=meta['Graphics']['gp']['tickl'])
+plt.tight_layout()
+#gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_DecidBroadleafProportionByHarvestHistoryAndBGC_CN','png',900)
+
 #%% Plot deciduous vs. conifer age
 d0=copy.deepcopy(d)
 lab0=lab.copy()
@@ -1058,3 +1015,4 @@ gu.PrintFig(meta['Paths']['GP']['Figures'] + '\\GP_CompareDecidConifNetBiomassHa
 
 
 #%%
+
